@@ -6,13 +6,13 @@ export function Skeleton({ className = '' }: SkeletonProps) {
 
 export function StorefrontLoadingShell() {
   return (
-    <main className="flex min-h-[70vh] flex-1 items-center justify-center bg-slate-50 px-4 py-16" aria-busy="true" aria-live="polite" aria-label="Loading SahiGadget">
+    <main className="flex min-h-[70vh] flex-1 items-center justify-center bg-slate-50 px-4 py-16" aria-busy="true" aria-live="polite" aria-label="Loading PhonerBazar">
       <div className="w-full max-w-sm rounded-[2rem] border border-slate-200 bg-white p-7 text-center shadow-sm">
         <div className="mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-slate-950 shadow-lg shadow-slate-900/10">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="SahiGadget" width="56" height="56" className="h-full w-full object-cover" />
+          <img src="/phonerbazar-icon.svg" alt="PhonerBazar" width="56" height="56" className="h-full w-full object-cover" />
         </div>
-        <p className="mt-5 text-lg font-black tracking-tight text-slate-950">SahiGadget</p>
+        <p className="mt-5 text-lg font-black tracking-tight text-slate-950">PhonerBazar</p>
         <div className="mx-auto mt-4 h-1.5 w-28 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
           <div className="h-full w-1/2 animate-[loading-progress_1.4s_ease-in-out_infinite] rounded-full bg-emerald-500 motion-reduce:animate-none" />
         </div>
