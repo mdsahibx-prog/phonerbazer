@@ -17,13 +17,13 @@ export default async function AdminForgotPasswordPage() {
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#d1fae5,_transparent_32%),linear-gradient(135deg,_#0f172a,_#14532d)] px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl shadow-slate-950/30 lg:grid-cols-[1.08fr_.92fr]">
         <section className="hidden bg-slate-950 p-10 text-white lg:flex lg:flex-col lg:justify-between">
-          <div className="flex items-center gap-3 text-sm font-semibold tracking-wide text-emerald-300"><div className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-slate-900 shadow-md"><Image src="/logo.png" alt="SahiGadget Logo" width={40} height={40} className="h-full w-full object-cover" /></div>SAHIGADGET OPERATIONS</div>
+          <div className="flex items-center gap-3 text-sm font-semibold tracking-wide text-emerald-300"><div className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-slate-900 shadow-md"><Image src="/phonerbazar-icon.svg" alt="PhonerBazar Logo" width={40} height={40} className="h-full w-full object-cover" /></div>PHONERBAZAR OPERATIONS</div>
           <div>
             <p className="mb-4 text-xs font-bold uppercase tracking-[0.22em] text-emerald-300">Secure recovery workspace</p>
             <h1 className="max-w-md text-4xl font-semibold leading-tight">Regain secure access with authorized verification.</h1>
             <p className="mt-5 max-w-md text-sm leading-6 text-slate-300">Password recovery sends a time-bound encrypted token to your verified administrative email address.</p>
           </div>
-          <p className="text-xs text-slate-400">SahiGadget Mobile Phone & Gadget Shop</p>
+          <p className="text-xs text-slate-400">PhonerBazar Mobile Phone & Gadget Shop</p>
         </section>
         <section className="flex items-center p-6 sm:p-10 lg:p-12">
           <div className="mx-auto w-full max-w-sm">
