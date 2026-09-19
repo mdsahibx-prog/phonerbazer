@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   keywords: [
     'mobile phones Bangladesh', 
     'gadgets Bangladesh', 
-    'SahiGadget', 
+    'PhonerBazar', 
     'mobile shop Narayanganj',
     'buy phones online Bangladesh',
     'authentic gadgets Bangladesh'
