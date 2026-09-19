@@ -3,6 +3,7 @@
 import 'server-only'
 
 import { z } from 'zod'
+import { after } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizePhone } from '@/lib/orders/phone'
 import { queueOrderConfirmationEmails } from '@/lib/email/service'
@@ -306,12 +307,12 @@ export async function createGuestCodOrder(input: unknown): Promise<ActionResult<
     }
 
     const summary = await loadOrderSuccessById(String(data[0].order_id))
-    await recordPurchaseOnce({ orderId: summary.orderId, orderNumber: summary.orderNumber, value: summary.grandTotal, sessionId: payload.checkoutRequestId, consent: { analytics: payload.analyticsConsent, marketing: payload.marketingConsent }, items: summary.items.map((item) => ({ item_id: item.sku, item_name: item.productName, price: item.unitPrice, quantity: item.quantity })) })
-    try {
-      await queueOrderConfirmationEmails(summary)
-    } catch (emailError) {
-      console.error('[email] order confirmation notification failed', emailError instanceof Error ? emailError.message : emailError)
-    }
+    after(async () => {
+      await Promise.allSettled([
+        recordPurchaseOnce({ orderId: summary.orderId, orderNumber: summary.orderNumber, value: summary.grandTotal, sessionId: payload.checkoutRequestId, consent: { analytics: payload.analyticsConsent, marketing: payload.marketingConsent }, items: summary.items.map((item) => ({ item_id: item.sku, item_name: item.productName, price: item.unitPrice, quantity: item.quantity })) }),
+        queueOrderConfirmationEmails(summary),
+      ])
+    })
     return { ok: true, data: summary }
   } catch (error) {
     return { ok: false, message: error instanceof Error && error.message.includes('available') ? error.message : 'We could not place your order right now. No payment has been collected. Please try again.' }
@@ -326,11 +327,46 @@ export async function createGuestOrderWithRisk(input: unknown): Promise<ActionRe
   const payload: GuestOrderInput = { ...parsed.data, phone: normalizePhone(parsed.data.phone), email: parsed.data.email || '' }
 
   try {
-    const quote = await loadVariantQuote(payload, payload.division)
+    // Run the two independent preflight checks together; the database RPC remains the final authoritative check.
+    const [quote, risk] = await Promise.all([
+      loadVariantQuote(payload, payload.division),
+      assessCustomerRisk({ phone: payload.phone }),
+    ])
     if (!quote.available) return { ok: false, message: 'The selected quantity is no longer available. Please adjust your order and try again.' }
-    const risk = await assessCustomerRisk({ phone: payload.phone })
     const paymentRequirement = paymentRequirementForRiskAction(risk.action)
-    if (paymentRequirement === 'COD') return createGuestCodOrder(input)
+    if (paymentRequirement === 'COD') {
+      const db = createAdminClient()
+      const { data, error } = await db.rpc('create_guest_cod_order', {
+        p_product_id: payload.productId,
+        p_variant_id: payload.variantId,
+        p_quantity: payload.quantity,
+        p_checkout_request_id: payload.checkoutRequestId,
+        p_customer_name: payload.fullName,
+        p_customer_phone: payload.phone,
+        p_customer_email: payload.email || null,
+        p_division: payload.division,
+        p_district: payload.district,
+        p_area: payload.area,
+        p_address: payload.address,
+        p_postal_code: payload.postalCode || null,
+        p_notes: payload.notes || null,
+      })
+      if (error || !Array.isArray(data) || !data[0]?.order_id) {
+        const message = error?.message ?? 'Unable to create your order.'
+        if (message.includes('INSUFFICIENT_STOCK')) return { ok: false, message: 'The selected quantity is no longer available. Please adjust your order and try again.' }
+        if (message.includes('PRODUCT_UNAVAILABLE')) return { ok: false, message: 'This product is not currently available to order.' }
+        if (message.includes('INVALID_QUANTITY')) return { ok: false, message: 'Please choose a valid quantity.' }
+        return { ok: false, message: 'We could not place your order right now. No payment has been collected. Please try again.' }
+      }
+      const summary = await loadOrderSuccessById(String(data[0].order_id))
+      after(async () => {
+        await Promise.allSettled([
+          recordPurchaseOnce({ orderId: summary.orderId, orderNumber: summary.orderNumber, value: summary.grandTotal, sessionId: payload.checkoutRequestId, consent: { analytics: payload.analyticsConsent, marketing: payload.marketingConsent }, items: summary.items.map((item) => ({ item_id: item.sku, item_name: item.productName, price: item.unitPrice, quantity: item.quantity })) }),
+          queueOrderConfirmationEmails(summary),
+        ])
+      })
+      return { ok: true, data: summary }
+    }
     if (paymentRequirement === 'MANUAL_REVIEW') return { ok: false, message: 'We need to verify a few details before accepting this order. Please contact support for help.' }
     const provider = await paymentProviderForPaymentRequirement(paymentRequirement)
     verifyPaymentProvider(provider)
