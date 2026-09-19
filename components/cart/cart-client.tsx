@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { trackClientEvent } from '@/lib/analytics/client'
 import { Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
 import { clearCartAction, removeCartItemAction, updateCartItemAction } from '@/lib/commerce/actions'
@@ -13,6 +13,8 @@ export function CartClient({ initialCart }: { initialCart: { items: CartItem[]; 
   const [cart, setCart] = useState(initialCart)
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const pendingTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  const pendingQuantities = useRef<Map<string, number>>(new Map())
   useEffect(() => { trackClientEvent({ eventName: 'view_cart', commerce: { currency: 'BDT', value: initialCart.subtotal, item_count: initialCart.itemCount } }) }, [initialCart.subtotal, initialCart.itemCount])
   async function run(action: () => Promise<{ ok: boolean; message?: string; data?: typeof initialCart }>, eventName?: 'add_to_cart' | 'remove_from_cart') {
     setBusy(true); setMessage('')
@@ -20,6 +22,40 @@ export function CartClient({ initialCart }: { initialCart: { items: CartItem[]; 
     setBusy(false)
     if (!result.ok) { setMessage(result.message ?? 'Unable to update your cart.'); return }
     if (result.data) { setCart(result.data); if (eventName) trackClientEvent({ eventName, commerce: { currency: 'BDT', value: result.data.subtotal, item_count: result.data.itemCount } }) }
+  }
+
+  function changeQuantity(item: CartItem, nextQuantity: number) {
+    const quantity = Math.max(1, Math.min(10, nextQuantity))
+    const previousQuantity = item.quantity
+    setMessage('')
+    setCart((current) => {
+      const items = current.items.map((row) => row.id === item.id ? { ...row, quantity } : row)
+      const subtotal = items.reduce((sum, row) => sum + Number(row.variant?.price ?? 0) * row.quantity, 0)
+      return { ...current, items, subtotal, itemCount: items.reduce((sum, row) => sum + row.quantity, 0) }
+    })
+    pendingQuantities.current.set(item.id, quantity)
+    const existing = pendingTimers.current.get(item.id)
+    if (existing) clearTimeout(existing)
+    pendingTimers.current.set(item.id, setTimeout(async () => {
+      const target = pendingQuantities.current.get(item.id)
+      if (target == null) return
+      pendingQuantities.current.delete(item.id)
+      pendingTimers.current.delete(item.id)
+      setBusy(true)
+      const result = await updateCartItemAction({ itemId: item.id, quantity: target })
+      setBusy(false)
+      if (!result.ok) {
+        setCart((current) => {
+          const items = current.items.map((row) => row.id === item.id ? { ...row, quantity: previousQuantity } : row)
+          const subtotal = items.reduce((sum, row) => sum + Number(row.variant?.price ?? 0) * row.quantity, 0)
+          return { ...current, items, subtotal, itemCount: items.reduce((sum, row) => sum + row.quantity, 0) }
+        })
+        setMessage(result.message ?? 'Unable to update your cart.')
+        return
+      }
+      if (result.data) setCart(result.data)
+      trackClientEvent({ eventName: target > previousQuantity ? 'add_to_cart' : 'remove_from_cart', commerce: { currency: 'BDT', value: result.data?.subtotal ?? 0, item_count: result.data?.itemCount ?? 0 } })
+    }, 250))
   }
   return <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
     <section className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-7">
@@ -39,9 +75,9 @@ export function CartClient({ initialCart }: { initialCart: { items: CartItem[]; 
             <p className="mt-2 text-lg font-black text-slate-950">{formatPrice(Number(item.variant?.price ?? 0))}</p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50">
-                <button type="button" disabled={busy || item.quantity <= 1} onClick={() => run(() => updateCartItemAction({ itemId: item.id, quantity: item.quantity - 1 }), 'remove_from_cart')} className="p-2 disabled:opacity-40" aria-label="Decrease quantity"><Minus className="h-4 w-4" /></button>
+                <button type="button" disabled={item.quantity <= 1} onClick={() => changeQuantity(item, item.quantity - 1)} className="p-2 disabled:opacity-40" aria-label="Decrease quantity"><Minus className="h-4 w-4" /></button>
                 <span className="w-8 text-center text-sm font-black">{item.quantity}</span>
-                <button type="button" disabled={busy || item.quantity >= 10} onClick={() => run(() => updateCartItemAction({ itemId: item.id, quantity: item.quantity + 1 }), 'add_to_cart')} className="p-2 disabled:opacity-40" aria-label="Increase quantity"><Plus className="h-4 w-4" /></button>
+                <button type="button" disabled={item.quantity >= 10} onClick={() => changeQuantity(item, item.quantity + 1)} className="p-2 disabled:opacity-40" aria-label="Increase quantity"><Plus className="h-4 w-4" /></button>
               </div>
               <button type="button" disabled={busy} onClick={() => run(() => removeCartItemAction(item.id), 'remove_from_cart')} className="ml-auto inline-flex items-center gap-1 rounded-lg px-2 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" /> Remove</button>
             </div>
