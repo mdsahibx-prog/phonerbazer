@@ -1,6 +1,4 @@
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://phonerbazar.store";
-const IS_PROD = SITE_URL.includes("phonerbazar.store");
-
 export const siteConfig = {
   name: "PhonerBazar",
   tagline: "সঠিক দাম, সঠিক গ্যাজেট",
@@ -15,7 +13,7 @@ export const siteConfig = {
   contact: {
     phone: "+880 1874-002918",
     publicEmail: "phonerbazar.helpline@gmail.com",
-    adminEmail: IS_PROD ? "phonerbazar.helpline@gmail.com" : "phonerbazar.helpline@gmail.com",
+    adminEmail: "phonerbazar.helpline@gmail.com",
     supportEmail: "phonerbazar.helpline@gmail.com",
     businessEmail: "phonerbazar.helpline@gmail.com",
     facebook: "https://www.facebook.com/share/1EA2WP2yNe/",
