@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { ArrowUpRight, PackageCheck } from 'lucide-react'
 
 import { BrandLogo } from '@/components/storefront/brand-logo'
+import { ProductPurchaseActions } from '@/components/product/product-purchase-actions'
 import type { StorefrontProduct } from '@/lib/services/storefront-utils'
 import { formatPrice, getBrandPath, getCompareAtPrice, getProductAvailability, getProductDiscount, getProductImageAlt, getProductImageUrl, getProductPriceRange, getProductVariantSummary } from '@/lib/services/storefront-utils'
 
@@ -40,7 +41,7 @@ export function ProductCard({ product, priority = false }: { product: Storefront
       </Link>
       <div className="flex flex-1 flex-col px-2 pb-2 pt-5">
         <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
-          {product.brand ? <Link href={getBrandPath(product.brand.slug)} className="inline-flex min-w-0 items-center gap-2 truncate transition-colors hover:text-emerald-700" aria-label={`Browse ${product.brand.name} products`}><BrandLogo brand={product.brand} size="sm" className="h-7 w-7 rounded-lg p-1" /><span className="truncate">{product.brand.name}</span></Link> : <span className="min-w-0 flex-1 truncate">SahiGadget</span>}
+          {product.brand ? <Link href={getBrandPath(product.brand.slug)} className="inline-flex min-w-0 items-center gap-2 truncate transition-colors hover:text-emerald-700" aria-label={`Browse ${product.brand.name} products`}><BrandLogo brand={product.brand} size="sm" className="h-7 w-7 rounded-lg p-1" /><span className="truncate">{product.brand.name}</span></Link> : <span className="min-w-0 flex-1 truncate">PhonerBazar</span>}
           {product.is_featured && <span className="shrink-0 text-emerald-600">Featured</span>}
         </div>
         <Link href={`/products/${product.slug}`} className="mt-2 block focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200">
@@ -52,12 +53,13 @@ export function ProductCard({ product, priority = false }: { product: Storefront
             <span className="text-lg font-black tracking-tight text-slate-950">{priceRange ? `From ${priceRange}` : 'Price on request'}</span>
             {compareAt && <span className="text-xs font-medium text-slate-400 line-through">{formatPrice(compareAt)}</span>}
           </div>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="mt-3 flex items-center justify-between gap-2">
             <div className="shrink-0">
               <AvailabilityPill product={product} />
             </div>
             <Link href={`/products/${product.slug}`} className="inline-flex min-h-9 items-center gap-1 rounded-full border border-slate-200 px-3 text-xs font-bold text-slate-900 transition-colors hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-100" aria-label={`View details for ${product.name}`}>Details <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" /></Link>
           </div>
+          <ProductPurchaseActions product={product} />
         </div>
       </div>
     </article>
