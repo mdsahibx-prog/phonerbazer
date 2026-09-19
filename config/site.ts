@@ -1,5 +1,5 @@
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.sahigadget.shop";
-const IS_PROD = SITE_URL.includes("sahigadget.shop");
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://phonerbazar.store";
+const IS_PROD = SITE_URL.includes("phonerbazar.store");
 
 export const siteConfig = {
   name: "SahiGadget",
