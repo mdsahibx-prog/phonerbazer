@@ -100,18 +100,19 @@ async function loadVariantQuote(selection: { productId: string; variantId: strin
 
 export async function loadOrderSuccessById(orderId: string): Promise<OrderSuccessSummary> {
   const admin = createAdminClient()
-  const { data: order, error: orderError } = await admin
-    .from('orders')
-    .select('id,order_number,order_status,created_at,subtotal,discount_total,delivery_charge,grand_total,payment_method,customer_name_snapshot,customer_phone_snapshot,customer_email_snapshot,shipping_division,shipping_district,shipping_area,shipping_address,shipping_postal_code,notes')
-    .eq('id', orderId)
-    .maybeSingle()
+  const [{ data: order, error: orderError }, { data: items, error: itemsError }] = await Promise.all([
+    admin
+      .from('orders')
+      .select('id,order_number,order_status,created_at,subtotal,discount_total,delivery_charge,grand_total,payment_method,customer_name_snapshot,customer_phone_snapshot,customer_email_snapshot,shipping_division,shipping_district,shipping_area,shipping_address,shipping_postal_code,notes')
+      .eq('id', orderId)
+      .maybeSingle(),
+    admin
+      .from('order_items')
+      .select('product_name_snapshot,variant_title_snapshot,sku,quantity,unit_price,compare_at_price_snapshot,discount_amount,line_total,warranty_policy_snapshot')
+      .eq('order_id', orderId)
+      .order('created_at'),
+  ])
   if (orderError || !order) throw new Error('Your order was created, but its confirmation could not be loaded. Please use order tracking.')
-
-  const { data: items, error: itemsError } = await admin
-    .from('order_items')
-    .select('product_name_snapshot,variant_title_snapshot,sku,quantity,unit_price,compare_at_price_snapshot,discount_amount,line_total,warranty_policy_snapshot')
-    .eq('order_id', orderId)
-    .order('created_at')
   if (itemsError) throw new Error('Your order was created, but its item summary could not be loaded. Please use order tracking.')
 
   const row = order as unknown as Record<string, unknown>
