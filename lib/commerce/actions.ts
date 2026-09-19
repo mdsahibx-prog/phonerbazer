@@ -1,6 +1,7 @@
 'use server'
 
 import { addToCart, clearCart, removeCartItem, updateCartItem } from './cart'
+import { prepareGuestCheckout } from '@/lib/orders/actions'
 
 export async function addToCartAction(input: { productId: string; variantId: string; quantity?: number }) {
   try {
@@ -35,5 +36,15 @@ export async function clearCartAction() {
   } catch (error) {
     console.error('[cart] clearCartAction failed', error)
     return { ok: false as const, message: 'Unable to clear your cart. Please try again.' }
+  }
+}
+
+
+export async function prepareGuestCheckoutAction(input: { productId: string; variantId: string; quantity?: number }) {
+  try {
+    return await prepareGuestCheckout(input)
+  } catch (error) {
+    console.error('[checkout] prepareGuestCheckoutAction failed', error)
+    return { ok: false as const, message: 'We could not start checkout right now. Please try again.' }
   }
 }
