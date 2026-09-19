@@ -4,7 +4,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
-import { Menu, Search, X, Sparkles, ArrowRight, Loader2, ShieldCheck } from 'lucide-react'
+import { Menu, Search, X, Sparkles, ArrowRight, Loader2, ShieldCheck, ShoppingBag } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 
 import { siteConfig } from '@/config/site'
@@ -258,6 +258,7 @@ export function SiteHeader() {
               Admin Portal
             </Link>
             <Link href="/track-order" className="hidden text-sm font-semibold text-slate-500 transition-colors hover:text-slate-950 lg:block">Track order</Link>
+            <Link href="/cart" className="hidden items-center gap-1.5 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-950 lg:inline-flex" aria-label="Open your cart"><ShoppingBag className="h-4 w-4" aria-hidden="true" />Your cart</Link>
             <Button asChild className="hidden rounded-full bg-emerald-500 text-slate-950 transition-transform duration-150 hover:-translate-y-0.5 hover:bg-emerald-400 motion-reduce:transform-none lg:inline-flex">
               <Link href="/products">Shop now</Link>
             </Button>
@@ -299,6 +300,7 @@ export function SiteHeader() {
               <Link href="/" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100">Home</Link>
               {navItems.map((item) => <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100">{item.label}</Link>)}
               <Link href="/track-order" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100">Track order</Link>
+              <Link href="/cart" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"><ShoppingBag className="h-4 w-4" aria-hidden="true" />Your cart</Link>
               <Link href="/admin" onClick={() => setMenuOpen(false)} className="mt-2 flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50" aria-label="Open Admin Portal">
                 <ShieldCheck className="h-4 w-4" aria-hidden="true" />
                 Admin Portal
