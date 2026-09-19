@@ -2,27 +2,27 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://phonerbazar.store"
 const IS_PROD = SITE_URL.includes("phonerbazar.store");
 
 export const siteConfig = {
-  name: "SahiGadget",
+  name: "PhonerBazar",
   tagline: "সঠিক দাম, সঠিক গ্যাজেট",
   brandPromise: "আসল পণ্য • দ্রুত ডেলিভারি • সারা দেশে সেবা",
   url: SITE_URL,
   established: 2019,
   location: {
-    address: "Araihazar, Narayanganj, Bangladesh – 1460",
+    address: "Narayanganj, Dhaka, Bangladesh",
     city: "Narayanganj",
     country: "Bangladesh",
   },
   contact: {
-    phone: "+880 1601-654316",
-    publicEmail: "hello@sahigadget.shop",
-    adminEmail: IS_PROD ? "hello@sahigadget.shop" : "helpline.sahitech@gmail.com",
-    supportEmail: "hello@sahigadget.shop",
-    businessEmail: "hello@sahigadget.shop",
-    facebook: "https://www.facebook.com/sahigadgetbd",
+    phone: "+880 1874-002918",
+    publicEmail: "phonerbazar.helpline@gmail.com",
+    adminEmail: IS_PROD ? "phonerbazar.helpline@gmail.com" : "phonerbazar.helpline@gmail.com",
+    supportEmail: "phonerbazar.helpline@gmail.com",
+    businessEmail: "phonerbazar.helpline@gmail.com",
+    facebook: "https://www.facebook.com/share/1EA2WP2yNe/",
   },
   email: {
-    sender: "orders@mail.sahigadget.shop",
-    replyTo: "hello@sahigadget.shop",
+    sender: "phonerbazar.helpline@gmail.com",
+    replyTo: "phonerbazar.helpline@gmail.com",
   },
   delivery: {
     dhakaCharge: 80,
