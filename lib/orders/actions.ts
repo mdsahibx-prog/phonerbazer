@@ -13,6 +13,7 @@ import { getPaymentsForOrder, initiatePaymentForOrder, paymentProviderForPayment
 import {
   guestOrderInputSchema,
   orderQuoteInputSchema,
+  orderSelectionSchema,
   trackingLookupSchema,
   type GuestOrderInput,
   type OrderSuccessSummary,
