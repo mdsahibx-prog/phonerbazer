@@ -33,7 +33,7 @@ function Input({ label, name, value, onChange, error, optional = false, type = '
   return <label className="block"><span className="flex items-center justify-between text-sm font-black text-slate-800">{label}{optional && <span className="text-xs font-medium text-slate-400">Optional</span>}</span><input name={name} type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className={`mt-2 h-12 w-full rounded-xl border bg-white px-4 text-sm text-slate-950 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 ${error ? 'border-rose-400' : 'border-slate-200'}`} />{error && <span className="mt-1.5 block text-xs font-bold text-rose-600">{error}</span>}</label>
 }
 
-export function CheckoutFlow({ productId, variantId, initialQuantity = 1 }: { productId: string; variantId: string; initialQuantity?: number }) {
+export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initialCheckoutRequestId }: { productId: string; variantId: string; initialQuantity?: number; initialCheckoutRequestId?: string }) {
   const router = useRouter()
   const [form, setForm] = useState<FormState>(() => ({ ...initialForm, quantity: Math.min(10, Math.max(1, initialQuantity || 1)) }))
   const [step, setStep] = useState<'details' | 'review'>('details')
@@ -41,7 +41,7 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1 }: { pr
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
-  const [checkoutRequestId] = useState(() => crypto.randomUUID())
+  const [checkoutRequestId] = useState(() => initialCheckoutRequestId || crypto.randomUUID())
 
   function update(name: keyof FormState, value: string) {
     setForm((current) => ({ ...current, [name]: name === 'quantity' ? Math.max(1, Number(value) || 1) : value }))
@@ -214,7 +214,7 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1 }: { pr
               {busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Confirming securely</> : <>Confirm order <CheckCircle2 className="h-4 w-4" /></>}
             </button>
           </div>
-          <p className="mt-4 text-center text-[10px] leading-4 text-slate-500 sm:text-xs sm:leading-5">By confirming, you agree that the final availability, totals, risk decision, and payment route are validated securely by SahiGadget’s server.</p>
+          <p className="mt-4 text-center text-[10px] leading-4 text-slate-500 sm:text-xs sm:leading-5">By confirming, you agree that the final availability, totals, risk decision, and payment route are validated securely by PhonerBazar’s server.</p>
         </div>
       )}
     </section>
