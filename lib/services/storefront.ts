@@ -1,4 +1,6 @@
+import { unstable_cache } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createPublicClient } from '@/lib/supabase/public'
 import {
   normalizeProduct,
   normalizeVariant,
@@ -81,6 +83,34 @@ async function resolveVariantIds(supabase: Awaited<ReturnType<typeof createClien
   if (error) throw new Error('Unable to apply catalogue availability filters.')
   return (data ?? []).map((row) => row.product_id)
 }
+
+export const getHomepageData = unstable_cache(async () => {
+  const supabase = createPublicClient()
+  const [latestResult, featuredResult, brandsResult, categoriesResult, bannersResult] = await Promise.all([
+    supabase.from('products').select(PRODUCT_SELECT).eq('is_published', true).order('created_at', { ascending: false }).limit(12),
+    supabase.from('products').select(PRODUCT_SELECT).eq('is_published', true).eq('is_featured', true).order('created_at', { ascending: false }).limit(8),
+    supabase.from('brands').select('id,name,slug,logo_url,description,meta_title,meta_description').eq('is_active', true).order('name'),
+    supabase.from('categories').select('id,name,slug,description,image_url,sort_order,meta_title,meta_description').eq('is_active', true).order('sort_order').order('name'),
+    supabase.from('homepage_banners').select('*').eq('is_active', true).order('sort_order', { ascending: true }).order('created_at', { ascending: false }),
+  ])
+  if (latestResult.error || featuredResult.error || brandsResult.error || categoriesResult.error) {
+    throw new Error('Unable to load the storefront.')
+  }
+  const latestRows = (latestResult.data ?? []) as unknown as RawProduct[]
+  const featuredRows = (featuredResult.data ?? []) as unknown as RawProduct[]
+  const productIds = Array.from(new Set([...latestRows, ...featuredRows].map((row) => row.id)))
+  const variantsByProduct = await getVariantsByProductId(supabase, productIds)
+  const normalizeRows = (rows: RawProduct[]) => rows.map((row) => normalizeProduct(row, variantsByProduct.get(row.id) ?? []))
+  const allProducts = normalizeRows(latestRows)
+  const featuredProducts = normalizeRows(featuredRows)
+  return {
+    allProducts,
+    featuredProducts: featuredProducts.length ? featuredProducts : allProducts.slice(0, 8),
+    brands: (brandsResult.data ?? []) as StorefrontBrand[],
+    categories: (categoriesResult.data ?? []) as StorefrontCategory[],
+    banners: bannersResult.error ? [] : (bannersResult.data ?? []) as HomepageBanner[],
+  }
+}, ['homepage-storefront'], { revalidate: 30 })
 
 export async function getProducts(filters: ProductFilters = {}): Promise<ProductListResult> {
   const supabase = await createClient()
