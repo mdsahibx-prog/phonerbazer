@@ -4,7 +4,7 @@ import { ArrowRight, Sparkles, PackageOpen, Phone } from 'lucide-react'
 import { siteConfig } from '@/config/site'
 import { BrandCard, CategoryCard } from '@/components/storefront/discovery-card'
 import { ProductGrid } from '@/components/product/product-card'
-import { getBrands, getCategories, getFeaturedProducts, getProducts, getStorefrontBanners, type StorefrontBrand, type StorefrontCategory } from '@/lib/services/storefront'
+import { getHomepageData, type StorefrontBrand, type StorefrontCategory } from '@/lib/services/storefront'
 import { HeroSection } from '@/components/storefront/hero-section'
 import { TrustStrip } from '@/components/storefront/trust-strip'
 
@@ -14,16 +14,7 @@ export const metadata = {
 }
 
 export default async function HomePage() {
-  const [featuredResult, allProductsResult, brands, categories, banners] = await Promise.all([
-    getFeaturedProducts(8),
-    getProducts({ pageSize: 12 }),
-    getBrands(),
-    getCategories(),
-    getStorefrontBanners(),
-  ])
-
-  const allProducts = allProductsResult.products
-  const featuredProducts = featuredResult.length > 0 ? featuredResult : allProducts.slice(0, 8)
+  const { allProducts, featuredProducts, brands, categories, banners } = await getHomepageData()
   const bestDeals = allProducts.filter((p) => p.variants.some((v) => v.compare_at_price && v.compare_at_price > v.price)).slice(0, 4)
 
   return (
