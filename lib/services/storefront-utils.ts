@@ -193,7 +193,7 @@ export function getProductImageUrl(product: StorefrontProduct) {
 export function getProductMetaTitle(product: StorefrontProduct) {
   if (product.meta_title) return product.meta_title
   const brandName = product.brand?.name ? `${product.brand.name} ` : ''
-  return `${brandName}${product.name} | SahiGadget`
+  return `${brandName}${product.name} | PhonerBazar`
 }
 
 export function getProductMetaDescription(product: StorefrontProduct) {
