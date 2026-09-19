@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Check, LoaderCircle, ShoppingCart, Zap } from 'lucide-react'
 
 import { addToCartAction } from '@/lib/commerce/actions'
@@ -111,7 +112,7 @@ export function ProductPurchaseActions({ product }: { product: StorefrontProduct
       </div>
 
       {message && message !== 'Added to cart.' ? <p role="alert" className="text-xs font-semibold leading-5 text-rose-600">{message}</p> : null}
-      {message === 'Added to cart.' ? <p role="status" className="text-xs font-semibold text-emerald-700">Added to cart. <a href="/cart" className="underline underline-offset-4">View cart</a></p> : null}
+      {message === 'Added to cart.' ? <p role="status" className="text-xs font-semibold text-emerald-700">Added to cart. <Link href="/cart" className="underline underline-offset-4">View cart</Link></p> : null}
     </div>
   )
 }
