@@ -8,7 +8,7 @@ const CART_COOKIE = 'sahigadget-cart-token'
 const MAX_QUANTITY = 10
 
 type CartRow = { id: string; guest_token: string; status: string; expires_at: string }
-type CartItemRow = { id: string; product_id: string; variant_id: string; quantity: number; product?: { name: string; slug: string; product_type: string }; variant?: { sku: string; variant_title: string; price: number; compare_at_price: number | null; is_in_stock: boolean } }
+type CartItemRow = { id: string; product_id: string; variant_id: string; quantity: number; product?: { name: string; slug: string; product_type: string; image_url: string | null }; variant?: { sku: string; variant_title: string; price: number; compare_at_price: number | null; is_in_stock: boolean } }
 
 function clampQuantity(value: number) { return Math.min(MAX_QUANTITY, Math.max(1, Math.floor(value || 1))) }
 
@@ -43,7 +43,7 @@ async function loadCartItems(cartId: string): Promise<CartItemRow[]> {
   const variantIds = Array.from(new Set(rows.map((row) => row.variant_id)))
 
   const [{ data: products, error: productsError }, { data: variants, error: variantsError }] = await Promise.all([
-    db.from('products').select('id,name,slug,product_type').in('id', productIds),
+    db.from('products').select('id,name,slug,product_type,product_images(image_url,is_primary,sort_order)').in('id', productIds),
     db.from('product_variants').select('id,sku,variant_title,price,compare_at_price,stock_quantity,is_active').in('id', variantIds),
   ])
 
@@ -61,7 +61,7 @@ async function loadCartItems(cartId: string): Promise<CartItemRow[]> {
       variant_id: row.variant_id,
       quantity: row.quantity,
       product: product
-        ? { name: product.name, slug: product.slug, product_type: product.product_type }
+        ? { name: product.name, slug: product.slug, product_type: product.product_type, image_url: ((product.product_images as { image_url: string; is_primary: boolean; sort_order: number }[] | undefined) ?? []).sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.sort_order - b.sort_order)[0]?.image_url ?? null }
         : undefined,
       variant: variant
         ? {
