@@ -24,6 +24,28 @@ export function CartClient({ initialCart }: { initialCart: { items: CartItem[]; 
     if (result.data) { setCart(result.data); if (eventName) trackClientEvent({ eventName, commerce: { currency: 'BDT', value: result.data.subtotal, item_count: result.data.itemCount } }) }
   }
 
+  async function removeItemFast(item: CartItem) {
+    const previous = cart
+    setMessage('')
+    setCart((current) => {
+      const items = current.items.filter((row) => row.id !== item.id)
+      return {
+        ...current,
+        items,
+        subtotal: items.reduce((sum, row) => sum + Number(row.variant?.price ?? 0) * row.quantity, 0),
+        itemCount: items.reduce((sum, row) => sum + row.quantity, 0),
+      }
+    })
+    const result = await removeCartItemAction(item.id)
+    if (!result.ok) {
+      setCart(previous)
+      setMessage(result.message ?? 'Unable to remove that item.')
+      return
+    }
+    if (result.data) setCart(result.data)
+    trackClientEvent({ eventName: 'remove_from_cart', commerce: { currency: 'BDT', value: result.data?.subtotal ?? 0, item_count: result.data?.itemCount ?? 0 } })
+  }
+
   function changeQuantity(item: CartItem, nextQuantity: number) {
     const quantity = Math.max(1, Math.min(10, nextQuantity))
     const previousQuantity = item.quantity
@@ -79,7 +101,7 @@ export function CartClient({ initialCart }: { initialCart: { items: CartItem[]; 
                 <span className="w-8 text-center text-sm font-black">{item.quantity}</span>
                 <button type="button" disabled={item.quantity >= 10} onClick={() => changeQuantity(item, item.quantity + 1)} className="p-2 disabled:opacity-40" aria-label="Increase quantity"><Plus className="h-4 w-4" /></button>
               </div>
-              <button type="button" disabled={busy} onClick={() => run(() => removeCartItemAction(item.id), 'remove_from_cart')} className="ml-auto inline-flex items-center gap-1 rounded-lg px-2 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" /> Remove</button>
+              <button type="button" disabled={false} onClick={() => removeItemFast(item)} className="ml-auto inline-flex items-center gap-1 rounded-lg px-2 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" /> Remove</button>
             </div>
           </div>
         </div>)}</div>}
