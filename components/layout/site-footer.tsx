@@ -53,11 +53,11 @@ export async function SiteFooter() {
     <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.2fr_.8fr_.9fr_1.1fr] lg:gap-8 lg:px-8">
       <div>
         <div className="flex items-center gap-3">
-          <div className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-slate-900 shadow-md"><Image src="/logo.png" alt="SahiGadget Logo" width={44} height={44} className="h-full w-full object-cover" /></div>
+          <div className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-slate-900 shadow-md"><Image src="/logo.png" alt="PhonerBazar Logo" width={44} height={44} className="h-full w-full object-cover" /></div>
           <div><p className="font-black tracking-tight">{siteConfig.name}</p><p className="text-xs text-slate-400">{siteConfig.tagline}</p></div>
         </div>
         <p className="mt-5 max-w-sm text-sm leading-7 text-slate-400">{siteConfig.brandPromise}. A clean, customer-first storefront for mobile phones and gadgets in Bangladesh.</p>
-        {socialLinks.length ? <div className="mt-6 flex flex-wrap gap-2" aria-label="SahiGadget social media links">{socialLinks.map(({ key, label, href, Icon }) => <a key={key} href={href} target="_blank" rel="noreferrer" aria-label={`SahiGadget on ${label}`} title={label} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 text-slate-300 transition-colors hover:border-emerald-400 hover:text-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"><Icon className="h-4 w-4" /></a>)}</div> : null}
+        {socialLinks.length ? <div className="mt-6 flex flex-wrap gap-2" aria-label="PhonerBazar social media links">{socialLinks.map(({ key, label, href, Icon }) => <a key={key} href={href} target="_blank" rel="noreferrer" aria-label={`PhonerBazar on ${label}`} title={label} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 text-slate-300 transition-colors hover:border-emerald-400 hover:text-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"><Icon className="h-4 w-4" /></a>)}</div> : null}
       </div>
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-300">Explore</p>
