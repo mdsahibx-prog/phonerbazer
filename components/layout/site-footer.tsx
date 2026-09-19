@@ -53,7 +53,7 @@ export async function SiteFooter() {
     <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.2fr_.8fr_.9fr_1.1fr] lg:gap-8 lg:px-8">
       <div>
         <div className="flex items-center gap-3">
-          <div className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-slate-900 shadow-md"><Image src="/logo.png" alt="PhonerBazar Logo" width={44} height={44} className="h-full w-full object-cover" /></div>
+          <div className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-slate-900 shadow-md"><Image src="/phonerbazar-icon.svg" alt="PhonerBazar Logo" width={44} height={44} className="h-full w-full object-cover" /></div>
           <div><p className="font-black tracking-tight">{siteConfig.name}</p><p className="text-xs text-slate-400">{siteConfig.tagline}</p></div>
         </div>
         <p className="mt-5 max-w-sm text-sm leading-7 text-slate-400">{siteConfig.brandPromise}. A clean, customer-first storefront for mobile phones and gadgets in Bangladesh.</p>
