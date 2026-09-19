@@ -54,9 +54,20 @@ export async function addToCart(input: { productId: string; variantId: string; q
   const cart = await getOrCreateCart(true)
   if (!cart) return { ok: false, message: 'Unable to start a cart.' }
   const db = createAdminClient()
-  const { data: variant, error: variantError } = await db.from('storefront_variants').select('id,product_id,is_in_stock').eq('id', input.variantId).eq('product_id', input.productId).maybeSingle()
-  if (variantError || !variant) return { ok: false, message: 'This product option is no longer available.' }
-  if (!variant.is_in_stock) return { ok: false, message: 'This product option is out of stock.' }
+  // Validate against the authoritative base tables for cart mutations.
+  // The storefront view is presentation-oriented; cart writes must not depend on it.
+  const { data: variant, error: variantError } = await db
+    .from('product_variants')
+    .select('id,product_id,is_active,stock_quantity,product:products(is_published)')
+    .eq('id', input.variantId)
+    .eq('product_id', input.productId)
+    .maybeSingle()
+
+  const productPublished = Boolean((variant?.product as { is_published?: boolean } | null)?.is_published)
+  if (variantError || !variant || !variant.is_active || !productPublished) {
+    return { ok: false, message: 'This product option is no longer available.' }
+  }
+  if (Number(variant.stock_quantity) <= 0) return { ok: false, message: 'This product option is out of stock.' }
   const { data: existing } = await db.from('cart_items').select('id,quantity').eq('cart_id', cart.id).eq('variant_id', input.variantId).maybeSingle()
   const nextQuantity = clampQuantity(Number(existing?.quantity ?? 0) + quantity)
   const result = existing
