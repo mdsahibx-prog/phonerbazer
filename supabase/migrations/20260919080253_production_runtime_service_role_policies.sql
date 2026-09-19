@@ -1,0 +1,12 @@
+DROP POLICY IF EXISTS "Service role full access assistant provider config" ON public.assistant_provider_configurations;
+CREATE POLICY "Service role full access assistant provider config" ON public.assistant_provider_configurations FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Service role full access audit logs" ON public.audit_logs;
+CREATE POLICY "Service role full access audit logs" ON public.audit_logs FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Service role full access email notifications" ON public.email_notifications;
+CREATE POLICY "Service role full access email notifications" ON public.email_notifications FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Service role full access IMEI inventory" ON public.imei_inventory;
+CREATE POLICY "Service role full access IMEI inventory" ON public.imei_inventory FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Service role full access invoices" ON public.invoices;
+CREATE POLICY "Service role full access invoices" ON public.invoices FOR ALL TO service_role USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Service role full access invoice items" ON public.invoice_items;
+CREATE POLICY "Service role full access invoice items" ON public.invoice_items FOR ALL TO service_role USING (true) WITH CHECK (true);
