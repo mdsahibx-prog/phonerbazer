@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7faf9;
+  --foreground: #0f172a;
+  --surface: #ffffff;
+  --muted: #64748b;
+  --line: #e2e8f0;
+  --accent: #10b981;
+  --ring: #a7f3d0;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { background: var(--background); color: var(--foreground); font-family: Arial, Helvetica, sans-serif; }
+button, a, input, select { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 3px solid var(--ring); outline-offset: 3px; }
+::selection { background: #a7f3d0; color: #064e3b; }
+
+@keyframes brand-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dropdown-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+[data-search-input]:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}
+
+@keyframes loading-progress {
+  0% { transform: translateX(-120%); opacity: 0.35; }
+  50% { opacity: 1; }
+  100% { transform: translateX(220%); opacity: 0.35; }
+}
+
+@keyframes catalog-sheet-in {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes catalog-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-safe\:animate-\[catalog-sheet-in_220ms_cubic-bezier\(0\.23\,1\,0\.32\,1\)\],
+  .motion-safe\:animate-\[catalog-fade-in_180ms_ease-out\] {
+    animation: none !important;
+  }
+}
+
+
+@page {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  .invoice-page {
+    min-height: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  .invoice-paper {
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .invoice-paper table {
+    page-break-inside: auto;
+  }
+
+  .invoice-paper tr,
+  .invoice-paper .invoice-policy,
+  .invoice-paper .invoice-footer,
+  .invoice-paper .invoice-qr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
