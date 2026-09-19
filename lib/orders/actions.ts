@@ -148,6 +148,64 @@ export async function loadOrderSuccessById(orderId: string): Promise<OrderSucces
   }
 }
 
+export async function prepareGuestCheckout(input: unknown): Promise<ActionResult<{ checkoutRequestId: string; redirectUrl: string }>> {
+  const parsed = orderSelectionSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, message: 'Please select a valid product option and quantity.', fieldErrors: fieldErrors(parsed.error) }
+
+  try {
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('product_variants')
+      .select('id,product_id,sku,variant_title,price,stock_quantity,is_active,product:products!inner(id,name,is_published)')
+      .eq('id', parsed.data.variantId)
+      .eq('product_id', parsed.data.productId)
+      .maybeSingle()
+
+    if (error || !data) return { ok: false, message: 'This product option is no longer available.' }
+
+    const variant = data as unknown as {
+      id: string
+      product_id: string
+      sku: string
+      variant_title: string
+      price: number | string
+      stock_quantity: number
+      is_active: boolean
+      product: { id: string; name: string; is_published: boolean } | null
+    }
+
+    if (!variant.is_active || !variant.product?.is_published) return { ok: false, message: 'This product is not currently available to order.' }
+    if (variant.stock_quantity < parsed.data.quantity) return { ok: false, message: 'The selected quantity is no longer available.' }
+
+    const checkoutRequestId = crypto.randomUUID()
+    await markCheckoutSession({
+      checkoutRequestId,
+      source: 'QUICK_ORDER',
+      status: 'STARTED',
+      quoteSnapshot: {
+        product_id: variant.product_id,
+        variant_id: variant.id,
+        product_name: variant.product.name,
+        variant_title: variant.variant_title,
+        sku: variant.sku,
+        quantity: parsed.data.quantity,
+        unit_price: numeric(variant.price),
+      },
+    })
+
+    return {
+      ok: true,
+      data: {
+        checkoutRequestId,
+        redirectUrl: `/order?productId=${encodeURIComponent(variant.product_id)}&variantId=${encodeURIComponent(variant.id)}&quantity=${parsed.data.quantity}&checkoutRequestId=${encodeURIComponent(checkoutRequestId)}`,
+      },
+    }
+  } catch (error) {
+    console.error('[checkout] prepareGuestCheckout failed', error)
+    return { ok: false, message: 'We could not start checkout right now. Please try again.' }
+  }
+}
+
 export async function quoteGuestCodOrder(input: unknown): Promise<ActionResult<Quote>> {
   const parsed = orderQuoteInputSchema.safeParse(input)
   if (!parsed.success) return { ok: false, message: 'Please correct the highlighted details.', fieldErrors: fieldErrors(parsed.error) }
