@@ -33,7 +33,10 @@ export function ProductDetailInteractive({ product, settings, phone }: { product
   function selectVariant(id: string) { const variant = product.variants.find((item) => item.id === id); if (variant) trackClientEvent({ eventName: 'select_item', commerce: { item_list_name: 'product_detail', items: [{ item_id: variant.sku || variant.id, item_name: product.name, price: variant.price, quantity: 1 }] } }); setSelectedId(id) }
 
   async function addSelectedToCart() {
-    if (!selected) return
+    if (!selected || selected.product_id !== product.id || !selected.is_in_stock || cartBusy || buyBusy) {
+      setCartMessage(!selected || selected.product_id !== product.id ? 'This product option needs a refresh. Please reload the page and try again.' : 'This product option is currently out of stock.')
+      return
+    }
     setCartBusy(true)
     setCartMessage('')
     const result = await addToCartAction({ productId: product.id, variantId: selected.id, quantity })
