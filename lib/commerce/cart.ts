@@ -30,9 +30,50 @@ async function getOrCreateCart(createIfMissing = true) {
 
 async function loadCartItems(cartId: string): Promise<CartItemRow[]> {
   const db = createAdminClient()
-  const { data, error } = await db.from('cart_items').select('id,product_id,variant_id,quantity,product:products(name,slug,product_type),variant:storefront_variants(sku,variant_title,price,compare_at_price,is_in_stock)').eq('cart_id', cartId).order('created_at')
+  const { data: rows, error } = await db
+    .from('cart_items')
+    .select('id,product_id,variant_id,quantity')
+    .eq('cart_id', cartId)
+    .order('created_at')
+
   if (error) throw new Error('Unable to load cart items.')
-  return (data ?? []) as unknown as CartItemRow[]
+  if (!rows?.length) return []
+
+  const productIds = Array.from(new Set(rows.map((row) => row.product_id)))
+  const variantIds = Array.from(new Set(rows.map((row) => row.variant_id)))
+
+  const [{ data: products, error: productsError }, { data: variants, error: variantsError }] = await Promise.all([
+    db.from('products').select('id,name,slug,product_type').in('id', productIds),
+    db.from('product_variants').select('id,sku,variant_title,price,compare_at_price,stock_quantity,is_active').in('id', variantIds),
+  ])
+
+  if (productsError || variantsError) throw new Error('Unable to load cart items.')
+
+  const productMap = new Map((products ?? []).map((product) => [product.id, product]))
+  const variantMap = new Map((variants ?? []).map((variant) => [variant.id, variant]))
+
+  return rows.map((row) => {
+    const product = productMap.get(row.product_id)
+    const variant = variantMap.get(row.variant_id)
+    return {
+      id: row.id,
+      product_id: row.product_id,
+      variant_id: row.variant_id,
+      quantity: row.quantity,
+      product: product
+        ? { name: product.name, slug: product.slug, product_type: product.product_type }
+        : undefined,
+      variant: variant
+        ? {
+            sku: variant.sku,
+            variant_title: variant.variant_title,
+            price: Number(variant.price),
+            compare_at_price: variant.compare_at_price === null ? null : Number(variant.compare_at_price),
+            is_in_stock: Boolean(variant.is_active && Number(variant.stock_quantity) > 0),
+          }
+        : undefined,
+    }
+  })
 }
 
 async function emitCartEvent(eventName: 'CART_CREATED' | 'CART_ITEM_ADDED' | 'CART_ITEM_UPDATED' | 'CART_ITEM_REMOVED', cartId: string, metadata: Record<string, unknown> = {}) {
