@@ -115,8 +115,11 @@ export async function addToCart(input: { productId: string; variantId: string; q
     ? await db.from('cart_items').update({ quantity: nextQuantity, updated_at: new Date().toISOString() }).eq('id', existing.id)
     : await db.from('cart_items').insert({ cart_id: cart.id, product_id: input.productId, variant_id: input.variantId, quantity: nextQuantity })
   if (result.error) return { ok: false, message: 'Unable to update your cart.' }
-  await emitCartEvent(existing ? 'CART_ITEM_UPDATED' : 'CART_ITEM_ADDED', cart.id, { quantity: nextQuantity })
-  return { ok: true, data: await getCart() }
+  const [cartData] = await Promise.all([
+    getCart(),
+    emitCartEvent(existing ? 'CART_ITEM_UPDATED' : 'CART_ITEM_ADDED', cart.id, { quantity: nextQuantity }),
+  ])
+  return { ok: true, data: cartData }
 }
 
 export async function updateCartItem(input: { itemId: string; quantity: number }) {
@@ -126,8 +129,11 @@ export async function updateCartItem(input: { itemId: string; quantity: number }
   const db = createAdminClient()
   const { error } = await db.from('cart_items').update({ quantity, updated_at: new Date().toISOString() }).eq('id', input.itemId).eq('cart_id', cart.id)
   if (error) return { ok: false, message: 'Unable to update your cart.' }
-  await emitCartEvent('CART_ITEM_UPDATED', cart.id, { quantity })
-  return { ok: true, data: await getCart() }
+  const [cartData] = await Promise.all([
+    getCart(),
+    emitCartEvent('CART_ITEM_UPDATED', cart.id, { quantity }),
+  ])
+  return { ok: true, data: cartData }
 }
 
 export async function removeCartItem(itemId: string) {
@@ -136,8 +142,11 @@ export async function removeCartItem(itemId: string) {
   const db = createAdminClient()
   const { error } = await db.from('cart_items').delete().eq('id', itemId).eq('cart_id', cart.id)
   if (error) return { ok: false, message: 'Unable to remove that item.' }
-  await emitCartEvent('CART_ITEM_REMOVED', cart.id)
-  return { ok: true, data: await getCart() }
+  const [cartData] = await Promise.all([
+    getCart(),
+    emitCartEvent('CART_ITEM_REMOVED', cart.id),
+  ])
+  return { ok: true, data: cartData }
 }
 
 export async function clearCart() {
