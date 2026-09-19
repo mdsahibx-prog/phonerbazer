@@ -2,7 +2,7 @@ import { ProductGridSkeleton, Skeleton } from '@/components/storefront/loading-s
 
 export default function StorefrontLoading() {
   return (
-    <main className="flex-1 bg-slate-50/50" aria-busy="true" aria-label="Loading SahiGadget storefront">
+    <main className="flex-1 bg-slate-50/50" aria-busy="true" aria-label="Loading PhonerBazar storefront">
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <Skeleton className="aspect-[16/8] min-h-56 rounded-[2rem] bg-slate-200/70 sm:min-h-72" />
       </section>
