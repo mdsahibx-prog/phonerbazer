@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { trackClientEvent } from '@/lib/analytics/client'
 import { Check, ChevronLeft, ChevronRight, MapPin, PackageCheck, Phone, ShieldCheck } from 'lucide-react'
 import { addToCartAction } from '@/lib/commerce/actions'
-import { prepareGuestCheckout } from '@/lib/orders/actions'
+import { prepareGuestCheckoutAction } from '@/lib/commerce/actions'
 
 import { BrandLogo } from '@/components/storefront/brand-logo'
 import type { StorefrontProduct, StorefrontSettings } from '@/lib/services/storefront-utils'
@@ -46,7 +46,7 @@ export function ProductDetailInteractive({ product, settings, phone }: { product
     if (!selected || !selected.is_in_stock || buyBusy || cartBusy) return
     setBuyBusy(true)
     setCartMessage('')
-    const result = await prepareGuestCheckout({ productId: product.id, variantId: selected.id, quantity })
+    const result = await prepareGuestCheckoutAction({ productId: product.id, variantId: selected.id, quantity })
     if (!result.ok) {
       setBuyBusy(false)
       setCartMessage(result.message)
