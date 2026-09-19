@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <rect width="256" height="256" rx="48" fill="#fff"/>
+  <g transform="translate(30 18)">
+    <rect x="70" y="0" width="82" height="132" rx="18" fill="none" stroke="#f28a18" stroke-width="12" transform="rotate(12 111 66)"/>
+    <path d="M91 35c23 2 40 16 46 37M86 54c15 2 26 10 31 24" fill="none" stroke="#f28a18" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="112" cy="111" r="5" fill="#f28a18"/>
+    <path d="M18 119h150l-17 35H35z" fill="#7a321b" transform="rotate(-7 93 136)"/>
+    <text x="93" y="143" text-anchor="middle" font-family="Noto Sans Bengali, sans-serif" font-size="31" font-weight="800" fill="#fff" transform="rotate(-7 93 143)">ফোন বাজার</text>
+    <path d="M48 160h120l-13 31H61z" fill="#f5c400" transform="rotate(-7 108 175)"/>
+    <text x="108" y="182" text-anchor="middle" font-family="Noto Sans Bengali, sans-serif" font-size="17" font-weight="700" fill="#7a321b" transform="rotate(-7 108 182)">সঠিক দামে</text>
+  </g>
+</svg>
