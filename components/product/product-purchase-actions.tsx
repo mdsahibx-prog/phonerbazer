@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Check, LoaderCircle, ShoppingCart, Zap } from 'lucide-react'
 
@@ -11,6 +12,7 @@ import type { StorefrontProduct } from '@/lib/services/storefront-utils'
 import { getVariantLabel } from '@/lib/services/storefront-utils'
 
 export function ProductPurchaseActions({ product }: { product: StorefrontProduct }) {
+  const router = useRouter()
   const [selectedId, setSelectedId] = useState(() => product.variants.find((variant) => variant.is_in_stock)?.id ?? '')
   const [busy, setBusy] = useState<'cart' | 'buy' | null>(null)
   const [message, setMessage] = useState('')
