@@ -87,10 +87,10 @@ BEGIN
   -- Serializes repeated submissions for the same client-generated request ID.
   PERFORM pg_advisory_xact_lock(hashtext(p_checkout_request_id::text));
 
-  SELECT id, order_number
+  SELECT o.id, o.order_number
     INTO v_existing_order
-    FROM public.orders
-    WHERE checkout_request_id = p_checkout_request_id;
+    FROM public.orders AS o
+    WHERE o.checkout_request_id = p_checkout_request_id;
 
   IF FOUND THEN
     RETURN QUERY SELECT v_existing_order.id, v_existing_order.order_number, FALSE;
