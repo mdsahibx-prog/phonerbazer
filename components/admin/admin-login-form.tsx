@@ -47,7 +47,7 @@ export function AdminLoginForm() {
         {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <LockKeyhole className="h-4 w-4" />}
         {isPending ? 'Signing in…' : 'Sign in securely'}
       </Button>
-      <p className="text-center text-xs leading-5 text-slate-500">This restricted area uses Supabase Auth. Only active SahiGadget administration records can continue.</p>
+      <p className="text-center text-xs leading-5 text-slate-500">This restricted area uses Supabase Auth. Only active PhonerBazar administration records can continue.</p>
     </form>
   )
 }
