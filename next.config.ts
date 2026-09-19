@@ -23,6 +23,7 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'yirbztzrgsvxuetqqiov.supabase.co' },
     ],
     formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 86400,
   },
   async headers() {
     return [
