@@ -195,7 +195,7 @@ export async function getCategories() {
 }
 
 const defaultFooterConfig = {
-  social: { facebook: 'https://www.facebook.com/sahigadgetbd', tiktok: '', instagram: '', x: '', youtube: '' },
+  social: { facebook: 'https://www.facebook.com/share/1EA2WP2yNe/', tiktok: '', instagram: '', x: '', youtube: '' },
   payments: { cash_on_delivery: true, visa: false, mastercard: false },
 }
 
