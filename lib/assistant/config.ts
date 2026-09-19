@@ -12,8 +12,8 @@ export const assistantControlConfigSchema = z.object({
   enabled: z.boolean().default(true),
   agentPreset: agentPresetSchema.default('ecommerce'),
   agentProfile: z.object({
-    agentName: z.string().trim().min(1).max(80).default('SahiGadget AI Assistant'),
-    businessName: z.string().trim().min(1).max(120).default('SahiGadget'),
+    agentName: z.string().trim().min(1).max(80).default('PhonerBazar AI Assistant'),
+    businessName: z.string().trim().min(1).max(120).default('PhonerBazar'),
     description: z.string().trim().max(300).default('Customer-service, sales, and gadget-advice assistant.'),
     subtitle: z.string().trim().max(160).default('Ask about products, prices, and delivery.'),
     welcomeMessage: z.string().trim().max(500).default('হ্যালো! পণ্য, দাম, ভ্যারিয়েন্ট, ডেলিভারি বা ওয়ারেন্টি সম্পর্কে জানতে প্রশ্ন করুন.'),
@@ -21,7 +21,7 @@ export const assistantControlConfigSchema = z.object({
     supportedLanguages: z.array(z.enum(['bn', 'en', 'banglish'])).min(1).max(3).default(['bn', 'en', 'banglish']),
     locale: z.string().trim().min(2).max(12).default('bn-BD'),
     timezone: z.string().trim().min(1).max(64).default('Asia/Dhaka'),
-  }).default({ agentName: 'SahiGadget AI Assistant', businessName: 'SahiGadget', description: 'Customer-service, sales, and gadget-advice assistant.', subtitle: 'Ask about products, prices, and delivery.', welcomeMessage: 'হ্যালো! পণ্য, দাম, ভ্যারিয়েন্ট, ডেলিভারি বা ওয়ারেন্টি সম্পর্কে জানতে প্রশ্ন করুন.', primaryLanguage: 'bn', supportedLanguages: ['bn', 'en', 'banglish'], locale: 'bn-BD', timezone: 'Asia/Dhaka' }),
+  }).default({ agentName: 'PhonerBazar AI Assistant', businessName: 'PhonerBazar', description: 'Customer-service, sales, and gadget-advice assistant.', subtitle: 'Ask about products, prices, and delivery.', welcomeMessage: 'হ্যালো! পণ্য, দাম, ভ্যারিয়েন্ট, ডেলিভারি বা ওয়ারেন্টি সম্পর্কে জানতে প্রশ্ন করুন.', primaryLanguage: 'bn', supportedLanguages: ['bn', 'en', 'banglish'], locale: 'bn-BD', timezone: 'Asia/Dhaka' }),
   personality: z.array(agentPersonalitySchema).min(1).max(9).default(['professional', 'friendly', 'helpful']),
   responseStyle: z.object({
     detail: z.enum(['concise', 'balanced', 'detailed']).default('balanced'),
@@ -42,7 +42,7 @@ export const assistantControlConfigSchema = z.object({
   modelPresets: z.array(z.object({ id: z.string().regex(/^[a-z0-9_-]{2,32}$/), name: z.string().trim().min(1).max(40), provider: z.string().trim().max(40), model: z.string().trim().max(200), temperature: z.number().min(0).max(1), maxTokens: z.number().int().min(64).max(2000), timeoutMs: z.number().int().min(1000).max(15000) }).strict()).max(5).default([]),
   activeModelPreset: z.string().regex(/^[a-z0-9_-]{2,32}$/).nullable().default(null),
   maintenanceMode: z.boolean().default(false),
-  assistantName: z.string().trim().min(1).max(80).default('SahiGadget AI Assistant'),
+  assistantName: z.string().trim().min(1).max(80).default('PhonerBazar AI Assistant'),
   buttonLabel: z.string().trim().min(1).max(80).default('সাহায্য লাগবে?'),
   maintenanceMessage: z.string().trim().max(300).default('AI Assistant is temporarily unavailable. Please try again later.'),
   maxVisibleProductCards: z.number().int().min(1).max(6).default(4),
