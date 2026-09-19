@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Check, LoaderCircle, ShoppingCart, Zap } from 'lucide-react'
 
 import { addToCartAction } from '@/lib/commerce/actions'
-import { prepareGuestCheckout } from '@/lib/orders/actions'
+import { prepareGuestCheckoutAction } from '@/lib/commerce/actions'
 import { trackClientEvent } from '@/lib/analytics/client'
 import type { StorefrontProduct } from '@/lib/services/storefront-utils'
 import { getVariantLabel } from '@/lib/services/storefront-utils'
@@ -48,7 +48,7 @@ export function ProductPurchaseActions({ product }: { product: StorefrontProduct
     if (!selected || !selected.is_in_stock || busy) return
     setBusy('buy')
     setMessage('')
-    const result = await prepareGuestCheckout({ productId: product.id, variantId: selected.id, quantity: 1 })
+    const result = await prepareGuestCheckoutAction({ productId: product.id, variantId: selected.id, quantity: 1 })
     if (!result.ok) {
       setBusy(null)
       setMessage(result.message)
