@@ -9,7 +9,7 @@ import { HeroSection } from '@/components/storefront/hero-section'
 import { TrustStrip } from '@/components/storefront/trust-strip'
 
 export const metadata = {
-  title: 'SahiGadget — Authentic Mobile Phones & Gadgets in Bangladesh',
+  title: 'PhonerBazar — Authentic Mobile Phones & Gadgets in Bangladesh',
   description: 'Shop verified mobile phones, feature phones, smartwatches, and tech gadgets with Cash on Delivery across Bangladesh. Clear pricing and transparent warranty.',
 }
 
