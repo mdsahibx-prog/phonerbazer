@@ -200,7 +200,7 @@ export function SiteHeader() {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
           <Link href="/" className="group flex min-w-0 shrink-0 items-center gap-2.5 sm:gap-3" aria-label={`${siteConfig.name} home`}>
             <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-950 shadow-lg shadow-slate-900/10 ring-1 ring-slate-900/5 transition-transform duration-200 group-hover:-rotate-3 sm:h-11 sm:w-11 sm:rounded-2xl">
-              <Image src="/logo.png" alt="SahiGadget Logo" width={44} height={44} className="h-full w-full object-cover" />
+              <Image src="/logo.png" alt="PhonerBazar Logo" width={44} height={44} className="h-full w-full object-cover" />
             </div>
             <div className="min-w-0">
               <span className="motion-safe:animate-[brand-in_240ms_ease-out_both] motion-reduce:animate-none block truncate bg-gradient-to-r from-slate-950 via-slate-800 to-emerald-600 bg-clip-text text-[17px] font-black leading-tight tracking-[-0.035em] text-transparent sm:text-lg">{siteConfig.name}</span>
