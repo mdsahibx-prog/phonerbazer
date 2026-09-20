@@ -189,14 +189,14 @@ export function SiteHeader() {
 
   return (
     <>
-      <div className="border-b border-slate-200 bg-[#0a0a0a] px-4 py-2 text-center text-[10px] font-semibold uppercase tracking-widest text-slate-300 sm:text-[11px] sm:tracking-[0.18em]">
+      <div className="border-b border-slate-200 bg-[#172033] px-4 py-2 text-center text-[10px] font-semibold uppercase tracking-widest text-slate-300 sm:text-[11px] sm:tracking-[0.18em]">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-center gap-1 sm:flex-row sm:gap-0">
           <span className="text-orange-400">{siteConfig.tagline}</span>
           <span className="hidden mx-2 text-slate-600 sm:inline">•</span>
           <span>{siteConfig.brandPromise}</span>
         </div>
       </div>
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#111111]">
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#172033]">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
           <Link href="/" className="group flex min-w-0 shrink-0 items-center gap-2.5 sm:gap-3" aria-label={`${siteConfig.name} home`}>
             <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/10 shadow-lg shadow-black/20 ring-1 ring-slate-900/5 transition-transform duration-200 group-hover:-rotate-3 sm:h-11 sm:w-11 sm:rounded-2xl">
@@ -253,12 +253,12 @@ export function SiteHeader() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Link href="/admin" className="hidden items-center gap-1.5 rounded-full border border-white/15 px-3 py-2 text-xs font-semibold text-white/70 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 lg:inline-flex" aria-label="Open Admin Portal">
+            <Link href="/admin" className="hidden items-center gap-1.5 rounded-full border border-white/15 px-3 py-2 text-xs font-semibold text-white/70 transition-colors hover:border-slate-300 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 lg:inline-flex" aria-label="Open Admin Portal">
               <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
               Admin Portal
             </Link>
             <Link href="/track-order" className="hidden text-sm font-semibold text-white/65 transition-colors hover:text-white lg:block">Track order</Link>
-            <Link href="/cart" className="hidden items-center gap-1.5 text-sm font-semibold text-slate-500 transition-colors hover:text-white lg:inline-flex" aria-label="Open your cart"><ShoppingBag className="h-4 w-4" aria-hidden="true" />Your cart</Link>
+            <Link href="/cart" className="hidden items-center gap-1.5 text-sm font-semibold text-white/65 transition-colors hover:text-white lg:inline-flex" aria-label="Open your cart"><ShoppingBag className="h-4 w-4" aria-hidden="true" />Your cart</Link>
             <Button asChild className="hidden rounded-full bg-orange-500 text-white transition-transform duration-150 hover:-translate-y-0.5 hover:bg-orange-400 motion-reduce:transform-none lg:inline-flex">
               <Link href="/products">Shop now</Link>
             </Button>
@@ -269,7 +269,7 @@ export function SiteHeader() {
         </div>
 
         {menuOpen && (
-          <div id="mobile-navigation" className="motion-safe:animate-[menu-in_180ms_ease-out_both] motion-reduce:animate-none border-t border-white/10 bg-[#111111] px-4 py-5 shadow-xl lg:hidden">
+          <div id="mobile-navigation" className="motion-safe:animate-[menu-in_180ms_ease-out_both] motion-reduce:animate-none border-t border-white/10 bg-[#172033] px-4 py-5 shadow-xl lg:hidden">
             <div ref={mobileSearchRef} className="relative mb-4">
                 <form onSubmit={submitSearch} className="flex items-center rounded-2xl border border-white/15 bg-white px-4 transition-colors focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-200" role="search">
                 <label className="sr-only" htmlFor="mobile-search">Search the catalogue</label>
@@ -298,9 +298,9 @@ export function SiteHeader() {
             
             <nav className="grid gap-1 border-t border-white/10 pt-3" aria-label="Mobile navigation">
               <Link href="/" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10">Home</Link>
-              {navItems.map((item) => <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-white/10">{item.label}</Link>)}
-              <Link href="/track-order" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-white/10">Track order</Link>
-              <Link href="/cart" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-white/10"><ShoppingBag className="h-4 w-4" aria-hidden="true" />Your cart</Link>
+              {navItems.map((item) => <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10">{item.label}</Link>)}
+              <Link href="/track-order" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10">Track order</Link>
+              <Link href="/cart" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10"><ShoppingBag className="h-4 w-4" aria-hidden="true" />Your cart</Link>
               <Link href="/admin" onClick={() => setMenuOpen(false)} className="mt-2 flex items-center gap-2 rounded-xl border border-white/15 px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10" aria-label="Open Admin Portal">
                 <ShieldCheck className="h-4 w-4" aria-hidden="true" />
                 Admin Portal
