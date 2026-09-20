@@ -13,10 +13,10 @@ const categoryFallbacks: Record<string, string> = {
 
 export function BrandCard({ brand }: { brand: StorefrontBrand }) {
   return (
-    <Link href={getBrandPath(brand.slug)} className="group flex min-h-36 flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 sm:min-h-44">
+    <Link href={getBrandPath(brand.slug)} className="group flex min-h-36 flex-col rounded-2xl border border-black/[0.08] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 sm:min-h-44">
       <div className="flex items-start justify-between gap-3">
         <BrandLogo brand={brand} size="md" />
-        <span className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition group-hover:border-orange-200 group-hover:bg-orange-50 group-hover:text-orange-600"><ArrowUpRight className="h-4 w-4" /></span>
+        <span className="flex h-9 w-9 items-center justify-center rounded-full border border-black/10 text-slate-400 transition group-hover:border-orange-200 group-hover:bg-orange-50 group-hover:text-orange-600"><ArrowUpRight className="h-4 w-4" /></span>
       </div>
       <div className="mt-auto pt-6">
         <h2 className="text-base font-black text-slate-950">{brand.name}</h2>
