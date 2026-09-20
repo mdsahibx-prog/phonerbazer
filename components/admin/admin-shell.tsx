@@ -24,7 +24,7 @@ export async function AdminShell({ session, children }: { session: AdminSession;
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-8">
           <div className="flex items-center gap-3">
             <AdminMobileNav>
-              <AdminNavigation role={session.role} />
+              <AdminNavigation role={session.role} canManageLandingPages={canManageLandingPages} />
               <div className="mt-3 border-t border-slate-800 pt-3">
                 <SignOutControl />
               </div>
