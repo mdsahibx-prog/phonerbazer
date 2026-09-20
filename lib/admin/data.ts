@@ -67,7 +67,7 @@ export async function getInventoryData() {
   const session = await requireAdmin()
 
   const canManageCosts = session.role !== 'STAFF'
-  const [variants, costs, receipts, movements, imei] = await Promise.all([
+  const [variants, costs, receipts, movements, imei, costItems] = await Promise.all([
     db.from('product_variants').select('id, product_id, sku, variant_title, stock_quantity, low_stock_threshold, price, is_active, products(name)').order('updated_at', { ascending: false }).limit(200),
     canManageCosts ? db.from('admin_inventory_cost_summary').select('variant_id, costed_quantity, average_cost, inventory_value, potential_gross_profit_per_unit, costing_method').limit(200) : Promise.resolve({ data: [], error: null }),
     canManageCosts ? db.from('inventory_receipts').select('id, variant_id, receipt_type, quantity, unit_cost, supplier_name, supplier_reference, received_at, created_by, note, movement_id, created_at').order('received_at', { ascending: false }).limit(150) : Promise.resolve({ data: [], error: null }),
@@ -75,11 +75,19 @@ export async function getInventoryData() {
     canManageCosts
       ? db.from('imei_inventory').select('id, variant_id, imei_1, imei_2, serial_number, status, order_id, sold_at, created_at, product_variants(sku, variant_title, products(name))').order('created_at', { ascending: false }).limit(100)
       : Promise.resolve({ data: [], error: null }),
+    canManageCosts ? db.from('order_items').select('quantity,line_total,cost_total,gross_profit,orders(order_status)').limit(5000) : Promise.resolve({ data: [], error: null }),
   ])
 
-  ;[variants, costs, receipts, movements, imei].forEach((result) => assertNoError(result.error))
+  ;[variants, costs, receipts, movements, imei, costItems].forEach((result) => assertNoError(result.error))
   const lowStock = (variants.data ?? []).filter((variant) => Number(variant.stock_quantity) <= Number(variant.low_stock_threshold))
-  return { variants: variants.data ?? [], costs: costs.data ?? [], receipts: receipts.data ?? [], movements: movements.data ?? [], imei: imei.data ?? [], lowStock, canManageImei: canManageCosts, canManageCosts }
+  const inventoryValue = (costs.data ?? []).reduce((sum: number, row: any) => sum + Number(row.inventory_value ?? 0), 0)
+  const unitsInStock = (variants.data ?? []).reduce((sum: number, row: any) => sum + Number(row.stock_quantity ?? 0), 0)
+  const costRows = (costItems.data ?? []).filter((row: any) => row.cost_total != null && row.orders?.order_status !== 'CANCELLED')
+  const revenue = costRows.reduce((sum: number, row: any) => sum + Number(row.line_total ?? 0), 0)
+  const cogs = costRows.reduce((sum: number, row: any) => sum + Number(row.cost_total ?? 0), 0)
+  const grossProfit = costRows.reduce((sum: number, row: any) => sum + Number(row.gross_profit ?? 0), 0)
+  const metrics = canManageCosts ? { unitsInStock, inventoryValue, revenue, cogs, grossProfit } : null
+  return { variants: variants.data ?? [], costs: costs.data ?? [], receipts: receipts.data ?? [], movements: movements.data ?? [], imei: imei.data ?? [], lowStock, canManageImei: canManageCosts, canManageCosts, metrics }
 }
 
 export async function getOrderManagementData(query?: string) {
