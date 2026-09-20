@@ -1,6 +1,7 @@
 'use server'
 
 import { z } from 'zod'
+import { after } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { loadOrderSuccessById } from '@/lib/orders/actions'
 import { normalizePhone } from '@/lib/orders/phone'
@@ -46,12 +47,10 @@ export async function createCartOrder(input: unknown) {
   const cart = await getCart()
   if (!cart.id || !cart.items.length) return { ok: false as const, message: 'Your cart is empty.' }
   const normalizedPhone = normalizePhone(parsed.data.phone)
-  const risk = await assessCustomerRisk({ phone: normalizedPhone })
-  const paymentRequirement = paymentRequirementForRiskAction(risk.action)
-  if (paymentRequirement === 'MANUAL_REVIEW') return { ok: false as const, message: 'We need to verify a few details before accepting this order. Please contact support for help.' }
-
   const quote = await quoteCartCheckout({ checkoutRequestId: parsed.data.checkoutRequestId, phone: normalizedPhone, division: parsed.data.division, source: 'CART' })
   if (!quote.ok) return quote
+  const paymentRequirement = paymentRequirementForRiskAction(quote.data.risk.action)
+  if (paymentRequirement === 'MANUAL_REVIEW') return { ok: false as const, message: 'We need to verify a few details before accepting this order. Please contact support for help.' }
   const db = createAdminClient()
   const rpcName = paymentRequirement === 'COD' ? 'create_guest_cod_cart_order' : 'create_guest_advance_cart_order'
   const { data, error } = await db.rpc(rpcName, {
@@ -96,15 +95,19 @@ export async function createCartOrder(input: unknown) {
       return { ok: false as const, message: 'Secure online payment could not be started. No payment was collected. Please try again.' }
     }
     if (!payment.paymentUrl) return { ok: false as const, message: 'Secure online payment could not be started. No payment was collected. Please try again.' }
-    await markCheckoutSession({ checkoutRequestId: parsed.data.checkoutRequestId, source: 'CART', cartId: cart.id, status: 'PAYMENT_INITIATED', customerPhone: normalizedPhone, customerEmail: parsed.data.email || null, completedOrderId: null })
-    await recordCommerceEvent({ eventId: `${parsed.data.checkoutRequestId}:payment-initiated`, eventName: 'PAYMENT_INITIATED', sessionId: parsed.data.checkoutRequestId, orderId: row.order_id, cartId: cart.id, metadata: { source: 'CART', provider: 'BDGATE' } })
+    after(() => Promise.all([
+      markCheckoutSession({ checkoutRequestId: parsed.data.checkoutRequestId, source: 'CART', cartId: cart.id, status: 'PAYMENT_INITIATED', customerPhone: normalizedPhone, customerEmail: parsed.data.email || null, completedOrderId: null }),
+      recordCommerceEvent({ eventId: `${parsed.data.checkoutRequestId}:payment-initiated`, eventName: 'PAYMENT_INITIATED', sessionId: parsed.data.checkoutRequestId, orderId: row.order_id, cartId: cart.id, metadata: { source: 'CART', provider: 'BDGATE' } }),
+    ]).catch((error) => console.error('[checkout] payment analytics failed', error)))
     return { ok: true as const, data: { paymentRequired: true as const, orderId: row.order_id, orderNumber: row.order_number, paymentId: payment.id, redirectUrl: payment.paymentUrl } }
   }
 
   const summary = await loadOrderSuccessById(row.order_id)
-  await markCheckoutSession({ checkoutRequestId: parsed.data.checkoutRequestId, source: 'CART', cartId: cart.id, status: 'COMPLETED', customerPhone: normalizedPhone, customerEmail: parsed.data.email || null, completedOrderId: row.order_id })
-  await recordCommerceEvent({ eventId: `${parsed.data.checkoutRequestId}:completed`, eventName: 'ORDER_COMPLETED', sessionId: parsed.data.checkoutRequestId, orderId: row.order_id, cartId: cart.id, metadata: { source: 'CART', createdNew: row.created_new } })
-  await recordPurchaseOnce({ orderId: summary.orderId, orderNumber: summary.orderNumber, value: summary.grandTotal, cartId: cart.id, sessionId: parsed.data.checkoutRequestId, consent: { analytics: parsed.data.analyticsConsent, marketing: parsed.data.marketingConsent }, items: summary.items.map((item) => ({ item_id: item.sku, item_name: item.productName, price: item.unitPrice, quantity: item.quantity })) })
+  after(() => Promise.all([
+    markCheckoutSession({ checkoutRequestId: parsed.data.checkoutRequestId, source: 'CART', cartId: cart.id, status: 'COMPLETED', customerPhone: normalizedPhone, customerEmail: parsed.data.email || null, completedOrderId: row.order_id }),
+    recordCommerceEvent({ eventId: `${parsed.data.checkoutRequestId}:completed`, eventName: 'ORDER_COMPLETED', sessionId: parsed.data.checkoutRequestId, orderId: row.order_id, cartId: cart.id, metadata: { source: 'CART', createdNew: row.created_new } }),
+    recordPurchaseOnce({ orderId: summary.orderId, orderNumber: summary.orderNumber, value: summary.grandTotal, cartId: cart.id, sessionId: parsed.data.checkoutRequestId, consent: { analytics: parsed.data.analyticsConsent, marketing: parsed.data.marketingConsent }, items: summary.items.map((item) => ({ item_id: item.sku, item_name: item.productName, price: item.unitPrice, quantity: item.quantity })) }),
+  ]).catch((error) => console.error('[checkout] completion analytics failed', error)))
   return { ok: true as const, data: summary }
 }
 
