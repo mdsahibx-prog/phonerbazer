@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireAdmin } from '@/lib/admin/auth'
+import { requireLandingPageManagement } from '@/lib/admin/auth'
 import { getAdminLandingPages } from '@/lib/landing-pages/data'
 import { validateLandingPageInput, type LandingPageInput } from '@/lib/landing-pages/types'
 
@@ -28,13 +28,13 @@ async function saveLinkedProducts(db: ReturnType<typeof createAdminClient>, page
 }
 
 export async function listAdminLandingPages() {
-  await requireAdmin(['OWNER', 'ADMIN'])
+  await requireLandingPageManagement()
   return getAdminLandingPages()
 }
 
 export async function uploadLandingPageMediaAction(formData: FormData): Promise<LandingPageActionResult> {
   try {
-    const session = await requireAdmin(['OWNER', 'ADMIN'])
+    const session = await requireLandingPageManagement()
     const file = formData.get('file') as File | null
     if (!file || !file.size) return { ok: false, message: 'Choose an image file first.' }
     const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif'])
@@ -53,7 +53,7 @@ export async function uploadLandingPageMediaAction(formData: FormData): Promise<
 
 export async function createLandingPage(input: LandingPageInput): Promise<LandingPageActionResult> {
   try {
-    const session = await requireAdmin(['OWNER', 'ADMIN'])
+    const session = await requireLandingPageManagement()
     const payload = validateLandingPageInput(input)
     const { linked_product_ids: linkedProductIds = [], ...pagePayload } = payload
     const db = createAdminClient()
@@ -69,7 +69,7 @@ export async function createLandingPage(input: LandingPageInput): Promise<Landin
 
 export async function updateLandingPage(id: string, input: LandingPageInput): Promise<LandingPageActionResult> {
   try {
-    const session = await requireAdmin(['OWNER', 'ADMIN'])
+    const session = await requireLandingPageManagement()
     const payload = validateLandingPageInput(input)
     const { linked_product_ids: linkedProductIds = [], ...pagePayload } = payload
     const db = createAdminClient()
@@ -85,7 +85,7 @@ export async function updateLandingPage(id: string, input: LandingPageInput): Pr
 
 export async function duplicateLandingPage(id: string): Promise<LandingPageActionResult> {
   try {
-    const session = await requireAdmin(['OWNER', 'ADMIN'])
+    const session = await requireLandingPageManagement()
     const db = createAdminClient()
     const { data: source, error: sourceError } = await db.from('landing_pages').select('internal_name, slug, page_type, linked_product_id, hero_image_url, mobile_hero_image_url, og_image_url, sections, seo_title, seo_description, noindex, starts_at, ends_at').eq('id', id).single()
     if (sourceError || !source) throw new Error('The landing page could not be duplicated.')
@@ -103,7 +103,7 @@ export async function duplicateLandingPage(id: string): Promise<LandingPageActio
 
 export async function setLandingPageStatus(id: string, status: 'draft' | 'published' | 'archived'): Promise<LandingPageActionResult> {
   try {
-    const session = await requireAdmin(['OWNER', 'ADMIN'])
+    const session = await requireLandingPageManagement()
     const db = createAdminClient()
     const { data, error } = await db.from('landing_pages').update({ status, published_at: status === 'published' ? new Date().toISOString() : null, updated_by: session.userId, updated_at: new Date().toISOString() }).eq('id', id).select('slug').single()
     if (error) throw new Error('The landing-page status could not be changed.')
@@ -116,7 +116,7 @@ export async function setLandingPageStatus(id: string, status: 'draft' | 'publis
 
 export async function deleteLandingPage(id: string): Promise<LandingPageActionResult> {
   try {
-    await requireAdmin(['OWNER', 'ADMIN'])
+    await requireLandingPageManagement()
     const db = createAdminClient()
     const { error } = await db.from('landing_pages').delete().eq('id', id)
     if (error) throw new Error('The landing page could not be deleted.')
