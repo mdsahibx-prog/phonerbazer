@@ -161,17 +161,30 @@ export function HeroSection({ banners, productCount, brandCount, categoryCount }
           const isLoaded = loadedSlides.has(banner.id)
           return (
             <div key={banner.id} aria-hidden={!isActive} className={`absolute inset-0 transition-opacity duration-500 ease-out motion-reduce:transition-none ${isActive ? 'z-10 opacity-100' : 'z-0 opacity-0'}`}>
-              <Image
-                src={banner.desktop_image_url || banner.mobile_image_url}
-                alt=""
+              <>
+                <Image
+                  src={banner.mobile_image_url || banner.desktop_image_url}
+                  alt=""
+                  fill
+                  sizes="100vw"
+                  priority={idx === 0}
+                  loading={idx === 0 ? 'eager' : 'lazy'}
+                  quality={82}
+                  onLoad={() => markLoaded(banner.id)}
+                  className={`object-cover transition-opacity duration-500 motion-reduce:transition-none sm:hidden ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                />
+                <Image
+                  src={banner.desktop_image_url || banner.mobile_image_url}
+                  alt=""
                 fill
                 sizes="100vw"
                 priority={idx === 0}
                 loading={idx === 0 ? 'eager' : 'lazy'}
                 quality={82}
                 onLoad={() => markLoaded(banner.id)}
-                className={`object-cover transition-opacity duration-500 motion-reduce:transition-none ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
-              />
+                  className={`hidden object-cover transition-opacity duration-500 motion-reduce:transition-none sm:block ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                />
+              </>
             </div>
           )
         })}
