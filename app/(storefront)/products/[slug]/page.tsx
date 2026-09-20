@@ -8,7 +8,7 @@ import { ProductGrid } from '@/components/product/product-card'
 import { getProductBySlug, getRelatedProducts, getStorefrontSettings } from '@/lib/services/storefront'
 import { formatPrice, getCategoryPath, getProductMetaDescription, getProductMetaTitle, getProductPrimaryImage } from '@/lib/services/storefront-utils'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 type Params = Promise<{ slug: string }>
 
@@ -51,8 +51,10 @@ export default async function ProductDetailPage({ params }: { params: Params }) 
   const product = await getProductBySlug(slug)
   if (!product) notFound()
 
-  const settings = await getStorefrontSettings()
-  const relatedProducts = await getRelatedProducts(product, 4)
+  const [settings, relatedProducts] = await Promise.all([
+    getStorefrontSettings(),
+    getRelatedProducts(product, 4),
+  ])
   const primaryImage = getProductPrimaryImage(product)
   const ramValues = Array.from(new Set(product.variants.map((variant) => variant.ram).filter(Boolean))).join(' · ')
   const storageValues = Array.from(new Set(product.variants.map((variant) => variant.storage).filter(Boolean))).join(' · ')
