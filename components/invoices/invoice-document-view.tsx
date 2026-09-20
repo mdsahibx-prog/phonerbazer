@@ -18,7 +18,7 @@ function statusLabel(value: string) {
 }
 
 export async function InvoiceDocumentView({ invoice }: { invoice: InvoiceDocument }) {
-  const qrUrl = invoice.verificationToken ? `${(process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sahigadget.shop').replace(/\/$/, '')}/verify-order/${encodeURIComponent(invoice.verificationToken)}` : null
+  const qrUrl = invoice.verificationToken ? `${(process.env.NEXT_PUBLIC_SITE_URL || siteConfig.url).replace(/\/$/, '')}/verify-order/${encodeURIComponent(invoice.verificationToken)}` : null
   let qrDataUrl: string | null = null
   if (qrUrl) {
     try { qrDataUrl = await QRCode.toDataURL(qrUrl, { width: 160, margin: 1, errorCorrectionLevel: 'M' }) } catch { qrDataUrl = null }
@@ -28,7 +28,7 @@ export async function InvoiceDocumentView({ invoice }: { invoice: InvoiceDocumen
     <div className="h-1.5 rounded-full bg-orange-500 print:rounded-none" />
     <header className="flex items-start justify-between gap-6 border-b border-slate-200 py-5">
       <div className="flex items-start gap-3"><Image src="/logo.png" alt={siteConfig.name} width={44} height={44} className="h-11 w-11 rounded-lg object-contain" /><div><p className="text-xl font-black tracking-[-0.04em]">{invoice.storeProfile.businessName}</p><p className="mt-1 text-xs font-bold text-orange-600">{invoice.storeProfile.tagline}</p><p className="mt-1 text-[11px] text-slate-500">{invoice.storeProfile.brandPromise}</p><p className="mt-2 text-[10px] leading-4 text-slate-500">{invoice.storeProfile.location}<br />{invoice.storeProfile.phone} · {invoice.storeProfile.publicEmail}</p></div></div>
-      <div className="text-right"><p className="text-2xl font-black uppercase tracking-[-0.05em] text-emerald-700">Invoice</p><p className="mt-1 font-mono text-xs font-bold">{invoice.invoiceNumber}</p><p className="mt-1 text-[10px] text-slate-500">Issued {dateLabel(invoice.issuedAt)}</p><p className="mt-2 text-[10px] text-slate-500">Order {invoice.orderNumber} · {statusLabel(invoice.orderStatus)}</p></div>
+      <div className="text-right"><p className="text-2xl font-black uppercase tracking-[-0.05em] text-orange-600">Invoice</p><p className="mt-1 font-mono text-xs font-bold">{invoice.invoiceNumber}</p><p className="mt-1 text-[10px] text-slate-500">Issued {dateLabel(invoice.issuedAt)}</p><p className="mt-2 text-[10px] text-slate-500">Order {invoice.orderNumber} · {statusLabel(invoice.orderStatus)}</p></div>
     </header>
 
     <div className="grid gap-3 py-4 sm:grid-cols-2 print:grid-cols-2"><section className="rounded-xl bg-slate-50 p-3"><h2 className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-700">Customer information</h2><p className="mt-2 text-sm font-black">{invoice.customer.name}</p><p className="text-[11px] text-slate-600">{invoice.customer.phone}</p>{invoice.customer.email && <p className="text-[11px] text-slate-600">{invoice.customer.email}</p>}</section><section className="rounded-xl bg-slate-50 p-3"><h2 className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-700">Delivery information</h2><p className="mt-2 text-[11px] font-semibold leading-4">{invoice.delivery.address}</p><p className="text-[11px] leading-4 text-slate-600">{[invoice.delivery.area, invoice.delivery.district, invoice.delivery.division, invoice.delivery.postalCode].filter(Boolean).join(', ')}</p></section></div>
