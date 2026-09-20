@@ -7,6 +7,7 @@ import QRCode from 'qrcode'
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from 'pdf-lib'
 
 import type { InvoiceDocument } from '@/lib/invoices/types'
+import { siteConfig } from '@/config/site'
 
 const PAGE_WIDTH = 595.28
 const PAGE_HEIGHT = 841.89
@@ -14,7 +15,7 @@ const MARGIN = 34
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2
 const DARK = rgb(0.07, 0.11, 0.18)
 const MUTED = rgb(0.32, 0.37, 0.45)
-const ACCENT = rgb(0.03, 0.62, 0.46)
+const ACCENT = rgb(0.96, 0.37, 0.05)
 const LIGHT = rgb(0.94, 0.97, 0.96)
 const BORDER = rgb(0.84, 0.87, 0.88)
 
@@ -61,7 +62,7 @@ function drawBox(page: PDFPage, x: number, y: number, width: number, height: num
 function drawFooter(page: PDFPage, font: PDFFont, bold: PDFFont) {
   page.drawLine({ start: { x: MARGIN, y: 28 }, end: { x: PAGE_WIDTH - MARGIN, y: 28 }, thickness: 0.6, color: BORDER })
   page.drawText('Keep this invoice for order and warranty reference.', { x: MARGIN, y: 15, size: 6.8, font, color: MUTED })
-  page.drawText('SahiGadget · Araihazar, Narayanganj · +880 1601-654316', { x: PAGE_WIDTH - MARGIN - 230, y: 15, size: 6.8, font: bold, color: MUTED })
+  page.drawText(`${invoice.storeProfile.businessName} · ${invoice.storeProfile.location} · ${invoice.storeProfile.phone}`, { x: PAGE_WIDTH - MARGIN - 230, y: 15, size: 6.8, font: bold, color: MUTED })
 }
 
 async function loadOptionalLogo(document: PDFDocument) {
