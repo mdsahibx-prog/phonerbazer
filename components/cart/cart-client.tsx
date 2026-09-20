@@ -82,8 +82,8 @@ export function CartClient({ initialCart }: { initialCart: { items: CartItem[]; 
   return <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
     <section className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-7">
       <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-5">
-        <div><p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-600">Almost yours</p><h1 className="mt-1 text-3xl font-black tracking-[-0.04em] text-slate-950">Review your order</h1><p className="mt-2 text-sm text-slate-500">Check your item and quantity, then continue to secure checkout.</p></div>
-        <ShoppingBag className="h-6 w-6 shrink-0 text-emerald-600" />
+        <div><p className="text-xs font-black uppercase tracking-[0.18em] text-orange-600">Almost yours</p><h1 className="mt-1 text-3xl font-black tracking-[-0.04em] text-slate-950">Review your order</h1><p className="mt-2 text-sm text-slate-500">Check your item and quantity, then continue to secure checkout.</p></div>
+        <ShoppingBag className="h-6 w-6 shrink-0 text-orange-600" />
       </div>
       {message ? <p role="alert" className="mt-5 rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">{message}</p> : null}
       {!cart.items.length ? <div className="py-16 text-center"><p className="text-lg font-black text-slate-950">Your cart is empty.</p><Link href="/products" className="mt-5 inline-flex rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white">Browse products</Link></div> :
@@ -92,7 +92,7 @@ export function CartClient({ initialCart }: { initialCart: { items: CartItem[]; 
             {item.product?.image_url ? <Image src={item.product.image_url} alt={item.product.name ?? 'Product'} fill sizes="112px" className="object-contain p-2" /> : <div className="flex h-full items-center justify-center text-xs font-black text-slate-400">No image</div>}
           </Link>
           <div className="min-w-0 flex-1">
-            <Link href={item.product?.slug ? `/products/${item.product.slug}` : '/products'} className="line-clamp-2 font-black text-slate-950 hover:text-emerald-700">{item.product?.name ?? 'Product'}</Link>
+            <Link href={item.product?.slug ? `/products/${item.product.slug}` : '/products'} className="line-clamp-2 font-black text-slate-950 hover:text-orange-700">{item.product?.name ?? 'Product'}</Link>
             <p className="mt-1 text-xs text-slate-500">{item.variant?.variant_title || item.variant?.sku}</p>
             <p className="mt-2 text-lg font-black text-slate-950">{formatPrice(Number(item.variant?.price ?? 0))}</p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -108,11 +108,11 @@ export function CartClient({ initialCart }: { initialCart: { items: CartItem[]; 
       {cart.items.length ? <button type="button" disabled={busy} onClick={() => run(() => clearCartAction(), 'remove_from_cart')} className="mt-5 text-sm font-bold text-slate-400 underline underline-offset-4">Clear cart</button> : null}
     </section>
     <aside className="h-fit rounded-[1.5rem] bg-slate-950 p-5 text-white shadow-xl lg:sticky lg:top-24 sm:p-6">
-      <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">Ready to order?</p>
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-300">Ready to order?</p>
       <h2 className="mt-2 text-2xl font-black tracking-tight">Confirm your details next</h2>
       <p className="mt-2 text-sm leading-6 text-slate-300">Your delivery location and final order total will be confirmed securely at checkout.</p>
       <div className="mt-5 rounded-xl bg-white/5 p-4"><div className="flex justify-between text-sm text-slate-300"><span>{cart.itemCount} item{cart.itemCount === 1 ? '' : 's'}</span><span>{formatPrice(cart.subtotal)}</span></div><div className="mt-3 border-t border-white/10 pt-3 flex justify-between"><span className="font-bold">Subtotal</span><span className="text-xl font-black">{formatPrice(cart.subtotal)}</span></div></div>
-      <Link onClick={() => { if (cart.items.length) trackClientEvent({ eventName: 'begin_checkout', commerce: { currency: 'BDT', value: cart.subtotal, item_count: cart.itemCount } }) }} href={cart.items.length ? '/order?source=cart' : '/products'} className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-emerald-400 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-emerald-950/20 transition hover:bg-emerald-300">Continue & confirm order →</Link>
+      <Link onClick={() => { if (cart.items.length) trackClientEvent({ eventName: 'begin_checkout', commerce: { currency: 'BDT', value: cart.subtotal, item_count: cart.itemCount } }) }} href={cart.items.length ? '/order?source=cart' : '/products'} className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-orange-400 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-orange-950/20 transition hover:bg-orange-300">Continue & confirm order →</Link>
       <div className="mt-4 grid grid-cols-2 gap-2 text-[11px] font-bold text-slate-300"><div className="rounded-lg bg-white/5 p-2 text-center">✓ Secure checkout</div><div className="rounded-lg bg-white/5 p-2 text-center">✓ Stock rechecked</div></div>
     </aside>
   </div>}
