@@ -18,6 +18,25 @@ function optionalText(value: unknown) {
   return text ? text : null
 }
 
+async function isInvoiceGenerationEnabled() {
+  const db = createAdminClient()
+  const { data, error } = await db.from('settings').select('value').eq('key', 'invoice_generation').maybeSingle()
+  if (error) throw new Error('Unable to read invoice generation settings safely.')
+  const value = data?.value
+  return value && typeof value === 'object' && !Array.isArray(value) && (value as Record<string, unknown>).enabled !== false
+}
+
+async function findExistingInvoiceId(orderId: string) {
+  const db = createAdminClient()
+  const { data, error } = await db.from('invoices').select('id').eq('order_id', orderId).maybeSingle()
+  if (error) throw new Error('Unable to check existing invoice safely.')
+  return data?.id ? String(data.id) : null
+}
+
+export async function getInvoiceGenerationStatus() {
+  return isInvoiceGenerationEnabled()
+}
+
 function normalizePhone(phone: string) {
   const digits = phone.replace(/\D/g, '')
   if (digits.startsWith('8801')) return `+${digits}`
@@ -115,6 +134,9 @@ async function loadInvoiceById(invoiceId: string, includeSensitiveIdentifiers: b
 }
 
 async function loadInvoiceForOrder(orderId: string, includeSensitiveIdentifiers: boolean) {
+  const existingInvoiceId = await findExistingInvoiceId(orderId)
+  if (existingInvoiceId) return loadInvoiceById(existingInvoiceId, includeSensitiveIdentifiers)
+  if (!(await isInvoiceGenerationEnabled())) throw new Error('INVOICE_GENERATION_DISABLED')
   const ensured = await ensureInvoice(orderId)
   return loadInvoiceById(ensured.invoiceId, includeSensitiveIdentifiers)
 }
