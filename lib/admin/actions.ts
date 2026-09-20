@@ -415,20 +415,40 @@ export async function saveFooterSettings(input: unknown): Promise<AdminActionRes
   }
 }
 
-export async function saveInvoiceGenerationSetting(input: unknown): Promise<AdminActionResult> {
+export async function saveLandingPageAccessSetting(input: unknown): Promise<AdminActionResult> {
   try {
     const session = await requireAdmin(['OWNER'])
-    const enabled = typeof input === 'object' && input !== null && 'enabled' in input && typeof (input as { enabled?: unknown }).enabled === 'boolean'
-      ? (input as { enabled: boolean }).enabled
+    const adminEnabled = typeof input === 'object' && input !== null && 'admin_enabled' in input && typeof (input as { admin_enabled?: unknown }).admin_enabled === 'boolean'
+      ? (input as { admin_enabled: boolean }).admin_enabled
       : null
-    if (enabled === null) return { ok: false, message: 'Choose whether invoice generation should be enabled or disabled.' }
+    if (adminEnabled === null) return { ok: false, message: 'Choose whether ADMIN access to Landing Pages should be enabled or disabled.' }
+
     const db = createAdminClient()
-    const { error } = await db.from('settings').upsert({ key: 'invoice_generation', value: { enabled }, description: 'Owner-only control for customer-facing invoice generation. Existing invoices remain immutable.' }, { onConflict: 'key' })
+    const { data: previous, error: previousError } = await db.from('settings').select('value').eq('key', 'landing_page_access').maybeSingle()
+    if (previousError) throw new Error(previousError.message)
+    const previousEnabled = previous?.value && typeof previous.value === 'object' && 'admin_enabled' in previous.value
+      ? (previous.value as { admin_enabled?: unknown }).admin_enabled !== false
+      : true
+
+    const { error } = await db.from('settings').upsert({
+      key: 'landing_page_access',
+      value: { admin_enabled: adminEnabled },
+      description: 'Owner-controlled access for ADMIN users to Landing Page management.',
+    }, { onConflict: 'key' })
     if (error) throw new Error(error.message)
-    await writeAdminAuditLog({ actorUserId: session.userId, action: 'INVOICE_GENERATION_SETTING_UPDATED', entityType: 'settings', details: { key: 'invoice_generation', enabled } })
+
+    await writeAdminAuditLog({
+      actorUserId: session.userId,
+      action: adminEnabled ? 'LANDING_PAGE_ACCESS_ENABLED' : 'LANDING_PAGE_ACCESS_DISABLED',
+      entityType: 'settings',
+      details: { setting: 'landing_page_access', previous_value: { admin_enabled: previousEnabled }, new_value: { admin_enabled: adminEnabled } },
+    })
     refreshAdminRoutes()
-    return { ok: true, message: enabled ? 'Invoice generation enabled.' : 'Invoice generation disabled.' }
-  } catch (error) { return actionFailure(error) }
+    revalidatePath('/admin/landing-pages')
+    return { ok: true, message: adminEnabled ? 'ADMIN Landing Page access enabled.' : 'ADMIN Landing Page access disabled.' }
+  } catch (error) {
+    return actionFailure(error)
+  }
 }
 
 export async function saveOwnerSettings(input: unknown): Promise<AdminActionResult> {
