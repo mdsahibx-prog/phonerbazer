@@ -297,7 +297,7 @@ export async function saveVariant(input: unknown): Promise<AdminActionResult> {
 
 export async function receiveStock(input: unknown): Promise<AdminActionResult> {
   try {
-    const session = await requireAdmin(['OWNER', 'ADMIN', 'STAFF'])
+    const session = await requireAdmin(['OWNER', 'ADMIN'])
     const parsed = receiveStockSchema.parse(input)
     const result = await receiveInventoryStock({ ...parsed, actorId: session.userId })
     refreshAdminRoutes()
@@ -307,7 +307,7 @@ export async function receiveStock(input: unknown): Promise<AdminActionResult> {
 
 export async function initializeCost(input: unknown): Promise<AdminActionResult> {
   try {
-    const session = await requireAdmin(['OWNER', 'ADMIN', 'STAFF'])
+    const session = await requireAdmin(['OWNER', 'ADMIN'])
     const parsed = initializeInventoryCostSchema.parse(input)
     const result = await initializeInventoryCost({ ...parsed, actorId: session.userId })
     refreshAdminRoutes()
