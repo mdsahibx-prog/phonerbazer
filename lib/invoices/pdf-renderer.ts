@@ -180,7 +180,7 @@ export async function renderInvoicePdf(invoice: InvoiceDocument) {
   page.drawText('QR VERIFICATION', { x: qrX, y, size: 7.4, font: bold, color: ACCENT })
   if (invoice.verificationToken) {
     try {
-      const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sahigadget.shop'
+      const site = process.env.NEXT_PUBLIC_SITE_URL || siteConfig.url
       const qrUrl = `${site.replace(/\/$/, '')}/verify-order/${encodeURIComponent(invoice.verificationToken)}`
       const qrPng = await QRCode.toBuffer(qrUrl, { type: 'png', width: 240, margin: 1, errorCorrectionLevel: 'M' })
       const qrImage = await document.embedPng(qrPng)
