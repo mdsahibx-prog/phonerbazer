@@ -97,29 +97,32 @@ export async function addToCart(input: { productId: string; variantId: string; q
   const db = createAdminClient()
   // Validate against the authoritative base tables for cart mutations.
   // The storefront view is presentation-oriented; cart writes must not depend on it.
-  const { data: variant, error: variantError } = await db
-    .from('product_variants')
-    .select('id,product_id,is_active,stock_quantity,product:products(is_published)')
-    .eq('id', input.variantId)
-    .eq('product_id', input.productId)
-    .maybeSingle()
+  const [{ data: variant, error: variantError }, { data: existing }] = await Promise.all([
+    db
+      .from('product_variants')
+      .select('id,product_id,is_active,stock_quantity,product:products(is_published)')
+      .eq('id', input.variantId)
+      .eq('product_id', input.productId)
+      .maybeSingle(),
+    db.from('cart_items').select('id,quantity').eq('cart_id', cart.id).eq('variant_id', input.variantId).maybeSingle(),
+  ])
 
   const productPublished = Boolean((variant?.product as { is_published?: boolean } | null)?.is_published)
   if (variantError || !variant || !variant.is_active || !productPublished) {
     return { ok: false, message: 'This product option is no longer available.' }
   }
   if (Number(variant.stock_quantity) <= 0) return { ok: false, message: 'This product option is out of stock.' }
-  const { data: existing } = await db.from('cart_items').select('id,quantity').eq('cart_id', cart.id).eq('variant_id', input.variantId).maybeSingle()
   const nextQuantity = clampQuantity(Number(existing?.quantity ?? 0) + quantity)
   const result = existing
     ? await db.from('cart_items').update({ quantity: nextQuantity, updated_at: new Date().toISOString() }).eq('id', existing.id)
     : await db.from('cart_items').insert({ cart_id: cart.id, product_id: input.productId, variant_id: input.variantId, quantity: nextQuantity })
   if (result.error) return { ok: false, message: 'Unable to update your cart.' }
-  const [cartData] = await Promise.all([
-    getCart(),
-    emitCartEvent(existing ? 'CART_ITEM_UPDATED' : 'CART_ITEM_ADDED', cart.id, { quantity: nextQuantity }),
-  ])
-  return { ok: true, data: cartData }
+  // Keep the add-to-cart critical path fast. The cart page always re-reads authoritative state.
+  // Analytics/event logging is intentionally outside the customer-facing response path.
+  void emitCartEvent(existing ? 'CART_ITEM_UPDATED' : 'CART_ITEM_ADDED', cart.id, { quantity: nextQuantity }).catch((error) => {
+    console.error('[cart] event logging failed', error)
+  })
+  return { ok: true, data: { itemCount: nextQuantity } }
 }
 
 export async function updateCartItem(input: { itemId: string; quantity: number }) {
