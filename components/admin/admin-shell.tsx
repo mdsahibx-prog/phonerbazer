@@ -3,7 +3,7 @@ import Image from 'next/image'
 import { Archive, LogOut, ShieldCheck } from 'lucide-react'
 
 import { signOutAdmin } from '@/lib/admin/actions'
-import type { AdminSession } from '@/lib/admin/auth'
+import { canAdminManageLandingPages, type AdminSession } from '@/lib/admin/auth'
 import { AdminMobileNav } from './admin-mobile-nav'
 import { AdminNavigation } from './admin-navigation'
 
@@ -11,12 +11,13 @@ function SignOutControl() {
   return <form action={signOutAdmin}><button type="submit" className="flex h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium text-slate-300 transition hover:bg-rose-500/10 hover:text-rose-300"><LogOut className="h-4 w-4" />Sign out</button></form>
 }
 
-export function AdminShell({ session, children }: { session: AdminSession; children: React.ReactNode }) {
+export async function AdminShell({ session, children }: { session: AdminSession; children: React.ReactNode }) {
+  const canManageLandingPages = await canAdminManageLandingPages()
   return (
     <div className="min-h-screen bg-slate-100 text-slate-950">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-slate-950 p-5 text-white md:flex">
         <Link href="/admin" className="mb-9 flex items-center gap-3"><div className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-slate-900 shadow-md"><Image src="/phonerbazar-icon.svg" alt="PhonerBazar Logo" width={40} height={40} className="h-full w-full object-cover" /></div><span><span className="block text-sm font-bold tracking-wide">PhonerBazar</span><span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-300">Operations</span></span></Link>
-        <AdminNavigation role={session.role} />
+        <AdminNavigation role={session.role} canManageLandingPages={canManageLandingPages} />
         <div className="mt-auto border-t border-slate-800 pt-4"><div className="mb-3 rounded-xl bg-slate-900 p-3"><p className="truncate text-sm font-semibold">{session.fullName}</p><p className="mt-1 text-xs font-bold uppercase tracking-wider text-emerald-300">{session.role}</p></div><SignOutControl /></div>
       </aside>
       <div className="md:pl-64">
