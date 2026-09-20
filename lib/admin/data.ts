@@ -118,12 +118,12 @@ export async function getCustomerManagementData(query?: string) {
 }
 
 export async function getSettingsData() {
-  const session = await requireAdmin(['OWNER', 'ADMIN'])
+  const session = await requireAdmin(['OWNER'])
   const db = createAdminClient()
   const { data, error } = await db
     .from('settings')
     .select('key, value, description, updated_at')
-    .in('key', ['delivery_charges', 'business_policy', 'risk_policy', 'payment_policy', 'store_profile', 'return_refund_policy', 'footer_config'])
+    .in('key', ['delivery_charges', 'business_policy', 'risk_policy', 'payment_policy', 'store_profile', 'return_refund_policy', 'footer_config', 'invoice_generation'])
     .limit(12)
   const { data: incompleteCheckouts, error: checkoutError } = await db
     .from('checkout_sessions')
@@ -145,5 +145,5 @@ export async function getSettingsData() {
     : { data: [], error: null }
   assertNoError(admins.error)
 
-  return { settings, auditLogs: auditLogs.data ?? [], admins: admins.data ?? [], incompleteCheckouts: incompleteCheckouts ?? [], isOwner: session.role === 'OWNER', bdgateConfigured: Boolean(process.env.BDGATE_LIVE_API_KEY) }
+  return { settings: { invoice_generation: { enabled: true }, ...settings }, auditLogs: auditLogs.data ?? [], admins: admins.data ?? [], incompleteCheckouts: incompleteCheckouts ?? [], isOwner: true, bdgateConfigured: Boolean(process.env.BDGATE_LIVE_API_KEY) }
 }
