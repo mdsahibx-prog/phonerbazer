@@ -20,11 +20,14 @@ import {
   paymentPolicySchema,
   footerConfigSchema,
   stockAdjustmentSchema,
+  receiveStockSchema,
+  initializeInventoryCostSchema,
   variantSchema,
 } from '@/lib/admin/schema'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { latestStatusTransitionId, loadOrderForEmail, queueOrderStatusEmail } from '@/lib/email/service'
 import { createClient } from '@/lib/supabase/server'
+import { receiveStock as receiveInventoryStock, initializeInventoryCost } from '@/lib/inventory/receiving'
 
 export type AdminActionResult = { ok: boolean; message: string; data?: { id?: string; logoUrl?: string } }
 
@@ -39,6 +42,10 @@ function actionFailure(error: unknown): AdminActionResult {
     if (error.message.includes('duplicate key')) return { ok: false, message: 'A record with that unique value already exists.' }
     if (error.message.includes('INSUFFICIENT_STOCK')) return { ok: false, message: 'This change would result in negative inventory.' }
     if (error.message.includes('INVALID_STOCK_DIRECTION')) return { ok: false, message: 'The quantity direction does not match the selected movement type.' }
+    if (error.message.includes('INVALID_RECEIVING_QUANTITY')) return { ok: false, message: 'Enter a positive whole-number receiving quantity.' }
+    if (error.message.includes('INVALID_PURCHASE_COST')) return { ok: false, message: 'Enter a valid non-negative purchase cost.' }
+    if (error.message.includes('INITIAL_COST_REQUIRED')) return { ok: false, message: 'Purchase Cost / Unit is required when initial stock is greater than zero.' }
+    if (error.message.includes('VARIANT_NOT_FOUND')) return { ok: false, message: 'The selected variant could not be found.' }
     if (error.message.includes('ORDER_STATUS_UNCHANGED')) return { ok: false, message: 'The order already has that status.' }
     if (error.message.includes('ORDER_NOT_FOUND')) return { ok: false, message: 'The order could not be found.' }
     if (error.message.includes('INVALID_ORDER_STATUS')) return { ok: false, message: 'Choose a valid order status.' }
@@ -261,16 +268,51 @@ export async function saveVariant(input: unknown): Promise<AdminActionResult> {
       return { ok: false, message: 'Compare-at price must be at least the selling price.' }
     }
     const db = createAdminClient()
+    if (!parsed.id) {
+      if (parsed.initialStock > 0 && parsed.initialCost == null) return { ok: false, message: 'Purchase Cost / Unit is required when Initial Stock is greater than 0.' }
+      const { data, error } = await db.rpc('create_admin_variant_with_initial_stock', {
+        p_product_id: parsed.productId, p_sku: parsed.sku, p_variant_title: parsed.variantTitle,
+        p_ram: parsed.ram ?? '', p_storage: parsed.storage ?? '', p_color: parsed.color ?? '',
+        p_price: parsed.price, p_compare_at_price: parsed.compareAtPrice ?? null,
+        p_low_stock_threshold: parsed.lowStockThreshold, p_is_active: parsed.isActive,
+        p_initial_stock: parsed.initialStock, p_initial_cost: parsed.initialCost ?? null,
+        p_actor_id: session.userId, p_idempotency_key: randomUUID(),
+      })
+      if (error || !data?.[0]) throw new Error(error?.message ?? 'Unable to create variant.')
+      await writeAdminAuditLog({ actorUserId: session.userId, action: 'VARIANT_CREATED', entityType: 'product_variant', entityId: data[0].variant_id, details: { price: parsed.price, initial_stock: parsed.initialStock, initial_cost: parsed.initialCost ?? null, is_active: parsed.isActive } })
+      refreshAdminRoutes()
+      return { ok: true, message: parsed.initialStock > 0 ? 'Variant created with initial stock and internal purchase cost.' : 'Variant created.' }
+    }
+
     const payload = { product_id: parsed.productId, sku: parsed.sku, variant_title: parsed.variantTitle, ram: optional(parsed.ram), storage: optional(parsed.storage), color: optional(parsed.color), price: parsed.price, compare_at_price: parsed.compareAtPrice ?? null, low_stock_threshold: parsed.lowStockThreshold, is_active: parsed.isActive, updated_at: new Date().toISOString() }
-    const request = parsed.id ? db.from('product_variants').update(payload).eq('id', parsed.id).select('id').single() : db.from('product_variants').insert(payload).select('id').single()
-    const { data, error } = await request
+    const { data, error } = await db.from('product_variants').update(payload).eq('id', parsed.id).select('id').single()
     if (error || !data) throw new Error(error?.message ?? 'Unable to save variant.')
-    await writeAdminAuditLog({ actorUserId: session.userId, action: parsed.id ? 'VARIANT_UPDATED' : 'VARIANT_CREATED', entityType: 'product_variant', entityId: data.id, details: { price: parsed.price, compare_at_price: parsed.compareAtPrice ?? null, is_active: parsed.isActive } })
+    await writeAdminAuditLog({ actorUserId: session.userId, action: 'VARIANT_UPDATED', entityType: 'product_variant', entityId: data.id, details: { price: parsed.price, compare_at_price: parsed.compareAtPrice ?? null, is_active: parsed.isActive } })
     refreshAdminRoutes()
     return { ok: true, message: parsed.id ? 'Variant updated.' : 'Variant created.' }
   } catch (error) {
     return actionFailure(error)
   }
+}
+
+export async function receiveStock(input: unknown): Promise<AdminActionResult> {
+  try {
+    const session = await requireAdmin(['OWNER', 'ADMIN', 'STAFF'])
+    const parsed = receiveStockSchema.parse(input)
+    const result = await receiveInventoryStock({ ...parsed, actorId: session.userId })
+    refreshAdminRoutes()
+    return { ok: true, message: `Received ${parsed.quantity} unit${parsed.quantity === 1 ? '' : 's'} successfully. Stock: ${result.previous_stock} → ${result.new_stock}.` }
+  } catch (error) { return actionFailure(error) }
+}
+
+export async function initializeCost(input: unknown): Promise<AdminActionResult> {
+  try {
+    const session = await requireAdmin(['OWNER', 'ADMIN', 'STAFF'])
+    const parsed = initializeInventoryCostSchema.parse(input)
+    const result = await initializeInventoryCost({ ...parsed, actorId: session.userId })
+    refreshAdminRoutes()
+    return { ok: true, message: `Opening cost recorded at ${result.unit_cost} per unit for ${result.stock_quantity} units.` }
+  } catch (error) { return actionFailure(error) }
 }
 
 export async function adjustInventory(input: unknown): Promise<AdminActionResult> {
