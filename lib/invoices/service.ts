@@ -3,6 +3,7 @@ import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAdmin } from '@/lib/admin/auth'
 import type { InvoiceDocument, InvoiceDocumentItem } from '@/lib/invoices/types'
+import { siteConfig } from '@/config/site'
 
 function numberValue(value: unknown) {
   const number = Number(value)
@@ -23,7 +24,7 @@ async function isInvoiceGenerationEnabled() {
   const { data, error } = await db.from('settings').select('value').eq('key', 'invoice_generation').maybeSingle()
   if (error) throw new Error('Unable to read invoice generation settings safely.')
   const value = data?.value
-  return value && typeof value === 'object' && !Array.isArray(value) && (value as Record<string, unknown>).enabled !== false
+  return !(value && typeof value === 'object' && !Array.isArray(value) && (value as Record<string, unknown>).enabled === false)
 }
 
 async function findExistingInvoiceId(orderId: string) {
@@ -47,13 +48,13 @@ function normalizePhone(phone: string) {
 function storeProfile(value: unknown) {
   const profile = value && typeof value === 'object' ? value as Record<string, unknown> : {}
   return {
-    businessName: textValue(profile.business_name, 'SahiGadget Mobile Phone & Gadget Shop'),
+    businessName: textValue(profile.business_name, siteConfig.name),
     established: Number.isFinite(Number(profile.established)) ? Number(profile.established) : null,
-    tagline: textValue(profile.tagline, 'সঠিক দাম, সঠিক গ্যাজেট'),
-    brandPromise: textValue(profile.brand_promise, 'আসল পণ্য • দ্রুত ডেলিভারি • সারা দেশে সেবা'),
-    location: textValue(profile.location, 'Araihazar, Narayanganj, Bangladesh – 1460'),
-    phone: textValue(profile.phone, '+880 1601-654316'),
-    publicEmail: textValue(profile.public_email, 'hello@sahigadget.shop'),
+    tagline: textValue(profile.tagline, siteConfig.tagline),
+    brandPromise: textValue(profile.brand_promise, siteConfig.brandPromise),
+    location: textValue(profile.location, siteConfig.location.address),
+    phone: textValue(profile.phone, siteConfig.contact.phone),
+    publicEmail: textValue(profile.public_email, siteConfig.contact.publicEmail),
     currency: textValue(profile.currency, 'BDT'),
   }
 }
