@@ -10,29 +10,88 @@ import { TrustStrip } from '@/components/storefront/trust-strip'
 
 export const metadata = {
   title: 'PhonerBazar — Authentic Mobile Phones & Gadgets in Bangladesh',
-  description: 'Shop verified mobile phones, feature phones, smartwatches, and tech gadgets with Cash on Delivery across Bangladesh. Clear pricing and transparent warranty.',
+  description: 'Shop verified mobile phones, feature phones, smartwatches, and tech gadgets with Cash on Delivery across Bangladesh.',
 }
 
 export default async function HomePage() {
   const { allProducts, featuredProducts, brands, categories, banners } = await getHomepageData()
   const bestDeals = allProducts.filter((p) => p.variants.some((v) => v.compare_at_price && v.compare_at_price > v.price)).slice(0, 4)
+  const primaryProducts = featuredProducts.length ? featuredProducts : allProducts.slice(0, 8)
 
   return (
-    <main className="flex-1 bg-slate-50/50">
+    <main className="flex-1 bg-[#f7f7f7]">
       <HeroSection banners={banners} productCount={allProducts.length} brandCount={brands.length} categoryCount={categories.length} />
       <TrustStrip />
 
-      <section className="border-t border-slate-200/70 bg-slate-50/70"><div className="mx-auto max-w-7xl px-4 pb-16 pt-10 sm:px-6 sm:pt-12 lg:px-8"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-600">Discover</p><h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">Shop by category</h2></div><Link href="/categories" className="inline-flex items-center gap-2 text-sm font-black text-slate-950 transition-colors hover:text-emerald-700">View all categories <ArrowRight className="h-4 w-4" /></Link></div><div className="mt-7">{categories.length ? <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{categories.map((category: StorefrontCategory) => <CategoryCard key={category.id} category={category} />)}</div> : <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">Categories will appear here as soon as they are added.</div>}</div></div></section>
+      <section className="bg-white py-8 sm:py-12" aria-labelledby="featured-categories-heading">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-orange-500">Browse collections</p>
+              <h2 id="featured-categories-heading" className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Featured <span className="text-orange-500">Categories</span></h2>
+            </div>
+            <Link href="/categories" className="shrink-0 text-xs font-black text-slate-700 hover:text-orange-600">See All Categories <ArrowRight className="ml-1 inline h-3.5 w-3.5" /></Link>
+          </div>
+          <div className="mt-6 flex snap-x gap-1 overflow-x-auto pb-2 [scrollbar-width:none] sm:grid sm:grid-cols-4 sm:gap-3 lg:grid-cols-6">
+            {categories.slice(0, 8).map((category: StorefrontCategory) => <CategoryCard key={category.id} category={category} />)}
+          </div>
+        </div>
+      </section>
 
-      <section className="border-y border-slate-200 bg-white py-16"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-600">Catalogue highlight</p><h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">Featured devices & gadgets</h2><p className="mt-1 text-sm text-slate-500">Published live inventory with transparent pricing and specs.</p></div><Link href="/products" className="inline-flex items-center gap-2 text-sm font-black text-slate-950 hover:text-emerald-700">Browse full catalogue <ArrowRight className="h-4 w-4" /></Link></div><div className="mt-8">{featuredProducts.length ? <ProductGrid products={featuredProducts} /> : <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 p-12 text-center"><PackageOpen className="mx-auto h-10 w-10 text-slate-400" /><p className="mt-4 text-base font-black text-slate-950">Catalogue is being updated</p><p className="mt-1 text-sm text-slate-500">Published products will appear here automatically.</p></div>}</div></div></section>
+      <section className="py-8 sm:py-12" aria-labelledby="featured-products-heading">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-orange-500">Shop now</p>
+              <h2 id="featured-products-heading" className="mt-1 text-2xl font-black tracking-tight text-slate-950">Featured <span className="text-orange-500">Products</span></h2>
+            </div>
+            <Link href="/products" className="shrink-0 text-xs font-black text-slate-700 hover:text-orange-600">See All <ArrowRight className="ml-1 inline h-3.5 w-3.5" /></Link>
+          </div>
+          <div className="mt-5">
+            {primaryProducts.length ? <ProductGrid products={primaryProducts} /> : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center"><PackageOpen className="mx-auto h-9 w-9 text-slate-400" /><p className="mt-3 text-sm font-bold text-slate-700">Published products will appear here.</p></div>}
+          </div>
+        </div>
+      </section>
 
-      {bestDeals.length > 0 && <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.2em] text-rose-600"><Sparkles className="h-3.5 w-3.5" /> Special savings</p><h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">Best value deals</h2></div><Link href="/products" className="inline-flex items-center gap-2 text-sm font-black text-slate-950 hover:text-emerald-700">View all deals <ArrowRight className="h-4 w-4" /></Link></div><div className="mt-8"><ProductGrid products={bestDeals} /></div></section>}
+      {bestDeals.length > 0 && (
+        <section className="border-y border-slate-200 bg-white py-8 sm:py-12" aria-labelledby="deals-heading">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <p className="flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.18em] text-orange-500"><Sparkles className="h-3.5 w-3.5" /> Limited savings</p>
+                <h2 id="deals-heading" className="mt-1 text-2xl font-black tracking-tight text-slate-950">Exclusive <span className="text-orange-500">Deals</span></h2>
+              </div>
+              <Link href="/products" className="shrink-0 text-xs font-black text-slate-700 hover:text-orange-600">View All <ArrowRight className="ml-1 inline h-3.5 w-3.5" /></Link>
+            </div>
+            <div className="mt-5"><ProductGrid products={bestDeals} /></div>
+          </div>
+        </section>
+      )}
 
-      {brands.length > 0 && <section className="bg-slate-900 py-16 text-white"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-400">Trusted makers</p><h2 className="mt-2 text-2xl font-black tracking-[-0.04em] sm:text-3xl">Shop by brand</h2><p className="mt-2 max-w-xl text-sm leading-6 text-slate-400">Explore active makers with clear catalogue paths, recognizable logos, and products ready for delivery across Bangladesh.</p></div><Link href="/brands" className="inline-flex items-center gap-2 text-sm font-black text-emerald-300 hover:text-emerald-200">All brands <ArrowRight className="h-4 w-4" /></Link></div><div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{brands.map((brand: StorefrontBrand) => <BrandCard key={brand.id} brand={brand} />)}</div></div></section>}
+      {brands.length > 0 && (
+        <section className="py-8 sm:py-12" aria-labelledby="brands-heading">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-orange-500">Trusted makers</p>
+                <h2 id="brands-heading" className="mt-1 text-2xl font-black tracking-tight text-slate-950">Shop by <span className="text-orange-500">Brand</span></h2>
+              </div>
+              <Link href="/brands" className="text-xs font-black text-slate-700 hover:text-orange-600">All Brands <ArrowRight className="ml-1 inline h-3.5 w-3.5" /></Link>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{brands.map((brand: StorefrontBrand) => <BrandCard key={brand.id} brand={brand} />)}</div>
+          </div>
+        </section>
+      )}
 
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8"><div className="mx-auto max-w-2xl text-center"><p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-600">Simple & secure</p><h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">How to order with Cash on Delivery</h2><p className="mt-2 text-sm text-slate-500">No advance online payment needed. Order securely in minutes.</p></div><div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">{['Browse & Choose','Enter Address','Confirm COD Order','Receive & Pay'].map((title, index) => <div key={title} className="relative rounded-2xl border border-slate-200 bg-white p-6"><span className="absolute right-4 top-4 text-2xl font-black text-slate-200">0{index + 1}</span><p className="font-black text-slate-950">{title}</p><p className="mt-2 text-xs leading-5 text-slate-500">{['Select your preferred device, colour, RAM, and storage variant from our live catalogue.','Provide your name, mobile number, and complete delivery address in Bangladesh.','Review your subtotal and delivery fee, then place your verified Cash on Delivery order.','Our courier delivers your order safely to your door. Pay in cash upon receipt.'][index]}</p></div>)}</div></section>
-
-      <section className="bg-emerald-500 py-12 text-slate-950"><div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-4 sm:px-6 md:flex-row lg:px-8"><div><p className="text-xs font-black uppercase tracking-[0.18em] text-slate-900">Need assistance?</p><h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Have questions about a product or order?</h2><p className="mt-1 text-sm text-slate-900">Our support team is ready to help you every day.</p></div><div className="flex flex-wrap gap-3"><a href={`tel:${siteConfig.contact.phone.replace(/\s+/g, '')}`} className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-6 py-3.5 text-sm font-black text-white hover:bg-slate-800"><Phone className="h-4 w-4 text-emerald-400" /> Call {siteConfig.contact.phone}</a><Link href="/track-order" className="inline-flex items-center gap-2 rounded-full border border-slate-950 bg-white px-6 py-3.5 text-sm font-black text-slate-950 hover:bg-slate-100">Track an order</Link></div></div></section>
+      <section className="bg-[#111111] py-9 text-white sm:py-12">
+        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-4 sm:px-6 md:flex-row md:items-center lg:px-8">
+          <div><p className="text-xs font-black uppercase tracking-[0.18em] text-orange-400">Need assistance?</p><h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Questions about a product or order?</h2><p className="mt-1 text-sm text-white/60">Our support team is ready to help across Bangladesh.</p></div>
+          <div className="flex flex-wrap gap-2.5">
+            <a href={`tel:${siteConfig.contact.phone.replace(/\s+/g, '')}`} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-orange-500 px-5 text-sm font-black text-white hover:bg-orange-600"><Phone className="h-4 w-4" /> Call {siteConfig.contact.phone}</a>
+            <Link href="/track-order" className="inline-flex min-h-11 items-center rounded-full border border-white/15 px-5 text-sm font-black text-white hover:bg-white/10">Track an order</Link>
+          </div>
+        </div>
+      </section>
     </main>
   )
 }
