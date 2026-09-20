@@ -16,7 +16,7 @@ export const siteConfig = {
     adminEmail: "phonerbazar.helpline@gmail.com",
     supportEmail: "phonerbazar.helpline@gmail.com",
     businessEmail: "phonerbazar.helpline@gmail.com",
-    facebook: "https://www.facebook.com/share/1EA2WP2yNe/",
+    facebook: "https://www.facebook.com/profile.php?id=61576274226905",
   },
   email: {
     sender: "phonerbazar.helpline@gmail.com",
