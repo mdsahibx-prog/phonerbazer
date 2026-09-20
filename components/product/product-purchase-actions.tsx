@@ -62,7 +62,7 @@ export function ProductPurchaseActions({ product }: { product: StorefrontProduct
         items: [{ item_id: selected.sku || selected.id, item_name: product.name, price: selected.price, quantity: 1 }],
       },
     })
-    router.push(result.data.redirectUrl)
+    router.replace(result.data.redirectUrl)
   }
 
   return (
