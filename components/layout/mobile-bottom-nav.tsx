@@ -7,7 +7,7 @@ import { Grid2X2, Home, Percent, ShoppingBag } from 'lucide-react'
 const items = [
   { href: '/', label: 'Home', Icon: Home },
   { href: '/categories', label: 'Category', Icon: Grid2X2 },
-  { href: '/products', label: 'Offer', Icon: Percent },
+  { href: '/offers', label: 'Offers', Icon: Percent },
   { href: '/cart', label: 'Cart', Icon: ShoppingBag },
 ]
 
