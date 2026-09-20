@@ -18,7 +18,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         'Cache-Control': 'private, no-store, max-age=0',
       },
     })
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === 'INVOICE_GENERATION_DISABLED') return NextResponse.json({ ok: false, message: 'Invoice is currently unavailable. Invoice generation is disabled from Settings.' }, { status: 409, headers: { 'Cache-Control': 'private, no-store' } })
     return NextResponse.json({ ok: false, message: 'This invoice is unavailable or you are not authorized to access it.' }, { status: 404, headers: { 'Cache-Control': 'private, no-store' } })
   }
 }
