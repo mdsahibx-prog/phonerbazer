@@ -181,20 +181,26 @@ export async function prepareGuestCheckout(input: unknown): Promise<ActionResult
     if (variant.stock_quantity < parsed.data.quantity) return { ok: false, message: 'The selected quantity is no longer available.' }
 
     const checkoutRequestId = crypto.randomUUID()
-    await markCheckoutSession({
-      checkoutRequestId,
-      source: 'QUICK_ORDER',
-      status: 'STARTED',
-      quoteSnapshot: {
-        product_id: variant.product_id,
-        variant_id: variant.id,
-        product_name: variant.product.name,
-        variant_title: variant.variant_title,
-        sku: variant.sku,
-        quantity: parsed.data.quantity,
-        unit_price: numeric(variant.price),
-      },
-    })
+    const quoteSnapshot = {
+      product_id: variant.product_id,
+      variant_id: variant.id,
+      product_name: variant.product.name,
+      variant_title: variant.variant_title,
+      sku: variant.sku,
+      quantity: parsed.data.quantity,
+      unit_price: numeric(variant.price),
+    }
+
+    // Do not make the customer wait for analytics/session persistence.
+    // The checkout page and final order creation remain authoritative.
+    after(() =>
+      markCheckoutSession({
+        checkoutRequestId,
+        source: 'QUICK_ORDER',
+        status: 'STARTED',
+        quoteSnapshot,
+      }).catch((error) => console.error('[checkout] session tracking failed', error)),
+    )
 
     return {
       ok: true,
