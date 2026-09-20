@@ -66,19 +66,20 @@ export async function getInventoryData() {
   const db = createAdminClient()
   const session = await requireAdmin()
 
+  const canManageCosts = session.role !== 'STAFF'
   const [variants, costs, receipts, movements, imei] = await Promise.all([
     db.from('product_variants').select('id, product_id, sku, variant_title, stock_quantity, low_stock_threshold, price, is_active, products(name)').order('updated_at', { ascending: false }).limit(200),
-    db.from('admin_inventory_cost_summary').select('variant_id, costed_quantity, average_cost, inventory_value, potential_gross_profit_per_unit, costing_method').limit(200),
-    db.from('inventory_receipts').select('id, variant_id, receipt_type, quantity, unit_cost, supplier_name, supplier_reference, received_at, created_by, note, movement_id, created_at').order('received_at', { ascending: false }).limit(150),
+    canManageCosts ? db.from('admin_inventory_cost_summary').select('variant_id, costed_quantity, average_cost, inventory_value, potential_gross_profit_per_unit, costing_method').limit(200) : Promise.resolve({ data: [], error: null }),
+    canManageCosts ? db.from('inventory_receipts').select('id, variant_id, receipt_type, quantity, unit_cost, supplier_name, supplier_reference, received_at, created_by, note, movement_id, created_at').order('received_at', { ascending: false }).limit(150) : Promise.resolve({ data: [], error: null }),
     db.from('stock_movements').select('id, variant_id, change_amount, movement_type, notes, created_by, created_at, product_variants(sku, variant_title, products(name))').order('created_at', { ascending: false }).limit(100),
-    session.role === 'STAFF'
-      ? Promise.resolve({ data: [], error: null })
-      : db.from('imei_inventory').select('id, variant_id, imei_1, imei_2, serial_number, status, order_id, sold_at, created_at, product_variants(sku, variant_title, products(name))').order('created_at', { ascending: false }).limit(100),
+    canManageCosts
+      ? db.from('imei_inventory').select('id, variant_id, imei_1, imei_2, serial_number, status, order_id, sold_at, created_at, product_variants(sku, variant_title, products(name))').order('created_at', { ascending: false }).limit(100)
+      : Promise.resolve({ data: [], error: null }),
   ])
 
   ;[variants, costs, receipts, movements, imei].forEach((result) => assertNoError(result.error))
   const lowStock = (variants.data ?? []).filter((variant) => Number(variant.stock_quantity) <= Number(variant.low_stock_threshold))
-  return { variants: variants.data ?? [], costs: costs.data ?? [], receipts: receipts.data ?? [], movements: movements.data ?? [], imei: imei.data ?? [], lowStock, canManageImei: session.role !== 'STAFF' }
+  return { variants: variants.data ?? [], costs: costs.data ?? [], receipts: receipts.data ?? [], movements: movements.data ?? [], imei: imei.data ?? [], lowStock, canManageImei: canManageCosts, canManageCosts }
 }
 
 export async function getOrderManagementData(query?: string) {
