@@ -2,21 +2,20 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Grid2X2, Home, Percent, ShoppingBag, UserRound } from 'lucide-react'
+import { Grid2X2, Home, Percent, ShoppingBag } from 'lucide-react'
 
 const items = [
   { href: '/', label: 'Home', Icon: Home },
   { href: '/categories', label: 'Category', Icon: Grid2X2 },
   { href: '/products', label: 'Offer', Icon: Percent },
   { href: '/cart', label: 'Cart', Icon: ShoppingBag },
-  { href: '/account', label: 'Sign In', Icon: UserRound },
 ]
 
 export function MobileBottomNav() {
   const pathname = usePathname()
   return (
     <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-8px_24px_-20px_rgba(15,23,42,0.5)] backdrop-blur lg:hidden">
-      <div className="mx-auto grid max-w-md grid-cols-5">
+      <div className="mx-auto grid max-w-md grid-cols-4">
         {items.map(({ href, label, Icon }) => {
           const active = pathname === href || (href !== '/' && pathname.startsWith(href))
           return (
