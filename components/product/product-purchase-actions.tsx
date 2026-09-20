@@ -89,12 +89,12 @@ export function ProductPurchaseActions({ product }: { product: StorefrontProduct
         </label>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
         <button
           type="button"
           onClick={addSelectedToCart}
           disabled={!canBuy || Boolean(busy)}
-          className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-slate-300 px-3 py-2 text-xs font-black text-slate-800 transition hover:border-orange-500 hover:bg-orange-50 hover:text-orange-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex min-w-0 min-h-11 items-center justify-center gap-1.5 rounded-xl border border-slate-300 px-3 py-2 text-xs font-black text-slate-800 transition hover:border-orange-500 hover:bg-orange-50 hover:text-orange-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy === 'cart' ? <LoaderCircle className="h-4 w-4 animate-spin" /> : message === 'Added to cart.' ? <Check className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
           {busy === 'cart' ? 'Adding…' : message === 'Added to cart.' ? 'Added' : 'Add to Cart'}
@@ -103,7 +103,7 @@ export function ProductPurchaseActions({ product }: { product: StorefrontProduct
           type="button"
           onClick={buyNow}
           disabled={!canBuy || Boolean(busy)}
-          className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-orange-500 px-3 py-2 text-xs font-black text-white transition hover:bg-orange-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-200 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex min-w-0 min-h-11 items-center justify-center gap-1.5 rounded-xl bg-orange-500 px-3 py-2 text-xs font-black text-white transition hover:bg-orange-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-200 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy === 'buy' ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
           {busy === 'buy' ? 'Preparing…' : 'Buy Now'}
