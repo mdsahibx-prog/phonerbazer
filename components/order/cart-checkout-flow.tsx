@@ -22,7 +22,7 @@ const DISTRICTS_BY_DIVISION: Record<string, string[]> = {
   Rangpur: ['Dinajpur', 'Gaibandha', 'Kurigram', 'Lalmonirhat', 'Nilphamari', 'Panchagarh', 'Rangpur', 'Thakurgaon'],
   Mymensingh: ['Jamalpur', 'Mymensingh', 'Netrokona', 'Sherpur'],
 }
-\ntype Quote = { items: Array<{ name: string; variantTitle: string; sku: string; quantity: number; unitPrice: number; lineTotal: number }>; subtotal: number; deliveryCharge: number; grandTotal: number; risk: { level: string; action: string } }
+type Quote = { items: Array<{ name: string; variantTitle: string; sku: string; quantity: number; unitPrice: number; lineTotal: number }>; subtotal: number; deliveryCharge: number; grandTotal: number; risk: { level: string; action: string } }
 
 export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
   const [form, setForm] = useState<FormState>({ fullName: '', phone: '', email: '', division: '', district: '', area: '', address: '', postalCode: '', notes: '' })
