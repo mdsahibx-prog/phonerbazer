@@ -16,8 +16,8 @@ export default async function OffersPage() {
   const dealBanners = banners.filter((banner) => banner.primary_cta_url || banner.mobile_image_url || banner.desktop_image_url).slice(0, 3)
 
   return (
-    <main className="min-h-[70vh] overflow-x-hidden bg-[#f7f7f7] pb-8">
-      <section className="bg-slate-950 px-3 py-7 text-white sm:px-6 sm:py-12 lg:px-8">
+    <main className="min-h-[70vh] overflow-x-hidden bg-[#f6f7f9] pb-8">
+      <section className="bg-[#172033] px-3 py-7 text-white sm:px-6 sm:py-12 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-orange-400"><Percent className="h-3.5 w-3.5" /> PhonerBazar offers</p>
           <div className="mt-1 flex items-end justify-between gap-4"><div><h1 className="text-2xl font-black tracking-tight sm:text-4xl">Deals worth <span className="text-orange-400">checking</span></h1><p className="mt-2 max-w-xl text-xs leading-5 text-slate-300 sm:text-sm">Browse products with a current compare-at price and discover active promotions from our storefront.</p></div><Link href="/products" className="hidden shrink-0 rounded-full border border-white/15 px-4 py-2 text-xs font-black text-white sm:inline-flex">Shop all</Link></div>
