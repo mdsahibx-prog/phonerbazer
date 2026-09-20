@@ -21,11 +21,11 @@ const navigation: { href: string; label: string; icon: LucideIcon; roles: readon
   { href: '/admin/settings', label: 'Settings', icon: Settings2, roles: ['OWNER'] },
 ]
 
-export function AdminNavigation({ role }: { role: AdminRole }) {
+export function AdminNavigation({ role, canManageLandingPages = role === 'OWNER' }: { role: AdminRole; canManageLandingPages?: boolean }) {
   const pathname = usePathname()
   return (
     <nav className="space-y-1" aria-label="Admin navigation">
-      {navigation.filter((item) => item.roles.includes(role)).map((item) => {
+      {navigation.filter((item) => item.roles.includes(role) && (item.href !== '/admin/landing-pages' || canManageLandingPages)).map((item) => {
         const Icon = item.icon
         const isActive = item.href === '/admin' ? pathname === '/admin' || pathname === '/admin/dashboard' : pathname === item.href || pathname.startsWith(`${item.href}/`)
         return (
