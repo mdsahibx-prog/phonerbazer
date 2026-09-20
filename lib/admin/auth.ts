@@ -65,3 +65,24 @@ export async function requireAdmin(allowedRoles: readonly AdminRole[] = ADMIN_RO
   }
   return session
 }
+
+export async function canAdminManageLandingPages() {
+  const session = await getAdminSession()
+  if (!session) return false
+  if (session.role === 'OWNER') return true
+  if (session.role === 'STAFF') return false
+
+  const db = createAdminClient()
+  const { data, error } = await db.from('settings').select('value').eq('key', 'landing_page_access').maybeSingle()
+  if (error) throw new Error('Unable to verify Landing Page access.')
+  const value = data?.value
+  return typeof value === 'object' && value !== null && 'admin_enabled' in value
+    ? (value as { admin_enabled?: unknown }).admin_enabled !== false
+    : true
+}
+
+export async function requireLandingPageManagement() {
+  const session = await requireAdmin(['OWNER', 'ADMIN'])
+  if (!(await canAdminManageLandingPages())) throw new Error('ADMIN_FORBIDDEN')
+  return session
+}
