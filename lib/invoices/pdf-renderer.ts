@@ -59,7 +59,7 @@ function drawBox(page: PDFPage, x: number, y: number, width: number, height: num
   page.drawRectangle({ x, y: y - height, width, height, color: fill, borderColor: BORDER, borderWidth: 0.6 })
 }
 
-function drawFooter(page: PDFPage, font: PDFFont, bold: PDFFont) {
+function drawFooter(page: PDFPage, font: PDFFont, bold: PDFFont, invoice: InvoiceDocument) {
   page.drawLine({ start: { x: MARGIN, y: 28 }, end: { x: PAGE_WIDTH - MARGIN, y: 28 }, thickness: 0.6, color: BORDER })
   page.drawText('Keep this invoice for order and warranty reference.', { x: MARGIN, y: 15, size: 6.8, font, color: MUTED })
   page.drawText(`${invoice.storeProfile.businessName} · ${invoice.storeProfile.location} · ${invoice.storeProfile.phone}`, { x: PAGE_WIDTH - MARGIN - 230, y: 15, size: 6.8, font: bold, color: MUTED })
@@ -204,7 +204,7 @@ export async function renderInvoicePdf(invoice: InvoiceDocument) {
     drawWrapped(page, `Policy: ${policyText}`, MARGIN, 68, CONTENT_WIDTH, regular, 6.2, MUTED, 7.2)
   }
   page.drawText('Customer support: ' + invoice.storeProfile.publicEmail, { x: MARGIN, y: 45, size: 6.5, font: regular, color: MUTED })
-  drawFooter(page, regular, bold)
+  drawFooter(page, regular, bold, invoice)
 
   return Buffer.from(await document.save())
 }
