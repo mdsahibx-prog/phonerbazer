@@ -415,6 +415,42 @@ export async function saveFooterSettings(input: unknown): Promise<AdminActionRes
   }
 }
 
+export async function saveInvoiceGenerationSetting(input: unknown): Promise<AdminActionResult> {
+  try {
+    const session = await requireAdmin(['OWNER'])
+    const enabled = typeof input === 'object' && input !== null && 'enabled' in input && typeof (input as { enabled?: unknown }).enabled === 'boolean'
+      ? (input as { enabled: boolean }).enabled
+      : null
+    if (enabled === null) return { ok: false, message: 'Choose whether invoice generation should be enabled or disabled.' }
+
+    const db = createAdminClient()
+    const { data: previous, error: previousError } = await db.from('settings').select('value').eq('key', 'invoice_generation').maybeSingle()
+    if (previousError) throw new Error(previousError.message)
+    const previousEnabled = previous?.value && typeof previous.value === 'object' && 'enabled' in previous.value
+      ? (previous.value as { enabled?: unknown }).enabled !== false
+      : true
+
+    const { error } = await db.from('settings').upsert({
+      key: 'invoice_generation',
+      value: { enabled },
+      description: 'Owner-only control for customer-facing invoice generation. Defaults to enabled to preserve existing behavior.',
+    }, { onConflict: 'key' })
+    if (error) throw new Error(error.message)
+
+    await writeAdminAuditLog({
+      actorUserId: session.userId,
+      action: enabled ? 'INVOICE_GENERATION_ENABLED' : 'INVOICE_GENERATION_DISABLED',
+      entityType: 'settings',
+      details: { setting: 'invoice_generation', previous_value: { enabled: previousEnabled }, new_value: { enabled } },
+    })
+    refreshAdminRoutes()
+    revalidatePath('/admin/orders')
+    return { ok: true, message: enabled ? 'Invoice generation enabled.' : 'Invoice generation disabled.' }
+  } catch (error) {
+    return actionFailure(error)
+  }
+}
+
 export async function saveLandingPageAccessSetting(input: unknown): Promise<AdminActionResult> {
   try {
     const session = await requireAdmin(['OWNER'])
