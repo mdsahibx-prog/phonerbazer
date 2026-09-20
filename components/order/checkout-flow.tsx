@@ -25,6 +25,30 @@ const initialForm: FormState = {
   fullName: '', phone: '', email: '', division: '', district: '', area: '', address: '', postalCode: '', notes: '', quantity: 1,
 }
 
+const DIVISIONS = ['Dhaka', 'Chattogram', 'Rajshahi', 'Khulna', 'Barishal', 'Sylhet', 'Rangpur', 'Mymensingh'] as const
+
+const DISTRICTS_BY_DIVISION: Record<string, string[]> = {
+  Dhaka: ['Dhaka', 'Faridpur', 'Gazipur', 'Gopalganj', 'Kishoreganj', 'Madaripur', 'Manikganj', 'Munshiganj', 'Narayanganj', 'Narsingdi', 'Rajbari', 'Shariatpur', 'Tangail'],
+  Chattogram: ['Bandarban', 'Brahmanbaria', 'Chandpur', 'Chattogram', 'Cox’s Bazar', 'Cumilla', 'Feni', 'Khagrachhari', 'Lakshmipur', 'Noakhali', 'Rangamati'],
+  Rajshahi: ['Bogura', 'Chapainawabganj', 'Joypurhat', 'Naogaon', 'Natore', 'Pabna', 'Rajshahi', 'Sirajganj'],
+  Khulna: ['Bagerhat', 'Chuadanga', 'Jashore', 'Jhenaidah', 'Khulna', 'Kushtia', 'Magura', 'Meherpur', 'Narail', 'Satkhira'],
+  Barishal: ['Barguna', 'Barishal', 'Bhola', 'Jhalokathi', 'Patuakhali', 'Pirojpur'],
+  Sylhet: ['Habiganj', 'Moulvibazar', 'Sunamganj', 'Sylhet'],
+  Rangpur: ['Dinajpur', 'Gaibandha', 'Kurigram', 'Lalmonirhat', 'Nilphamari', 'Panchagarh', 'Rangpur', 'Thakurgaon'],
+  Mymensingh: ['Jamalpur', 'Mymensingh', 'Netrokona', 'Sherpur'],
+}
+
+function SelectField({ label, name, value, onChange, options, error, placeholder, disabled = false }: { label: string; name: keyof FormState; value: string; onChange: (value: string) => void; options: string[]; error?: string; placeholder: string; disabled?: boolean }) {
+  return <label className="block">
+    <span className="flex items-center justify-between text-sm font-black text-slate-800">{label}</span>
+    <select name={name} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} className={`mt-2 h-12 w-full rounded-xl border bg-white px-4 text-sm text-slate-950 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 ${error ? 'border-rose-400' : 'border-slate-200'}`}>
+      <option value="">{placeholder}</option>
+      {options.map((option) => <option key={option} value={option}>{option}</option>)}
+    </select>
+    {error && <span className="mt-1.5 block text-xs font-bold text-rose-600">{error}</span>}
+  </label>
+}
+
 function money(value: number) {
   return `৳${new Intl.NumberFormat('en-BD', { maximumFractionDigits: 0 }).format(value)}`
 }
@@ -98,7 +122,7 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-orange-600 sm:text-xs">Guest checkout</p>
           <h1 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">Place your order</h1>
-          <p className="mt-2 max-w-lg text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">No account is required. We verify price, delivery, and availability securely before confirmation.</p>
+          <p className="mt-2 max-w-lg text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">No account needed. Enter your mobile and delivery details, review the exact total, then confirm securely.</p>
         </div>
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-orange-100 text-orange-700 sm:h-11 sm:w-11">
           <PackageCheck className="h-5 w-5" />
@@ -117,7 +141,7 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
         <div className="mt-7 space-y-9">
           <section>
             <h2 className="text-base font-black text-slate-950 sm:text-lg">Customer information</h2>
-            <p className="mt-1 text-xs text-slate-500 sm:text-sm">আপনার তথ্য সঠিকভাবে দিন, যেন আমরা অর্ডার নিশ্চিত করতে পারি।</p>
+            <p className="mt-1 text-xs text-slate-500 sm:text-sm">অর্ডার নিশ্চিত করতে আপনার নাম ও সক্রিয় মোবাইল নম্বর দিন।</p>
             <div className="mt-5 grid gap-5 sm:grid-cols-2">
               <Input label="Full name" name="fullName" value={form.fullName} onChange={(value) => update('fullName', value)} error={fieldErrors.fullName} placeholder="Your full name" />
               <Input label="Mobile number" name="phone" value={form.phone} onChange={(value) => update('phone', value)} error={fieldErrors.phone} type="tel" placeholder="01XXXXXXXXX" />
@@ -128,11 +152,11 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
           </section>
           <section className="border-t border-slate-100 pt-8">
             <h2 className="text-base font-black text-slate-950 sm:text-lg">Delivery information</h2>
-            <p className="mt-1 text-xs text-slate-500 sm:text-sm">আপনার ঠিকানা অনুযায়ী ডেলিভারি চার্জ স্বয়ংক্রিয়ভাবে হিসাব হবে।</p>
+            <p className="mt-1 text-xs text-slate-500 sm:text-sm">এলাকা নির্বাচন করলে আপনার ডেলিভারি জোন ও চার্জ সঠিকভাবে হিসাব করা হবে।</p>
             <div className="mt-5 grid gap-5 sm:grid-cols-2">
-              <Input label="Division" name="division" value={form.division} onChange={(value) => update('division', value)} error={fieldErrors.division} placeholder="Dhaka" />
-              <Input label="District" name="district" value={form.district} onChange={(value) => update('district', value)} error={fieldErrors.district} placeholder="Narayanganj" />
-              <Input label="Area / Upazila" name="area" value={form.area} onChange={(value) => update('area', value)} error={fieldErrors.area} placeholder="Araihazar" />
+              <SelectField label="Division" name="division" value={form.division} onChange={(value) => { update('division', value); update('district', ''); update('area', '') }} error={fieldErrors.division} placeholder="Select division" options={[...DIVISIONS]} />
+              <SelectField label="District" name="district" value={form.district} onChange={(value) => { update('district', value); update('area', '') }} error={fieldErrors.district} placeholder={form.division ? 'Select district' : 'Select division first'} options={DISTRICTS_BY_DIVISION[form.division] ?? []} disabled={!form.division} />
+              <Input label="Area / Upazila" name="area" value={form.area} onChange={(value) => update('area', value)} error={fieldErrors.area} placeholder={form.district ? 'Enter area or upazila' : 'Select district first'} />
               <Input label="Postal code" name="postalCode" value={form.postalCode} onChange={(value) => update('postalCode', value)} error={fieldErrors.postalCode} optional placeholder="1460" />
               <label className="block sm:col-span-2">
                 <span className="flex items-center justify-between text-sm font-black text-slate-800">Full delivery address</span>
@@ -156,17 +180,26 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
             {fieldErrors.quantity && <p className="mt-3 text-xs font-bold text-rose-600">{fieldErrors.quantity}</p>}
           </section>
           <button type="button" disabled={disabled} onClick={requestQuote} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-slate-950 px-6 py-3 text-sm font-black text-white transition hover:bg-orange-600 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60">
-            {busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Checking order details</> : <>Continue to review <CheckCircle2 className="h-4 w-4" /></>}
+            {busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Checking delivery & total</> : <>Review order <CheckCircle2 className="h-4 w-4" /></>}
           </button>
         </div>
       ) : (
         <div className="mt-7">
+          <div className="mb-4 rounded-2xl border border-orange-200 bg-orange-50 p-4">
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" />
+              <div>
+                <p className="font-black text-slate-950">Prefer advance payment?</p>
+                <p className="mt-1 text-xs leading-5 text-slate-600 sm:text-sm">After confirmation, eligible orders can be securely routed to online payment. No card, bKash, Nagad, or OTP details are collected in this form.</p>
+              </div>
+            </div>
+          </div>
           <div className="rounded-2xl bg-slate-950 p-5 text-white">
             <div className="flex items-start gap-3">
               <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-orange-300" />
               <div>
-                <p className="font-black">Secure payment routing</p>
-                <p className="mt-1 text-xs leading-5 text-slate-300 sm:text-sm sm:leading-6">The server confirms the safest available payment method. You may pay on delivery or be securely redirected for advance payment if required.</p>
+                <p className="font-black">Secure payment options</p>
+                <p className="mt-1 text-xs leading-5 text-slate-300 sm:text-sm sm:leading-6">The server confirms the available payment route. Cash on delivery may be available, while eligible orders can be securely redirected for advance payment.</p>
               </div>
             </div>
           </div>
@@ -211,7 +244,7 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
               <ArrowLeft className="h-4 w-4" /> Edit details
             </button>
             <button type="button" disabled={disabled} onClick={submitOrder} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-orange-500 px-6 py-3 text-sm font-black text-slate-950 transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-60">
-              {busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Confirming securely</> : <>Confirm order <CheckCircle2 className="h-4 w-4" /></>}
+              {busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Securing your order</> : <>Place order <CheckCircle2 className="h-4 w-4" /></>}
             </button>
           </div>
           <p className="mt-4 text-center text-[10px] leading-4 text-slate-500 sm:text-xs sm:leading-5">By confirming, you agree that the final availability, totals, risk decision, and payment route are validated securely by PhonerBazar’s server.</p>
