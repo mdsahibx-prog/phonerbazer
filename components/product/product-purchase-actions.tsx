@@ -77,7 +77,7 @@ export function ProductPurchaseActions({ product }: { product: StorefrontProduct
               setMessage('')
             }}
             disabled={Boolean(busy)}
-            className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-800 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 disabled:opacity-60"
+            className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-800 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:opacity-60"
             aria-label={`Choose a variant for ${product.name}`}
           >
             {product.variants.map((variant) => (
@@ -94,7 +94,7 @@ export function ProductPurchaseActions({ product }: { product: StorefrontProduct
           type="button"
           onClick={addSelectedToCart}
           disabled={!canBuy || Boolean(busy)}
-          className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-slate-300 px-3 py-2 text-xs font-black text-slate-800 transition hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-slate-300 px-3 py-2 text-xs font-black text-slate-800 transition hover:border-orange-500 hover:bg-orange-50 hover:text-orange-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy === 'cart' ? <LoaderCircle className="h-4 w-4 animate-spin" /> : message === 'Added to cart.' ? <Check className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
           {busy === 'cart' ? 'Adding…' : message === 'Added to cart.' ? 'Added' : 'Add to Cart'}
@@ -103,7 +103,7 @@ export function ProductPurchaseActions({ product }: { product: StorefrontProduct
           type="button"
           onClick={buyNow}
           disabled={!canBuy || Boolean(busy)}
-          className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-slate-950 px-3 py-2 text-xs font-black text-white transition hover:bg-emerald-600 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-orange-500 px-3 py-2 text-xs font-black text-white transition hover:bg-orange-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-200 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy === 'buy' ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
           {busy === 'buy' ? 'Preparing…' : 'Buy Now'}
@@ -111,7 +111,7 @@ export function ProductPurchaseActions({ product }: { product: StorefrontProduct
       </div>
 
       {message && message !== 'Added to cart.' ? <p role="alert" className="text-xs font-semibold leading-5 text-rose-600">{message}</p> : null}
-      {message === 'Added to cart.' ? <p role="status" className="text-xs font-semibold text-emerald-700">Added to cart. <Link href="/cart" className="underline underline-offset-4">View cart</Link></p> : null}
+      {message === 'Added to cart.' ? <p role="status" className="text-xs font-semibold text-green-600">Added to cart. <Link href="/cart" className="underline underline-offset-4">View cart</Link></p> : null}
     </div>
   )
 }
