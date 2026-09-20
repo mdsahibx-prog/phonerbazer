@@ -18,7 +18,7 @@ const navigation: { href: string; label: string; icon: LucideIcon; roles: readon
   { href: '/admin/customers', label: 'Customers', icon: UsersRound, roles: ['OWNER', 'ADMIN', 'STAFF'] },
   { href: '/admin/support', label: 'Customer Support', icon: MessageSquareText, roles: ['OWNER', 'ADMIN', 'STAFF'] },
   { href: '/admin/ai-assistant', label: 'AI Assistant', icon: Bot, roles: ['OWNER', 'ADMIN'] },
-  { href: '/admin/settings', label: 'Settings', icon: Settings2, roles: ['OWNER', 'ADMIN'] },
+  { href: '/admin/settings', label: 'Settings', icon: Settings2, roles: ['OWNER'] },
 ]
 
 export function AdminNavigation({ role }: { role: AdminRole }) {
