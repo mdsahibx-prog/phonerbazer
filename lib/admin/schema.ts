@@ -60,7 +60,25 @@ export const variantSchema = z.object({
   price: z.coerce.number().finite().min(0).max(99999999),
   compareAtPrice: z.coerce.number().finite().min(0).max(99999999).nullable().optional(),
   lowStockThreshold: z.coerce.number().int().min(0).max(100000).default(5),
+  initialStock: z.coerce.number().int().min(0).max(2147483647).default(0),
+  initialCost: z.coerce.number().finite().min(0).max(9999999999).nullable().optional(),
   isActive: z.boolean().default(true),
+})
+
+export const receiveStockSchema = z.object({
+  variantId: uuid,
+  quantity: z.coerce.number().int().positive().max(2147483647),
+  unitCost: z.coerce.number().finite().min(0).max(9999999999),
+  supplierName: optionalShortText,
+  supplierReference: optionalShortText,
+  receivedAt: z.string().datetime().optional(),
+  note: z.string().trim().max(1000).optional().or(z.literal('')),
+})
+
+export const initializeInventoryCostSchema = z.object({
+  variantId: uuid,
+  unitCost: z.coerce.number().finite().min(0).max(9999999999),
+  note: z.string().trim().max(1000).optional().or(z.literal('')),
 })
 
 export const stockAdjustmentSchema = z.object({
