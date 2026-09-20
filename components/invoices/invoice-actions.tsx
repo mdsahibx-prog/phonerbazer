@@ -27,7 +27,7 @@ export function InvoiceActions({ orderId }: { orderId: string }) {
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
       anchor.href = url
-      anchor.download = 'sahigadget-invoice.pdf'
+      anchor.download = 'phonerbazar-invoice.pdf'
       document.body.appendChild(anchor)
       anchor.click()
       anchor.remove()
