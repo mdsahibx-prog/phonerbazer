@@ -1,5 +1,7 @@
 import 'server-only'
 
+import { after } from 'next/server'
+
 import { getCart } from './cart'
 import { markCheckoutSession, recordCommerceEvent } from '@/lib/analytics/events'
 import { assessCustomerRisk, type RiskAssessment } from '@/lib/risk/service'
@@ -19,7 +21,11 @@ export async function quoteCartCheckout(input: { checkoutRequestId: string; divi
   const deliveryCharge = input.division.trim().toLowerCase() === 'dhaka' ? settings.delivery.dhakaCharge : settings.delivery.outsideDhakaCharge
   const risk = await assessCustomerRisk({ phone: input.phone })
   const data: CheckoutQuote = { checkoutRequestId: requestId, source: input.source ?? 'CART', items, subtotal: items.reduce((sum, item) => sum + item.lineTotal, 0), deliveryCharge, grandTotal: items.reduce((sum, item) => sum + item.lineTotal, 0) + deliveryCharge, risk: { level: risk.level, action: risk.action } }
-  await markCheckoutSession({ checkoutRequestId: requestId, source: data.source, cartId: cart.id, status: 'QUOTED', customerPhone: input.phone, quoteSnapshot: { itemCount: cart.itemCount, subtotal: data.subtotal, deliveryCharge: data.deliveryCharge, grandTotal: data.grandTotal } })
-  await recordCommerceEvent({ eventId: `${requestId}:quoted`, eventName: 'CHECKOUT_QUOTED', sessionId: requestId, cartId: cart.id, metadata: { source: data.source, itemCount: cart.itemCount, grandTotal: data.grandTotal } })
+  after(() => {
+    Promise.all([
+      markCheckoutSession({ checkoutRequestId: requestId, source: data.source, cartId: cart.id, status: 'QUOTED', customerPhone: input.phone, quoteSnapshot: { itemCount: cart.itemCount, subtotal: data.subtotal, deliveryCharge: data.deliveryCharge, grandTotal: data.grandTotal } }),
+      recordCommerceEvent({ eventId: `${requestId}:quoted`, eventName: 'CHECKOUT_QUOTED', sessionId: requestId, cartId: cart.id, metadata: { source: data.source, itemCount: cart.itemCount, grandTotal: data.grandTotal } }),
+    ]).catch((error) => console.error('[checkout] quote analytics failed', error))
+  })
   return { ok: true, data }
 }
