@@ -3,6 +3,7 @@ import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 import { requireAdmin } from './auth'
+import { getInvoiceGenerationStatus } from '@/lib/invoices/service'
 
 function dayStartIso() {
   const now = new Date()
@@ -81,6 +82,7 @@ export async function getInventoryData() {
 export async function getOrderManagementData(query?: string) {
   await requireAdmin()
   const db = createAdminClient()
+  const invoiceGenerationEnabled = await getInvoiceGenerationStatus()
   const search = query?.trim()
   let request = db
     .from('orders')
@@ -94,7 +96,7 @@ export async function getOrderManagementData(query?: string) {
 
   const { data, error } = await request
   assertNoError(error)
-  return data ?? []
+  return { orders: data ?? [], invoiceGenerationEnabled }
 }
 
 export async function getCustomerManagementData(query?: string) {
