@@ -189,7 +189,7 @@ export function SiteHeader() {
 
   return (
     <>
-      <div className="border-b border-slate-200 bg-[#111111] px-4 py-2 text-center text-[10px] font-semibold uppercase tracking-widest text-slate-300 sm:text-[11px] sm:tracking-[0.18em]">
+      <div className="border-b border-slate-200 bg-[#0a0a0a] px-4 py-2 text-center text-[10px] font-semibold uppercase tracking-widest text-slate-300 sm:text-[11px] sm:tracking-[0.18em]">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-center gap-1 sm:flex-row sm:gap-0">
           <span className="text-orange-400">{siteConfig.tagline}</span>
           <span className="hidden mx-2 text-slate-600 sm:inline">•</span>
@@ -253,11 +253,11 @@ export function SiteHeader() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Link href="/admin" className="hidden items-center gap-1.5 rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 lg:inline-flex" aria-label="Open Admin Portal">
+            <Link href="/admin" className="hidden items-center gap-1.5 rounded-full border border-white/15 px-3 py-2 text-xs font-semibold text-white/70 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 lg:inline-flex" aria-label="Open Admin Portal">
               <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
               Admin Portal
             </Link>
-            <Link href="/track-order" className="hidden text-sm font-semibold text-slate-500 transition-colors hover:text-white lg:block">Track order</Link>
+            <Link href="/track-order" className="hidden text-sm font-semibold text-white/65 transition-colors hover:text-white lg:block">Track order</Link>
             <Link href="/cart" className="hidden items-center gap-1.5 text-sm font-semibold text-slate-500 transition-colors hover:text-white lg:inline-flex" aria-label="Open your cart"><ShoppingBag className="h-4 w-4" aria-hidden="true" />Your cart</Link>
             <Button asChild className="hidden rounded-full bg-orange-500 text-white transition-transform duration-150 hover:-translate-y-0.5 hover:bg-orange-400 motion-reduce:transform-none lg:inline-flex">
               <Link href="/products">Shop now</Link>
@@ -297,7 +297,7 @@ export function SiteHeader() {
             </div>
             
             <nav className="grid gap-1 border-t border-white/10 pt-3" aria-label="Mobile navigation">
-              <Link href="/" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-white/10">Home</Link>
+              <Link href="/" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10">Home</Link>
               {navItems.map((item) => <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-white/10">{item.label}</Link>)}
               <Link href="/track-order" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-white/10">Track order</Link>
               <Link href="/cart" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-white/10"><ShoppingBag className="h-4 w-4" aria-hidden="true" />Your cart</Link>
