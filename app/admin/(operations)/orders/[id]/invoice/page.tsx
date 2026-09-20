@@ -7,7 +7,7 @@ import { getAdminInvoiceDocument } from '@/lib/invoices/service'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Invoice preview · SahiGadget Admin',
+  title: 'Invoice preview · Phonerbazar Admin',
   robots: { index: false, follow: false },
 }
 
