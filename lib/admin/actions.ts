@@ -349,7 +349,7 @@ export async function updateOrderStatus(input: unknown): Promise<AdminActionResu
 
 export async function saveOperationalSettings(input: unknown): Promise<AdminActionResult> {
   try {
-    const session = await requireAdmin(['OWNER', 'ADMIN'])
+    const session = await requireAdmin(['OWNER'])
     const parsed = settingsSchema.pick({ deliveryCharges: true, businessPolicy: true }).parse(input)
     const db = createAdminClient()
     const { error } = await db.from('settings').upsert([
@@ -367,7 +367,7 @@ export async function saveOperationalSettings(input: unknown): Promise<AdminActi
 
 export async function savePaymentPolicy(input: unknown): Promise<AdminActionResult> {
   try {
-    const session = await requireAdmin(['OWNER', 'ADMIN'])
+    const session = await requireAdmin(['OWNER'])
     const parsed = paymentPolicySchema.parse(input)
     if (!parsed.codEnabled && parsed.defaultProvider === 'COD') return { ok: false, message: 'Enable Cash on Delivery or choose an enabled online provider.' }
     const db = createAdminClient()
@@ -382,7 +382,7 @@ export async function savePaymentPolicy(input: unknown): Promise<AdminActionResu
 }
 export async function saveRiskPolicy(input: unknown): Promise<AdminActionResult> {
   try {
-    const session = await requireAdmin(['OWNER', 'ADMIN'])
+    const session = await requireAdmin(['OWNER'])
     const parsed = riskPolicySchema.parse(input)
     const db = createAdminClient()
     const { error } = await db.from('settings').upsert({ key: 'risk_policy', value: parsed, description: 'Deterministic customer risk weights and COD decision thresholds' }, { onConflict: 'key' })
@@ -396,7 +396,7 @@ export async function saveRiskPolicy(input: unknown): Promise<AdminActionResult>
 }
 export async function saveFooterSettings(input: unknown): Promise<AdminActionResult> {
   try {
-    const session = await requireAdmin(['OWNER', 'ADMIN'])
+    const session = await requireAdmin(['OWNER'])
     const parsed = footerConfigSchema.parse(input)
     const db = createAdminClient()
     const { error } = await db.from('settings').upsert({
@@ -413,6 +413,22 @@ export async function saveFooterSettings(input: unknown): Promise<AdminActionRes
   } catch (error) {
     return actionFailure(error)
   }
+}
+
+export async function saveInvoiceGenerationSetting(input: unknown): Promise<AdminActionResult> {
+  try {
+    const session = await requireAdmin(['OWNER'])
+    const enabled = typeof input === 'object' && input !== null && 'enabled' in input && typeof (input as { enabled?: unknown }).enabled === 'boolean'
+      ? (input as { enabled: boolean }).enabled
+      : null
+    if (enabled === null) return { ok: false, message: 'Choose whether invoice generation should be enabled or disabled.' }
+    const db = createAdminClient()
+    const { error } = await db.from('settings').upsert({ key: 'invoice_generation', value: { enabled }, description: 'Owner-only control for customer-facing invoice generation. Existing invoices remain immutable.' }, { onConflict: 'key' })
+    if (error) throw new Error(error.message)
+    await writeAdminAuditLog({ actorUserId: session.userId, action: 'INVOICE_GENERATION_SETTING_UPDATED', entityType: 'settings', details: { key: 'invoice_generation', enabled } })
+    refreshAdminRoutes()
+    return { ok: true, message: enabled ? 'Invoice generation enabled.' : 'Invoice generation disabled.' }
+  } catch (error) { return actionFailure(error) }
 }
 
 export async function saveOwnerSettings(input: unknown): Promise<AdminActionResult> {
