@@ -167,14 +167,22 @@ export async function getProductById(id: string) {
   return normalizeProduct(row, variantsByProduct.get(row.id) ?? [])
 }
 
+const getCachedProductBySlug = unstable_cache(
+  async (slug: string) => {
+    const supabase = createPublicClient()
+    const { data, error } = await supabase.from('products').select(PRODUCT_SELECT).eq('slug', slug).eq('is_published', true).maybeSingle()
+    if (error) throw new Error('Unable to load this product.')
+    if (!data) return null
+    const row = data as unknown as RawProduct
+    const variantsByProduct = await getVariantsByProductId(supabase, [row.id])
+    return normalizeProduct(row, variantsByProduct.get(row.id) ?? [])
+  },
+  ['product-by-slug'],
+  { revalidate: 60 }
+)
+
 export async function getProductBySlug(slug: string) {
-  const supabase = await createClient()
-  const { data, error } = await supabase.from('products').select(PRODUCT_SELECT).eq('slug', slug).eq('is_published', true).maybeSingle()
-  if (error) throw new Error('Unable to load this product.')
-  if (!data) return null
-  const row = data as unknown as RawProduct
-  const variantsByProduct = await getVariantsByProductId(supabase, [row.id])
-  return normalizeProduct(row, variantsByProduct.get(row.id) ?? [])
+  return getCachedProductBySlug(slug)
 }
 
 export async function getRelatedProducts(product: StorefrontProduct, limit = 4) {
