@@ -189,22 +189,22 @@ export function SiteHeader() {
 
   return (
     <>
-      <div className="border-b border-slate-200 bg-slate-950 px-4 py-2.5 text-center text-[10px] font-semibold uppercase tracking-widest text-slate-300 sm:text-[11px] sm:tracking-[0.18em]">
+      <div className="border-b border-slate-200 bg-[#111111] px-4 py-2 text-center text-[10px] font-semibold uppercase tracking-widest text-slate-300 sm:text-[11px] sm:tracking-[0.18em]">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-center gap-1 sm:flex-row sm:gap-0">
-          <span className="text-emerald-300">{siteConfig.tagline}</span>
+          <span className="text-orange-400">{siteConfig.tagline}</span>
           <span className="hidden mx-2 text-slate-600 sm:inline">•</span>
           <span>{siteConfig.brandPromise}</span>
         </div>
       </div>
-      <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#111111]">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
           <Link href="/" className="group flex min-w-0 shrink-0 items-center gap-2.5 sm:gap-3" aria-label={`${siteConfig.name} home`}>
-            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-950 shadow-lg shadow-slate-900/10 ring-1 ring-slate-900/5 transition-transform duration-200 group-hover:-rotate-3 sm:h-11 sm:w-11 sm:rounded-2xl">
+            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/10 shadow-lg shadow-black/20 ring-1 ring-slate-900/5 transition-transform duration-200 group-hover:-rotate-3 sm:h-11 sm:w-11 sm:rounded-2xl">
               <Image src="/phonerbazar-icon.svg" alt="PhonerBazar Logo" width={44} height={44} className="h-full w-full object-cover" />
             </div>
             <div className="min-w-0">
-              <span className="motion-safe:animate-[brand-in_240ms_ease-out_both] motion-reduce:animate-none block truncate bg-gradient-to-r from-slate-950 via-slate-800 to-emerald-600 bg-clip-text text-[17px] font-black leading-tight tracking-[-0.035em] text-transparent sm:text-lg">{siteConfig.name}</span>
-              <span className="hidden text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400 sm:block">Mobile & gadgets</span>
+              <span className="motion-safe:animate-[brand-in_240ms_ease-out_both] motion-reduce:animate-none block truncate bg-gradient-to-r from-white via-white to-orange-400 bg-clip-text text-[17px] font-black leading-tight tracking-[-0.035em] text-transparent sm:text-lg">{siteConfig.name}</span>
+              <span className="hidden text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45 sm:block">Mobile & gadgets</span>
             </div>
           </Link>
 
@@ -212,7 +212,7 @@ export function SiteHeader() {
             {navItems.map((item) => {
               const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
               return (
-                <Link key={item.href} href={item.href} className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${active ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'}`}>
+                <Link key={item.href} href={item.href} className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${active ? 'bg-orange-500 text-white' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}>
                   {item.label}
                 </Link>
               )
@@ -222,7 +222,7 @@ export function SiteHeader() {
           <div ref={searchRef} className="relative hidden min-w-0 max-w-md flex-1 items-center lg:block lg:mx-4">
             <form onSubmit={submitSearch} role="search">
               <label className="sr-only" htmlFor="desktop-search">Search the catalogue</label>
-              <div className="flex w-full items-center rounded-full border border-slate-200 bg-slate-50 px-4 transition-colors focus-within:border-emerald-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-100/80">
+              <div className="flex w-full items-center rounded-full border border-white/15 bg-white px-4 transition-colors focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-200">
                 <Search className="mr-2 h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
                 <input 
                   id="desktop-search" data-search-input
@@ -246,32 +246,32 @@ export function SiteHeader() {
                     <X className="h-4 w-4" />
                   </button>
                 )}
-                <button type="submit" className="border-l border-slate-200 pl-3 text-xs font-bold text-slate-500 transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2">Search</button>
+                <button type="submit" className="ml-2 rounded-full bg-orange-500 px-4 py-2 text-xs font-black text-white transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2">Search</button>
               </div>
             </form>
             <SearchDropdown showDropdown={showDropdown} query={query} isSearching={isSearching} suggestions={suggestions} onPopularSearch={selectPopularSearch} onViewAll={submitViewAll} onProductClick={closeSearchDropdown} />
           </div>
 
           <div className="flex items-center gap-2">
-            <Link href="/admin" className="hidden items-center gap-1.5 rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 lg:inline-flex" aria-label="Open Admin Portal">
+            <Link href="/admin" className="hidden items-center gap-1.5 rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 lg:inline-flex" aria-label="Open Admin Portal">
               <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
               Admin Portal
             </Link>
-            <Link href="/track-order" className="hidden text-sm font-semibold text-slate-500 transition-colors hover:text-slate-950 lg:block">Track order</Link>
-            <Link href="/cart" className="hidden items-center gap-1.5 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-950 lg:inline-flex" aria-label="Open your cart"><ShoppingBag className="h-4 w-4" aria-hidden="true" />Your cart</Link>
-            <Button asChild className="hidden rounded-full bg-emerald-500 text-slate-950 transition-transform duration-150 hover:-translate-y-0.5 hover:bg-emerald-400 motion-reduce:transform-none lg:inline-flex">
+            <Link href="/track-order" className="hidden text-sm font-semibold text-slate-500 transition-colors hover:text-white lg:block">Track order</Link>
+            <Link href="/cart" className="hidden items-center gap-1.5 text-sm font-semibold text-slate-500 transition-colors hover:text-white lg:inline-flex" aria-label="Open your cart"><ShoppingBag className="h-4 w-4" aria-hidden="true" />Your cart</Link>
+            <Button asChild className="hidden rounded-full bg-orange-500 text-white transition-transform duration-150 hover:-translate-y-0.5 hover:bg-orange-400 motion-reduce:transform-none lg:inline-flex">
               <Link href="/products">Shop now</Link>
             </Button>
-            <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition-colors hover:bg-slate-100 lg:hidden" onClick={() => { setMenuOpen((open) => !open); if (!menuOpen) setShowDropdown(false); }} aria-expanded={menuOpen} aria-controls="mobile-navigation" aria-label={menuOpen ? 'Close menu' : 'Open menu'}>
+            <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-white transition-colors hover:bg-white/10 lg:hidden" onClick={() => { setMenuOpen((open) => !open); if (!menuOpen) setShowDropdown(false); }} aria-expanded={menuOpen} aria-controls="mobile-navigation" aria-label={menuOpen ? 'Close menu' : 'Open menu'}>
               {menuOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
             </button>
           </div>
         </div>
 
         {menuOpen && (
-          <div id="mobile-navigation" className="motion-safe:animate-[menu-in_180ms_ease-out_both] motion-reduce:animate-none border-t border-slate-200 bg-white px-4 py-5 shadow-xl lg:hidden">
+          <div id="mobile-navigation" className="motion-safe:animate-[menu-in_180ms_ease-out_both] motion-reduce:animate-none border-t border-white/10 bg-[#111111] px-4 py-5 shadow-xl lg:hidden">
             <div ref={mobileSearchRef} className="relative mb-4">
-                <form onSubmit={submitSearch} className="flex items-center rounded-2xl border border-slate-200 bg-slate-50 px-4 transition-colors focus-within:border-emerald-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-100/80" role="search">
+                <form onSubmit={submitSearch} className="flex items-center rounded-2xl border border-white/15 bg-white px-4 transition-colors focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-200" role="search">
                 <label className="sr-only" htmlFor="mobile-search">Search the catalogue</label>
                 <Search className="mr-2 h-4 w-4 text-slate-400" aria-hidden="true" />
                 <input 
@@ -296,12 +296,12 @@ export function SiteHeader() {
               <SearchDropdown showDropdown={showDropdown} query={query} isSearching={isSearching} suggestions={suggestions} isMobile onPopularSearch={selectPopularSearch} onViewAll={submitViewAll} onProductClick={closeSearchDropdown} />
             </div>
             
-            <nav className="grid gap-1 border-t border-slate-100 pt-3" aria-label="Mobile navigation">
-              <Link href="/" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100">Home</Link>
-              {navItems.map((item) => <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100">{item.label}</Link>)}
-              <Link href="/track-order" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100">Track order</Link>
-              <Link href="/cart" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"><ShoppingBag className="h-4 w-4" aria-hidden="true" />Your cart</Link>
-              <Link href="/admin" onClick={() => setMenuOpen(false)} className="mt-2 flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50" aria-label="Open Admin Portal">
+            <nav className="grid gap-1 border-t border-white/10 pt-3" aria-label="Mobile navigation">
+              <Link href="/" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-white/10">Home</Link>
+              {navItems.map((item) => <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-white/10">{item.label}</Link>)}
+              <Link href="/track-order" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-white/10">Track order</Link>
+              <Link href="/cart" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-white/10"><ShoppingBag className="h-4 w-4" aria-hidden="true" />Your cart</Link>
+              <Link href="/admin" onClick={() => setMenuOpen(false)} className="mt-2 flex items-center gap-2 rounded-xl border border-white/15 px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10" aria-label="Open Admin Portal">
                 <ShieldCheck className="h-4 w-4" aria-hidden="true" />
                 Admin Portal
               </Link>
