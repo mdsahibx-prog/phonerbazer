@@ -35,11 +35,11 @@ export function ProductCard({ product, priority = false }: { product: Storefront
   const compareAt = getCompareAtPrice(product)
   const priceRange = getProductPriceRange(product)
   return (
-    <article className="group flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-2 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md sm:p-3">
+    <article className="group flex min-w-0 h-full flex-col rounded-2xl border border-slate-200 bg-white p-2 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md sm:p-3">
       <Link href={`/products/${product.slug}`} className="block rounded-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100" aria-label={`View ${product.name}`}>
         <ProductMedia product={product} priority={priority} />
       </Link>
-      <div className="flex flex-1 flex-col px-2 pb-2 pt-3">
+      <div className="flex min-w-0 flex-1 flex-col px-2 pb-2 pt-3">
         <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
           {product.brand ? <Link href={getBrandPath(product.brand.slug)} className="inline-flex min-w-0 items-center gap-2 truncate transition-colors hover:text-orange-600" aria-label={`Browse ${product.brand.name} products`}><BrandLogo brand={product.brand} size="sm" className="h-7 w-7 rounded-lg p-1" /><span className="truncate">{product.brand.name}</span></Link> : <span className="min-w-0 flex-1 truncate">PhonerBazar</span>}
           {product.is_featured && <span className="shrink-0 text-orange-600">Featured</span>}
@@ -53,11 +53,11 @@ export function ProductCard({ product, priority = false }: { product: Storefront
             <span className="text-base font-black tracking-tight text-slate-950 sm:text-lg">{priceRange ? `From ${priceRange}` : 'Price on request'}</span>
             {compareAt && <span className="text-xs font-medium text-slate-400 line-through">{formatPrice(compareAt)}</span>}
           </div>
-          <div className="mt-2 flex items-center justify-between gap-2">
-            <div className="shrink-0">
+          <div className="mt-2 flex min-w-0 flex-wrap items-center justify-between gap-2">
+            <div className="min-w-0 shrink-0">
               <AvailabilityPill product={product} />
             </div>
-            <Link href={`/products/${product.slug}`} className="inline-flex min-h-9 items-center gap-1 rounded-full border border-slate-200 px-3 text-xs font-bold text-slate-900 transition-colors hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100" aria-label={`View details for ${product.name}`}>Details <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" /></Link>
+            <Link href={`/products/${product.slug}`} className="inline-flex min-w-0 min-h-9 items-center gap-1 rounded-full border border-slate-200 px-3 text-xs font-bold text-slate-900 transition-colors hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100" aria-label={`View details for ${product.name}`}>Details <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" /></Link>
           </div>
           <ProductPurchaseActions product={product} />
         </div>
@@ -67,5 +67,5 @@ export function ProductCard({ product, priority = false }: { product: Storefront
 }
 
 export function ProductGrid({ products }: { products: StorefrontProduct[] }) {
-  return <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-5 xl:grid-cols-4">{products.map((product, index) => <ProductCard key={product.id} product={product} priority={index === 0} />)}</div>
+  return <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-5 xl:grid-cols-4">{products.map((product, index) => <ProductCard key={product.id} product={product} priority={index === 0} />)}</div>
 }
