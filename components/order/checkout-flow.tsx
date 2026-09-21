@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Check, CheckCircle2, ChevronDown, LoaderCircle, PackageCheck, Search, ShieldCheck } from 'lucide-react'
 
-import { createGuestOrderWithRisk, quoteGuestCodOrder } from '@/lib/orders/actions'
+import { createGuestOrderWithRisk, quoteGuestCodOrder } from '@/lib/orders/actions'\nimport { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
 import { getAnalyticsConsent } from '@/lib/analytics/client'
 import type { OrderSuccessSummary, Quote } from '@/lib/orders/schema'
 import { formatPrice } from '@/lib/services/storefront-utils'
@@ -39,10 +39,10 @@ function money(value: number) {
   return `৳${new Intl.NumberFormat('en-BD', { maximumFractionDigits: 0 }).format(value)}`
 }
 
-function Input({ label, value, onChange, error, type = 'text', placeholder, autoComplete }: { label: string; value: string; onChange: (value: string) => void; error?: string; type?: string; placeholder: string; autoComplete?: string }) {
+function Input({ label, value, onChange, onBlur, error, type = 'text', placeholder, autoComplete }: { label: string; value: string; onChange: (value: string) => void; onBlur?: () => void; error?: string; type?: string; placeholder: string; autoComplete?: string }) {
   return <label className="block min-w-0">
     <span className="text-xs font-black text-slate-800">{label}</span>
-    <input value={value} onChange={(event) => onChange(event.target.value)} type={type} inputMode={type === 'tel' ? 'tel' : undefined} autoComplete={autoComplete} placeholder={placeholder} className={`mt-1.5 h-12 w-full rounded-xl border bg-white px-3.5 text-sm text-slate-950 outline-none focus:border-[var(--brand-orange)] focus:ring-4 focus:ring-orange-100 ${error ? 'border-rose-400' : 'border-slate-200'}`} />
+    <input value={value} onChange={(event) => onChange(event.target.value)} onBlur={onBlur} type={type} inputMode={type === 'tel' ? 'tel' : undefined} autoComplete={autoComplete} placeholder={placeholder} className={`mt-1.5 h-12 w-full rounded-xl border bg-white px-3.5 text-sm text-slate-950 outline-none focus:border-[var(--brand-orange)] focus:ring-4 focus:ring-orange-100 ${error ? 'border-rose-400' : 'border-slate-200'}`} />
     {error && <span className="mt-1 block text-[11px] font-bold text-rose-600">{error}</span>}
   </label>
 }
@@ -153,7 +153,7 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
       {step === 'contact' && <div className="space-y-4 px-0.5 pt-2">
         <div className="grid gap-3">
           <Input label="Full name" value={form.fullName} onChange={(value) => update('fullName', value)} error={fieldErrors.fullName} placeholder="Your full name" autoComplete="name" />
-          <Input label="Mobile number" value={form.phone} onChange={(value) => update('phone', value)} error={fieldErrors.phone} type="tel" placeholder="01XXXXXXXXX" autoComplete="tel" />
+          <Input label="Mobile number" value={form.phone} onChange={(value) => update('phone', value)} onBlur={validatePhone} error={fieldErrors.phone} type="tel" placeholder="01XXXXXXXXX" autoComplete="tel" />
         </div>
         <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 text-[10px] font-semibold text-slate-600">
           <span className="flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5 text-orange-600" /> Cash on Delivery</span>
@@ -189,7 +189,7 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
         </div>
         <div className="mt-3 flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-[11px] leading-5 text-slate-500"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" /> <span>Final stock, delivery and order details are securely verified before confirmation.</span></div>
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/98 px-3 pt-2.5 pb-[calc(.625rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-18px_rgba(15,23,42,.35)] backdrop-blur sm:static sm:mt-4 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
-          <div className="mx-auto grid max-w-6xl grid-cols-[auto_1fr] gap-2"><button type="button" disabled={busy} onClick={() => setStep('delivery')} className="inline-flex min-h-12 items-center justify-center gap-1 rounded-xl border border-slate-300 bg-white px-4 text-xs font-black text-slate-700">Edit</button><button type="submit" disabled={busy} className="inline-flex min-h-12 items-center justify-between gap-2 rounded-xl bg-[var(--brand-orange)] px-4 text-sm font-black text-slate-950 shadow-md disabled:opacity-60"><span>{busy ? 'Confirming order...' : '✓ Confirm order'}</span><span>{formatPrice(total)}</span></button></div>
+          <div className="mx-auto grid max-w-6xl grid-cols-[auto_1fr] gap-2"><button type="button" disabled={busy} onClick={() => setStep('delivery')} className="inline-flex min-h-12 items-center justify-center gap-1 rounded-xl border border-slate-300 bg-white px-4 text-xs font-black text-slate-700">Edit</button><button type="button" onClick={submitOrder} disabled={busy} className="inline-flex min-h-12 items-center justify-between gap-2 rounded-xl bg-[var(--brand-orange)] px-4 text-sm font-black text-slate-950 shadow-md disabled:opacity-60"><span>{busy ? 'Confirming order...' : '✓ Confirm order'}</span><span>{formatPrice(total)}</span></button></div>
         </div>
       </div>}
 
