@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from 'zod'\nimport { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
 
 const optionalText = z.string().trim().max(500).optional().or(z.literal(''))
 
