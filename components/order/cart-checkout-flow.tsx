@@ -66,6 +66,21 @@ export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
     setMessage('')
   }
 
+  function validatePhone() {
+    if (!form.phone.trim()) {
+      setFieldErrors((current) => ({ ...current, phone: 'Enter your mobile number.' }))
+      return false
+    }
+    if (!isValidBangladeshMobile(form.phone)) {
+      setFieldErrors((current) => ({ ...current, phone: 'Please enter a valid Bangladesh mobile number.' }))
+      return false
+    }
+    const canonical = normalizePhone(form.phone)
+    setForm((current) => ({ ...current, phone: canonical }))
+    setFieldErrors((current) => ({ ...current, phone: '' }))
+    return true
+  }
+
   function continueToDelivery() {
     const phone = form.phone.replace(/\D/g, '')
     if (!form.fullName.trim()) { setMessage('Enter your name.'); return }
