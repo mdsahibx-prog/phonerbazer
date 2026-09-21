@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, CheckCircle2, ChevronDown, LoaderCircle, MapPin, PackageCheck, Search, ShieldCheck, Truck } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, LoaderCircle, MapPin, PackageCheck, ShieldCheck, Truck } from 'lucide-react'
 
 import { createGuestOrderWithRisk, quoteGuestCodOrder } from '@/lib/orders/actions'
 import { getAnalyticsConsent } from '@/lib/analytics/client'
@@ -173,57 +173,35 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
           </button>
         </div>
       ) : (
-        <div className="mt-7">
-          
+        <div className="mt-5 pb-20 sm:pb-0">
+          <div className="divide-y divide-slate-100 rounded-xl border border-slate-200">
+            <div className="flex items-start gap-3 p-3.5">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" />
+              <div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Delivery</p><p className="mt-0.5 text-xs font-bold text-slate-800">{form.fullName} · {form.phone}</p><p className="mt-0.5 break-words text-xs leading-5 text-slate-500">{form.address}, {form.area}, {form.district}, {form.division}</p></div>
+            </div>
+            <div className="flex items-start gap-3 p-3.5">
+              <PackageCheck className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" />
+              <div className="min-w-0 flex-1"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Order</p><div className="mt-0.5 flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-bold text-slate-900">{quote?.productName}</p><p className="text-xs text-slate-500">{quote?.variantTitle || quote?.sku}</p></div><span className="shrink-0 text-xs font-black text-slate-700">× {form.quantity}</span></div></div>
+            </div>
+            <div className="flex items-center justify-between p-3.5 text-sm"><span className="text-slate-500">Subtotal</span><span className="font-bold text-slate-900">{money(quote?.subtotal ?? 0)}</span></div>
+            <div className="flex items-center justify-between p-3.5 text-sm"><span className="text-slate-500">Delivery</span><span className="font-bold text-slate-900">{money(quote?.deliveryCharge ?? 0)}</span></div>
+            {(quote?.discountTotal ?? 0) > 0 && <div className="flex items-center justify-between px-3.5 pb-3.5 text-xs text-orange-600"><span>Saved</span><span className="font-bold">{money(quote?.discountTotal ?? 0)}</span></div>}
+            <div className="flex items-center justify-between border-t border-slate-100 p-3.5"><span className="font-black text-slate-950">Total</span><span className="text-lg font-black text-slate-950">{money(quote?.grandTotal ?? 0)}</span></div>
+          </div>
+          <div className="mt-4 flex items-start gap-2 rounded-xl bg-slate-50 px-3.5 py-3 text-[11px] leading-5 text-slate-500">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" />
+            <span>Final stock, delivery, risk, COD/advance-payment route, and order creation are revalidated securely on the server.</span>
+          </div>
+          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 backdrop-blur sm:static sm:mt-5 sm:border-0 sm:bg-transparent sm:p-0">
+            <div className="mx-auto grid max-w-6xl grid-cols-[auto_1fr] gap-2">
+              <button type="button" disabled={disabled} onClick={() => setStep('details')} className="inline-flex min-h-12 items-center justify-center gap-1.5 rounded-xl border border-slate-300 px-4 text-xs font-black text-slate-700 disabled:opacity-60 sm:rounded-full sm:px-5"><ArrowLeft className="h-4 w-4" /> Edit</button>
+              <button type="button" disabled={disabled} onClick={submitOrder} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 text-sm font-black text-slate-950 shadow-lg shadow-orange-500/20 disabled:cursor-not-allowed disabled:opacity-60 sm:rounded-full">
+                {busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Securing order</> : <>Confirm Order <CheckCircle2 className="h-4 w-4" /></>}
+              </button>
             </div>
           </div>
-          <div className="mt-7 rounded-2xl border border-slate-200 p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-black text-slate-950">{quote?.productName}</p>
-                <p className="mt-1 truncate text-xs text-slate-500 sm:text-sm">{quote?.variantTitle} · {quote?.sku}</p>
-              </div>
-              <span className="shrink-0 rounded-full bg-orange-50 px-3 py-1 text-[10px] font-black text-orange-700 sm:text-xs">{form.quantity} item{form.quantity === 1 ? '' : 's'}</span>
-            </div>
-            <dl className="mt-5 space-y-3 border-t border-slate-100 pt-5 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-slate-500">Subtotal</dt>
-                <dd className="font-bold text-slate-950">{money(quote?.subtotal ?? 0)}</dd>
-              </div>
-              {(quote?.discountTotal ?? 0) > 0 && (
-                <div className="flex justify-between text-orange-700">
-                  <dt>Saved from regular price</dt>
-                  <dd className="font-bold">{money(quote?.discountTotal ?? 0)}</dd>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <dt className="text-slate-500">Delivery ({quote?.deliveryZone === 'dhaka' ? 'Dhaka' : 'Outside Dhaka'})</dt>
-                <dd className="font-bold text-slate-950">{money(quote?.deliveryCharge ?? 0)}</dd>
-              </div>
-              <div className="flex justify-between border-t border-slate-100 pt-4 text-base">
-                <dt className="font-black text-slate-950">Grand total</dt>
-                <dd className="font-black text-slate-950">{money(quote?.grandTotal ?? 0)}</dd>
-              </div>
-            </dl>
-          </div>
-          <div className="mt-6 rounded-2xl bg-slate-50 p-5">
-            <p className="font-black text-slate-950">Delivery to</p>
-            <p className="mt-2 break-words text-xs leading-5 text-slate-600 sm:text-sm sm:leading-6">
-              {form.fullName} · {form.phone}<br />
-              {form.address}, {form.area}, {form.district}, {form.division}
-            </p>
-          </div>
-          <div className="mt-7 grid gap-3 sm:grid-cols-2">
-            <button type="button" disabled={disabled} onClick={() => setStep('details')} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-slate-300 px-6 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-100 disabled:opacity-60">
-              <ArrowLeft className="h-4 w-4" /> Edit details
-            </button>
-            <button type="button" disabled={disabled} onClick={submitOrder} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-orange-500 px-6 py-3 text-sm font-black text-slate-950 transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-60">
-              {busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Securing your order</> : <>Place order <CheckCircle2 className="h-4 w-4" /></>}
-            </button>
-          </div>
-          <p className="mt-4 text-center text-[10px] leading-4 text-slate-500 sm:text-xs sm:leading-5">By confirming, you agree that the final availability, totals, risk decision, and payment route are validated securely by PhonerBazar’s server.</p>
         </div>
-      )}
+      )
     </section>
     <aside className="space-y-4 lg:sticky lg:top-24">
       <div className="rounded-[1.5rem] bg-orange-500 p-6 text-slate-950">
