@@ -6,7 +6,7 @@ import { ArrowLeft, ChevronDown, LoaderCircle, PackageCheck, Search, ShieldCheck
 import { quoteCartOrder, createCartOrder } from '@/lib/commerce/order-actions'
 import { getAnalyticsConsent } from '@/lib/analytics/client'
 import type { OrderSuccessSummary } from '@/lib/orders/schema'
-import { formatPrice } from '@/lib/services/storefront-utils'
+import { formatPrice } from '@/lib/services/storefront-utils'\nimport { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
 
 type CartSummary = { itemCount: number; subtotal: number; deliveryCharges: { dhakaCharge: number; outsideDhakaCharge: number } }
 type FormState = { fullName: string; phone: string; division: string; district: string; area: string; address: string }
@@ -110,7 +110,7 @@ export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
         <section><div className="flex items-center gap-2"><UserRound className="h-4 w-4 text-orange-600" /><h2 className="text-base font-black">Almost there 👋</h2></div><p className="mt-1 text-xs text-slate-500">Just a few details to confirm your order.</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <label className="text-xs font-black text-slate-800">Full name<input autoComplete="name" value={form.fullName} onChange={(e)=>update('fullName',e.target.value)} placeholder="Your full name" className="mt-1.5 h-12 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none focus:border-orange-500" /></label>
-            <label className="text-xs font-black text-slate-800">Mobile number<input autoComplete="tel" inputMode="tel" value={form.phone} onChange={(e)=>update('phone',e.target.value)} type="tel" placeholder="01XXXXXXXXX" className="mt-1.5 h-12 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none focus:border-orange-500" /></label>
+            <label className="text-xs font-black text-slate-800">Mobile number<input autoComplete="tel" inputMode="tel" value={form.phone} onChange={(e)=>update('phone',e.target.value)} onBlur={validatePhone} type="tel" placeholder="01XXXXXXXXX" className="mt-1.5 h-12 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none focus:border-orange-500" /></label>
           </div>
         </section>
         <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 text-[10px] font-semibold text-slate-600"><span>✓ Cash on Delivery</span><span>✓ Secure order</span><span className="hidden min-[375px]:inline">✓ No account</span></div>
