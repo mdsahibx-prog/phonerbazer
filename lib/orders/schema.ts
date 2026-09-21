@@ -45,6 +45,8 @@ export type TrackingLookupInput = z.infer<typeof trackingLookupSchema>
 export type Quote = {
   productName: string
   variantTitle: string
+  color: string | null
+  imageUrl: string | null
   sku: string
   quantity: number
   unitPrice: number
