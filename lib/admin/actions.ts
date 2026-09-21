@@ -589,7 +589,9 @@ export async function uploadProductImage(formData: FormData): Promise<AdminActio
     if (upload.error) throw new Error(upload.error.message)
     const { data: publicUrl } = db.storage.from('product-images').getPublicUrl(storagePath)
     if (isPrimary) {
-      const { error } = await db.from('product_images').update({ is_primary: false, updated_at: new Date().toISOString() }).eq('product_id', productId).eq('variant_id', typeof variantId === 'string' && variantId ? variantId : null)
+      let primaryQuery = db.from('product_images').update({ is_primary: false, updated_at: new Date().toISOString() }).eq('product_id', productId)
+      primaryQuery = typeof variantId === 'string' && variantId ? primaryQuery.eq('variant_id', variantId) : primaryQuery.is('variant_id', null)
+      const { error } = await primaryQuery
       if (error) throw new Error(error.message)
     }
     const { data, error } = await db.from('product_images').insert({ product_id: productId, variant_id: typeof variantId === 'string' && variantId ? variantId : null, storage_path: storagePath, image_url: publicUrl.publicUrl, alt_text: typeof altText === 'string' ? optional(altText) : null, is_primary: isPrimary, created_by: session.userId }).select('id').single()
