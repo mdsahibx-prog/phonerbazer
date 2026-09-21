@@ -49,7 +49,7 @@ export async function SiteFooter() {
     settings.footer.payments.mastercard ? { label: 'Mastercard', Icon: PaymentCard } : null,
   ].filter(Boolean) as { label: string; Icon: typeof Banknote }[]
 
-  return <footer className="border-t border-slate-200 bg-slate-950 text-white">
+  return <footer className="border-t border-slate-200 bg-[#151c2f] text-white">
     <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.2fr_.8fr_.9fr_1.1fr] lg:gap-8 lg:px-8">
       <div>
         <div className="flex items-center gap-3">
@@ -57,10 +57,10 @@ export async function SiteFooter() {
           <div><p className="font-black tracking-tight">{siteConfig.name}</p><p className="text-xs text-slate-400">{siteConfig.tagline}</p></div>
         </div>
         <p className="mt-5 max-w-sm text-sm leading-7 text-slate-400">{siteConfig.brandPromise}. A clean, customer-first storefront for mobile phones and gadgets in Bangladesh.</p>
-        {socialLinks.length ? <div className="mt-6 flex flex-wrap gap-2" aria-label="PhonerBazar social media links">{socialLinks.map(({ key, label, href, Icon }) => <a key={key} href={href} target="_blank" rel="noreferrer" aria-label={`PhonerBazar on ${label}`} title={label} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 text-slate-300 transition-colors hover:border-emerald-400 hover:text-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"><Icon className="h-4 w-4" /></a>)}</div> : null}
+        {socialLinks.length ? <div className="mt-6 flex flex-wrap gap-2" aria-label="PhonerBazar social media links">{socialLinks.map(({ key, label, href, Icon }) => <a key={key} href={href} target="_blank" rel="noreferrer" aria-label={`PhonerBazar on ${label}`} title={label} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 text-slate-300 transition-colors hover:border-emerald-400 hover:text-orange-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"><Icon className="h-4 w-4" /></a>)}</div> : null}
       </div>
       <div>
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-300">Explore</p>
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-300">Explore</p>
         <nav className="mt-5 grid gap-3 text-sm text-slate-300" aria-label="Footer explore navigation"><Link href="/products" className="flex items-center gap-2 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"><ShoppingBag className="h-4 w-4 text-emerald-300" />Shop products</Link><Link href="/search" className="flex items-center gap-2 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"><Search className="h-4 w-4 text-emerald-300" />Search catalogue</Link></nav>
       </div>
       <div>
