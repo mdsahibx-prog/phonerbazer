@@ -2,11 +2,13 @@
 
  :root {
   --background: #f6f7f9;
+  --brand-navy: #151c2f;
+  --brand-orange: #ff6b00;
   --foreground: #111827;
   --surface: #ffffff;
   --muted: #6b7280;
   --line: #e5e7eb;
-  --accent: #ff6b00;
+  --accent: var(--brand-orange);
   --accent-dark: #e85d04;
   --ring: #ffd6b3;
   --success: #16a34a;
@@ -22,7 +24,7 @@
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { background: var(--background); color: var(--foreground); font-family: Arial, Helvetica, sans-serif; }\n\n/* Premium charcoal, ivory & orange storefront system */\n.storefront-dark { background: #172033; color: #fff; }\n.storefront-surface { background: #fff; color: #0a0a0a; }\n
+body { background: var(--background); color: var(--foreground); font-family: Arial, Helvetica, sans-serif; }\n\n/* Premium charcoal, ivory & orange storefront system */\n.storefront-dark { background: var(--brand-navy); color: #fff; }\n.storefront-surface { background: var(--surface); color: var(--foreground); }\n
 button, a, input, select { -webkit-tap-highlight-color: transparent; }
 :focus-visible { outline: 3px solid var(--ring); outline-offset: 3px; }
 ::selection { background: #fed7aa; color: #7c2d12; }
