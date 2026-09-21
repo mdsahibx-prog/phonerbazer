@@ -569,29 +569,35 @@ export async function uploadProductImage(formData: FormData): Promise<AdminActio
   try {
     const session = await requireAdmin(['OWNER', 'ADMIN'])
     const productId = formData.get('productId')
+    const variantId = formData.get('variantId')
     const altText = formData.get('altText')
     const isPrimary = formData.get('isPrimary') === 'true'
     const file = formData.get('file')
     if (typeof productId !== 'string' || !zUuid(productId) || !(file instanceof File)) return { ok: false, message: 'Choose a product and a valid image file.' }
+    if (variantId && (typeof variantId !== 'string' || !zUuid(variantId))) return { ok: false, message: 'Choose a valid variant.' }
     const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif'])
     if (!allowedTypes.has(file.type) || file.size <= 0 || file.size > 5 * 1024 * 1024) return { ok: false, message: 'Use a JPEG, PNG, WebP, or AVIF image up to 5 MB.' }
 
     const extension = file.type === 'image/jpeg' ? 'jpg' : file.type.split('/')[1]
     const storagePath = `${productId}/${randomUUID()}.${extension}`
     const db = createAdminClient()
+    if (typeof variantId === 'string' && variantId) {
+      const { data: variant, error: variantError } = await db.from('product_variants').select('id,product_id').eq('id', variantId).eq('product_id', productId).maybeSingle()
+      if (variantError || !variant) return { ok: false, message: 'The selected variant does not belong to this product.' }
+    }
     const upload = await db.storage.from('product-images').upload(storagePath, file, { contentType: file.type, upsert: false })
     if (upload.error) throw new Error(upload.error.message)
     const { data: publicUrl } = db.storage.from('product-images').getPublicUrl(storagePath)
     if (isPrimary) {
-      const { error } = await db.from('product_images').update({ is_primary: false, updated_at: new Date().toISOString() }).eq('product_id', productId)
+      const { error } = await db.from('product_images').update({ is_primary: false, updated_at: new Date().toISOString() }).eq('product_id', productId).eq('variant_id', typeof variantId === 'string' && variantId ? variantId : null)
       if (error) throw new Error(error.message)
     }
-    const { data, error } = await db.from('product_images').insert({ product_id: productId, storage_path: storagePath, image_url: publicUrl.publicUrl, alt_text: typeof altText === 'string' ? optional(altText) : null, is_primary: isPrimary, created_by: session.userId }).select('id').single()
+    const { data, error } = await db.from('product_images').insert({ product_id: productId, variant_id: typeof variantId === 'string' && variantId ? variantId : null, storage_path: storagePath, image_url: publicUrl.publicUrl, alt_text: typeof altText === 'string' ? optional(altText) : null, is_primary: isPrimary, created_by: session.userId }).select('id').single()
     if (error || !data) {
       await db.storage.from('product-images').remove([storagePath])
       throw new Error(error?.message ?? 'Unable to store image metadata.')
     }
-    await writeAdminAuditLog({ actorUserId: session.userId, action: 'PRODUCT_IMAGE_UPLOADED', entityType: 'product_image', entityId: data.id, details: { product_id: productId, content_type: file.type, size: file.size, is_primary: isPrimary } })
+    await writeAdminAuditLog({ actorUserId: session.userId, action: 'PRODUCT_IMAGE_UPLOADED', entityType: 'product_image', entityId: data.id, details: { product_id: productId, variant_id: typeof variantId === 'string' && variantId ? variantId : null, content_type: file.type, size: file.size, is_primary: isPrimary } })
     refreshAdminRoutes()
     return { ok: true, message: 'Product image uploaded.' }
   } catch (error) {
