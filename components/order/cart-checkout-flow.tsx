@@ -6,7 +6,8 @@ import { ArrowLeft, ChevronDown, LoaderCircle, PackageCheck, Search, ShieldCheck
 import { quoteCartOrder, createCartOrder } from '@/lib/commerce/order-actions'
 import { getAnalyticsConsent } from '@/lib/analytics/client'
 import type { OrderSuccessSummary } from '@/lib/orders/schema'
-import { formatPrice } from '@/lib/services/storefront-utils'\nimport { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
+import { formatPrice } from '@/lib/services/storefront-utils'
+import { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
 
 type CartSummary = { itemCount: number; subtotal: number; deliveryCharges: { dhakaCharge: number; outsideDhakaCharge: number } }
 type FormState = { fullName: string; phone: string; division: string; district: string; area: string; address: string }
@@ -67,25 +68,16 @@ export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
   }
 
   function validatePhone() {
-    if (!form.phone.trim()) {
-      setFieldErrors((current) => ({ ...current, phone: 'Enter your mobile number.' }))
-      return false
-    }
-    if (!isValidBangladeshMobile(form.phone)) {
-      setFieldErrors((current) => ({ ...current, phone: 'Please enter a valid Bangladesh mobile number.' }))
-      return false
-    }
-    const canonical = normalizePhone(form.phone)
-    setForm((current) => ({ ...current, phone: canonical }))
-    setFieldErrors((current) => ({ ...current, phone: '' }))
+    if (!form.phone.trim()) { setMessage('Enter your mobile number.'); return false }
+    if (!isValidBangladeshMobile(form.phone)) { setMessage('Please enter a valid Bangladesh mobile number.'); return false }
+    setForm((current) => ({ ...current, phone: normalizePhone(current.phone) }))
+    setMessage('')
     return true
   }
 
   function continueToDelivery() {
-    const phone = form.phone.replace(/\D/g, '')
     if (!form.fullName.trim()) { setMessage('Enter your name.'); return }
-    if (!/^01\d{9}$/.test(phone)) { setMessage('Enter a valid 11-digit mobile number.'); return }
-    setMessage('')
+    if (!validatePhone()) return
     setStep('delivery')
   }
 
