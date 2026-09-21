@@ -96,7 +96,7 @@ export function ProductPurchaseActions({ product }: { product: StorefrontProduct
           disabled={!canBuy || Boolean(busy)}
           aria-label={message === 'Added to cart.' ? `Added ${product.name} to cart` : `Add ${product.name} to cart`}
           title="Add to cart"
-          className="inline-flex min-w-0 min-h-9 items-center justify-center rounded-lg border border-slate-200 px-1.5 text-slate-800 transition hover:border-orange-500 hover:bg-orange-50 hover:text-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-100 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:gap-1.5 sm:rounded-xl sm:px-3 sm:text-xs sm:focus-visible:ring-4"
+          className="inline-flex min-w-0 min-h-9 items-center justify-center rounded-lg border border-slate-300 px-1.5 text-slate-800 transition hover:border-orange-500 hover:bg-orange-50 hover:text-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-100 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:gap-1.5 sm:rounded-xl sm:px-3 sm:text-xs sm:focus-visible:ring-4"
         >
           {busy === 'cart' ? <LoaderCircle className="h-4 w-4 animate-spin" /> : message === 'Added to cart.' ? <Check className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
           <span className="sr-only sm:not-sr-only">{busy === 'cart' ? 'Adding…' : message === 'Added to cart.' ? 'Added' : 'Add to Cart'}</span>
@@ -105,7 +105,7 @@ export function ProductPurchaseActions({ product }: { product: StorefrontProduct
           type="button"
           onClick={buyNow}
           disabled={!canBuy || Boolean(busy)}
-          className="inline-flex min-w-0 min-h-9 items-center justify-center gap-1 rounded-lg bg-orange-500 px-2 text-[11px] font-black text-white transition hover:bg-orange-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-200 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:gap-1.5 sm:rounded-xl sm:px-3 sm:py-2 sm:text-xs sm:focus-visible:ring-4"
+          className="inline-flex min-w-0 min-h-9 items-center justify-center gap-1 rounded-lg bg-[var(--brand-orange)] px-2 text-[11px] font-black text-white transition hover:bg-orange-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-200 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:gap-1.5 sm:rounded-xl sm:px-3 sm:py-2 sm:text-xs sm:focus-visible:ring-4"
         >
           {busy === 'buy' ? <LoaderCircle className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" /> : <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
           {busy === 'buy' ? 'Preparing…' : 'Buy Now'}
