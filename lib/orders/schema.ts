@@ -40,7 +40,7 @@ export const trackingLookupSchema = z.object({
 
 export type GuestOrderInput = z.infer<typeof guestOrderInputSchema>
 export type OrderQuoteInput = z.infer<typeof orderQuoteInputSchema>
-export type TrackingLookupInput = z.infer<typeof trackingLookupInputSchema>
+export type TrackingLookupInput = z.infer<typeof trackingLookupSchema>
 
 export type Quote = {
   productName: string
