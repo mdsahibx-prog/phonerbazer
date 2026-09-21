@@ -76,7 +76,7 @@ export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
     router.replace('/order/success')
   }
 
-  return <form onSubmit={submitOrder} className="mx-auto grid max-w-6xl gap-5 pb-20 lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start">
+  return <form onSubmit={submitOrder} className="mx-auto grid max-w-6xl gap-5 pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start">
     <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
       <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-orange-600"><PackageCheck className="h-4 w-4" /></span>
@@ -121,10 +121,10 @@ export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
             <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 text-orange-600" /><div><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Delivery</p><p className="text-xs leading-5 text-slate-600">{form.division} · {form.district} · {form.area}<br />{form.address}</p></div></div>
             <div className="flex items-start gap-2"><Truck className="mt-0.5 h-4 w-4 text-orange-600" /><div><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Payment / delivery</p><p className="text-xs text-slate-600">Final COD or advance-payment route is confirmed by the server.</p></div></div>
           </div>
-          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 backdrop-blur sm:static sm:mt-5 sm:border-0 sm:bg-transparent sm:p-0">
+          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/98 px-3 pt-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-18px_rgba(15,23,42,0.35)] backdrop-blur sm:static sm:mt-5 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-0">
             <div className="mx-auto grid max-w-6xl grid-cols-[auto_1fr] gap-2">
               <button type="button" disabled={busy} onClick={() => setStep('details')} className="inline-flex min-h-12 items-center justify-center gap-1.5 rounded-xl border border-slate-300 px-4 text-xs font-black text-slate-700 sm:rounded-full"><ArrowLeft className="h-4 w-4" /> Edit</button>
-              <button type="submit" disabled={busy} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 text-sm font-black text-slate-950 shadow-lg disabled:opacity-50 sm:rounded-full">{busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Securing order</> : <>Confirm Order <CheckCircle2 className="h-4 w-4" /></>}</button>
+              <button type="submit" disabled={busy} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[var(--brand-orange)] px-4 text-sm font-black text-slate-950 shadow-lg disabled:opacity-50 sm:rounded-full">{busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Processing order...</> : <><span>✓ Confirm Order</span><span>{formatPrice(quote?.grandTotal ?? 0)}</span></>}</button>
             </div>
           </div>
         </div>
