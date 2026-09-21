@@ -28,7 +28,7 @@ export * from './storefront-utils'
 type RawProduct = ProductRow & { 
   brand?: BrandRow | null; 
   category?: CategoryRow | null;
-  product_images?: ProductImageRow[]
+  product_images?: Array<ProductImageRow & { variant_id: string | null }>
 }
 type RawStorefrontVariant = Omit<StorefrontVariant, 'price' | 'compare_at_price'> & { price: number | string; compare_at_price: number | string | null }
 
