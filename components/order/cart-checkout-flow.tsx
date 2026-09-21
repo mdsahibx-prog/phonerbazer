@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, CheckCircle2, ChevronDown, LoaderCircle, MapPin, PackageCheck, Search, ShieldCheck, Truck, UserRound } from 'lucide-react'
+import { ArrowLeft, ChevronDown, LoaderCircle, PackageCheck, Search, ShieldCheck, UserRound } from 'lucide-react'
 import { quoteCartOrder, createCartOrder } from '@/lib/commerce/order-actions'
 import { getAnalyticsConsent } from '@/lib/analytics/client'
 import type { OrderSuccessSummary } from '@/lib/orders/schema'
@@ -25,19 +25,30 @@ const DISTRICTS_BY_DIVISION: Record<string, string[]> = {
   Mymensingh: ['Jamalpur', 'Mymensingh', 'Netrokona', 'Sherpur'],
 }
 
-function SearchSelect({ label, value, options, placeholder, disabled = false, onChange }: { label: string; value: string; options: string[]; placeholder: string; disabled?: boolean; onChange: (value: string) => void }) {
+function SearchSelect({ label, value, options, placeholder, disabled = false, error, onChange }: { label: string; value: string; options: string[]; placeholder: string; disabled?: boolean; error?: string; onChange: (value: string) => void }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const filtered = options.filter((option) => option.toLowerCase().includes(search.trim().toLowerCase()))
-  return <div className="relative">
+  return <div className="relative min-w-0">
     <span className="text-xs font-black text-slate-800">{label}</span>
-    <button type="button" disabled={disabled} onClick={() => { setOpen((v) => !v); setSearch('') }} className="mt-1.5 flex h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3.5 text-left text-sm outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-50 disabled:text-slate-400">
+    <button type="button" disabled={disabled} onClick={() => { setOpen((v) => !v); setSearch('') }} className={`mt-1.5 flex h-12 w-full items-center justify-between rounded-xl border bg-white px-3.5 text-left text-sm outline-none focus:border-[var(--brand-orange)] focus:ring-4 focus:ring-orange-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 ${error ? 'border-rose-400' : 'border-slate-200'}`}>
       <span className={value ? 'font-semibold text-slate-950' : 'text-slate-400'}>{value || placeholder}</span><ChevronDown className="h-4 w-4 text-slate-400" />
     </button>
     {open && !disabled && <div className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-      <div className="flex items-center gap-2 border-b border-slate-100 px-3"><Search className="h-4 w-4 text-slate-400" /><input autoFocus value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Type to search..." className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none" /></div>
-      <div className="max-h-56 overflow-y-auto p-1.5">{filtered.length ? filtered.map((option)=><button key={option} type="button" onClick={()=>{onChange(option);setOpen(false)}} className={`flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm hover:bg-orange-50 ${option===value?'bg-orange-50 font-black text-orange-700':'text-slate-700'}`}>{option}</button>) : <p className="px-3 py-4 text-xs text-slate-500">No matching options.</p>}</div>
+      <div className="flex items-center gap-2 border-b border-slate-100 px-3"><Search className="h-4 w-4 text-slate-400" /><input autoFocus value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none" /></div>
+      <div className="max-h-52 overflow-y-auto p-1.5">{filtered.length ? filtered.map((option) => <button key={option} type="button" onClick={() => { onChange(option); setOpen(false) }} className={`flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm ${option === value ? 'bg-orange-50 font-black text-orange-700' : 'text-slate-700 hover:bg-orange-50'}`}>{option}</button>) : <p className="px-3 py-4 text-xs text-slate-500">No matching options.</p>}</div>
     </div>}
+    {error && <span className="mt-1 block text-[11px] font-bold text-rose-600">{error}</span>}
+  </div>
+}
+
+function Progress({ step }: { step: Step }) {
+  const active = step === 'contact' ? 1 : step === 'delivery' ? 2 : 3
+  return <div className="flex items-center gap-2 text-[10px] font-black sm:text-xs">
+    {['Contact', 'Delivery', 'Review'].map((label, index) => {
+      const n = index + 1
+      return <div key={label} className="flex min-w-0 flex-1 items-center gap-2"><span className={`whitespace-nowrap ${n === active ? 'text-orange-600' : n < active ? 'text-slate-800' : 'text-slate-400'}`}>{n < active ? '✓' : n} {label}</span>{n < 3 && <span className={`h-px flex-1 ${n < active ? 'bg-slate-800' : 'bg-slate-200'}`} />}</div>
+    })}
   </div>
 }
 
@@ -65,6 +76,7 @@ export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
 
   async function requestQuote() {
     if (busy || !cart.itemCount) return
+    if (!form.division || !form.district || !form.area.trim() || !form.address.trim()) { setMessage('Please complete your delivery details.'); return }
     setBusy(true); setMessage('')
     const result = await quoteCartOrder({ checkoutRequestId, phone: form.phone, division: form.division })
     setBusy(false)
@@ -85,62 +97,49 @@ export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
     router.replace('/order/success')
   }
 
+  const total = quote?.grandTotal ?? 0
   return <form onSubmit={submitOrder} className="mx-auto grid max-w-6xl gap-5 pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start">
-    <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+    <section className="min-w-0 bg-white sm:rounded-2xl sm:border sm:border-slate-200 sm:p-6 sm:shadow-sm">
       <div className="px-0.5 pb-4">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-orange-600"><PackageCheck className="h-4 w-4" /></span>
-        <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-600">Cart checkout</p><h1 className="text-xl font-black text-slate-950 sm:text-2xl">Checkout</h1></div>
-        <div className="mt-4 flex items-center gap-2 text-[10px] font-black sm:text-xs"><span className={step === 'contact' ? 'text-orange-600' : 'text-slate-800'}>{step === 'contact' ? '1' : '✓'} Contact</span><span className="text-slate-300">→</span><span className={step === 'delivery' ? 'text-orange-600' : step === 'review' ? 'text-slate-800' : 'text-slate-400'}>{step === 'review' ? '✓' : '2'} Delivery</span><span className="text-slate-300">→</span><span className={step === 'review' ? 'text-orange-600' : 'text-slate-400'}>3 Review</span></div>
+        <div className="flex items-center gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600"><PackageCheck className="h-4 w-4" /></span><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-600">Phonerbazar checkout</p><h1 className="text-xl font-black text-slate-950 sm:text-2xl">{step === 'contact' ? 'Complete your order' : step === 'delivery' ? 'Where should we deliver?' : 'Review your order'}</h1><p className="mt-1 text-xs text-slate-500">{step === 'contact' ? 'No account needed. Just a few details.' : step === 'delivery' ? 'Choose your location so we can calculate delivery correctly.' : 'Everything looks good? Confirm when ready.'}</p></div></div>
+        <div className="mt-4"><Progress step={step} /></div>
       </div>
-      {message && <div role="alert" className="mt-4 rounded-xl bg-rose-50 px-3.5 py-3 text-xs font-semibold text-rose-700">{message}</div>}
+      {message && <div role="alert" className="mx-0.5 mb-3 rounded-xl bg-rose-50 px-3.5 py-2.5 text-xs font-semibold leading-5 text-rose-700">{message}</div>}
 
-      {step === 'contact' ? (
-        <div className="mt-2 space-y-4 pb-24">
-          <section>
-            <div className="flex items-center gap-2"><UserRound className="h-4 w-4 text-orange-600" /><h2 className="text-sm font-black text-slate-950">Customer</h2></div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <label className="text-xs font-black text-slate-800">Name<input value={form.fullName} onChange={(e)=>update('fullName',e.target.value)} required placeholder="Your full name" className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none focus:border-orange-500" /></label>
-              <label className="text-xs font-black text-slate-800">Mobile number<input value={form.phone} onChange={(e)=>update('phone',e.target.value)} required type="tel" placeholder="01XXXXXXXXX" className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none focus:border-orange-500" /></label>
-            </div>
-          </section>
+      {step === 'contact' && <div className="space-y-4 px-0.5 pb-24">
+        <section><div className="flex items-center gap-2"><UserRound className="h-4 w-4 text-orange-600" /><h2 className="text-base font-black">Almost there 👋</h2></div><p className="mt-1 text-xs text-slate-500">Just a few details to confirm your order.</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <label className="text-xs font-black text-slate-800">Full name<input autoComplete="name" value={form.fullName} onChange={(e)=>update('fullName',e.target.value)} placeholder="Your full name" className="mt-1.5 h-12 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none focus:border-orange-500" /></label>
+            <label className="text-xs font-black text-slate-800">Mobile number<input autoComplete="tel" inputMode="tel" value={form.phone} onChange={(e)=>update('phone',e.target.value)} type="tel" placeholder="01XXXXXXXXX" className="mt-1.5 h-12 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none focus:border-orange-500" /></label>
+          </div>
+        </section>
+        <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 text-[10px] font-semibold text-slate-600"><span>✓ Cash on Delivery</span><span>✓ Secure order</span><span className="hidden min-[375px]:inline">✓ No account</span></div>
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/98 px-3 pt-2.5 pb-[calc(.625rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-18px_rgba(15,23,42,.35)] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none"><button type="button" disabled={busy} onClick={continueToDelivery} className="mx-auto flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-orange)] px-5 text-sm font-black text-slate-950 shadow-md disabled:opacity-60">Continue to delivery →</button></div>
+      </div>}
 
-                    <section>
-            <div className="flex items-center gap-2"><UserRound className="h-4 w-4 text-orange-600" /><h2 className="text-base font-black text-slate-950">Almost there 👋</h2></div>
-            <p className="mt-1 text-xs text-slate-500">Just a few details to confirm your order.</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <label className="text-xs font-black text-slate-800">Full name<input autoComplete="name" value={form.fullName} onChange={(e)=>update('fullName',e.target.value)} placeholder="Your full name" className="mt-1.5 h-12 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none focus:border-orange-500" /></label>
-              <label className="text-xs font-black text-slate-800">Mobile number<input autoComplete="tel" inputMode="tel" value={form.phone} onChange={(e)=>update('phone',e.target.value)} type="tel" placeholder="01XXXXXXXXX" className="mt-1.5 h-12 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none focus:border-orange-500" /></label>
-            </div>
-          </section>
-          <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 text-[10px] font-semibold text-slate-600"><span>✓ Cash on Delivery</span><span>✓ Secure order</span><span className="hidden min-[375px]:inline">✓ No account</span></div>
-          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/98 px-3 pt-2.5 pb-[calc(.625rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-18px_rgba(15,23,42,.35)] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none"><button type="button" disabled={busy} onClick={continueToDelivery} className="mx-auto flex min-h-12 w-full max-w-6xl items-center justify-center gap-2 rounded-xl bg-[var(--brand-orange)] px-5 text-sm font-black text-slate-950">Continue to delivery →</button></div>
-          <button type="button" disabled={busy || !cart.itemCount} onClick={requestQuote} className="fixed inset-x-0 bottom-0 z-40 mx-auto inline-flex min-h-12 w-full max-w-6xl items-center justify-center gap-2 border-t border-slate-200 bg-orange-500 px-5 py-3 text-sm font-black text-slate-950 shadow-lg disabled:opacity-50 sm:static sm:rounded-full sm:border-0">{busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Checking delivery & total</> : <>Review Order <CheckCircle2 className="h-4 w-4" /></>}</button>
+      {step === 'delivery' && <div className="space-y-4 px-0.5 pb-24">
+        <button type="button" onClick={() => setStep('contact')} className="inline-flex items-center gap-1 text-xs font-bold text-slate-500"><ArrowLeft className="h-3.5 w-3.5" /> Edit contact</button>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <SearchSelect label="Division" value={form.division} options={[...DIVISIONS]} placeholder="Select division" onChange={(v)=>{update('division',v);update('district','');update('area','')}} />
+          <SearchSelect label="District" value={form.district} options={DISTRICTS_BY_DIVISION[form.division]??[]} placeholder="Select district" disabled={!form.division} onChange={(v)=>{update('district',v);update('area','')}} />
+          <label className="text-xs font-black text-slate-800">Area / Upazila<input value={form.area} onChange={(e)=>update('area',e.target.value)} disabled={!form.district} placeholder={form.district?'Area / thana':'Select district first'} className="mt-1.5 h-12 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none focus:border-orange-500 disabled:bg-slate-50 disabled:text-slate-400" /></label>
+          <label className="text-xs font-black text-slate-800 sm:col-span-2">Full delivery address<textarea value={form.address} onChange={(e)=>update('address',e.target.value)} rows={2} placeholder="House, road, landmark or village" className="mt-1.5 w-full resize-none rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-orange-500" /></label>
         </div>
-      ) : (
-        <div className="mt-5 pb-3">
-          <div className="divide-y divide-slate-100 rounded-xl border border-slate-200">
-            {quote?.items.map((item) => <div key={`${item.sku}-${item.variantTitle}`} className="flex justify-between gap-3 p-3.5"><div className="min-w-0"><p className="truncate text-sm font-bold text-slate-900">{item.name}</p><p className="text-xs text-slate-500">{item.variantTitle || item.sku} × {item.quantity}</p></div><p className="shrink-0 text-sm font-bold text-slate-900">{formatPrice(item.lineTotal)}</p></div>)}
-            <div className="flex items-center justify-between p-3.5 text-sm"><span className="text-slate-500">Subtotal</span><span className="font-bold">{formatPrice(quote?.subtotal ?? 0)}</span></div>
-            <div className="flex items-center justify-between p-3.5 text-sm"><span className="text-slate-500">Delivery</span><span className="font-bold">{formatPrice(quote?.deliveryCharge ?? 0)}</span></div>
-            <div className="flex items-center justify-between border-t border-slate-100 p-3.5"><span className="font-black text-slate-950">Total</span><span className="text-lg font-black text-slate-950">{formatPrice(quote?.grandTotal ?? 0)}</span></div>
-          </div>
-          <div className="mt-4 space-y-3 rounded-xl border border-slate-200 p-3.5">
-            <div className="flex items-start gap-2"><UserRound className="mt-0.5 h-4 w-4 text-orange-600" /><div><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Customer</p><p className="text-xs font-bold text-slate-800">{form.fullName} · {form.phone}</p></div></div>
-            <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 text-orange-600" /><div><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Delivery</p><p className="text-xs leading-5 text-slate-600">{form.division} · {form.district} · {form.area}<br />{form.address}</p></div></div>
-            <div className="flex items-start gap-2"><Truck className="mt-0.5 h-4 w-4 text-orange-600" /><div><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Payment / delivery</p><p className="text-xs text-slate-600">Final COD or advance-payment route is confirmed by the server.</p></div></div>
-          </div>
-          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/98 px-3 pt-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-18px_rgba(15,23,42,0.35)] backdrop-blur sm:static sm:mt-5 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-0">
-            <div className="mx-auto grid max-w-6xl grid-cols-[auto_1fr] gap-2">
-              <button type="button" disabled={busy} onClick={() => setStep('details')} className="inline-flex min-h-12 items-center justify-center gap-1.5 rounded-xl border border-slate-300 px-4 text-xs font-black text-slate-700 sm:rounded-full"><ArrowLeft className="h-4 w-4" /> Edit</button>
-              <button type="submit" disabled={busy} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[var(--brand-orange)] px-4 text-sm font-black text-slate-950 shadow-lg disabled:opacity-50 sm:rounded-full">{busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Processing order...</> : <><span>✓ Confirm Order</span><span>{formatPrice(quote?.grandTotal ?? 0)}</span></>}</button>
-            </div>
-          </div>
+        <div className="rounded-xl bg-slate-50 px-3 py-2.5 text-[11px] text-slate-500">Your delivery charge is calculated from your selected location.</div>
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/98 px-3 pt-2.5 pb-[calc(.625rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-18px_rgba(15,23,42,.35)] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none"><button type="button" disabled={busy} onClick={requestQuote} className="mx-auto flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-orange)] px-5 text-sm font-black text-slate-950 shadow-md disabled:opacity-60">{busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Reviewing order...</> : <>Review order →</>}</button></div>
+      </div>}
+
+      {step === 'review' && <div className="px-0.5 pb-[calc(7.5rem+env(safe-area-inset-bottom))]">
+        <button type="button" disabled={busy} onClick={() => setStep('delivery')} className="mb-3 inline-flex items-center gap-1 text-xs font-bold text-slate-500"><ArrowLeft className="h-3.5 w-3.5" /> Edit delivery</button>
+        <div className="divide-y divide-slate-100 rounded-xl border border-slate-200">
+          <div className="p-3.5"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Delivery</p><p className="mt-1 text-xs font-bold text-slate-800">{form.fullName} · {form.phone}</p><p className="text-xs text-slate-500">{[form.area, form.district, form.division].filter(Boolean).join(', ')}</p><p className="break-words text-xs leading-5 text-slate-600">{form.address}</p></div>
+          <div className="p-3.5"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Order</p>{quote?.items.map((item)=><div key={`${item.sku}-${item.variantTitle}`} className="flex items-center justify-between gap-3 py-1"><div className="min-w-0"><p className="truncate text-sm font-bold">{item.name}</p><p className="text-xs text-slate-500">Qty {item.quantity}{item.variantTitle ? ` · ${item.variantTitle}` : ''}</p></div><span className="shrink-0 text-sm font-black">{formatPrice(item.lineTotal)}</span></div>)}</div>
+          <div className="p-3.5 text-sm"><div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span className="font-bold">{formatPrice(quote?.subtotal ?? 0)}</span></div><div className="mt-2 flex justify-between"><span className="text-slate-500">Delivery</span><span className="font-bold">{formatPrice(quote?.deliveryCharge ?? 0)}</span></div><div className="mt-2 flex justify-between border-t border-slate-100 pt-2"><span className="font-black">Total</span><span className="text-lg font-black">{formatPrice(total)}</span></div></div>
         </div>
-      )}
+        <div className="mt-3 flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-[11px] leading-5 text-slate-500"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" /> <span>Final stock, delivery and order details are securely verified before confirmation.</span></div>
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/98 px-3 pt-2.5 pb-[calc(.625rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-18px_rgba(15,23,42,.35)] backdrop-blur sm:static sm:mt-4 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none"><div className="mx-auto grid w-full max-w-6xl grid-cols-[auto_1fr] gap-2"><button type="button" disabled={busy} onClick={()=>setStep('delivery')} className="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-xs font-black text-slate-700">Edit</button><button type="submit" disabled={busy} className="inline-flex min-h-12 items-center justify-between gap-2 rounded-xl bg-[var(--brand-orange)] px-4 text-sm font-black text-slate-950 shadow-md disabled:opacity-60"><span>{busy?'Confirming order...':'✓ Confirm order'}</span><span>{formatPrice(total)}</span></button></div></div>
+      </div>}
     </section>
-
-    <aside className="hidden lg:block lg:sticky lg:top-24">
-      <div className="rounded-2xl bg-[#172033] p-5 text-white"><ShieldCheck className="h-5 w-5 text-orange-400" /><p className="mt-4 text-base font-black">Secure checkout</p><p className="mt-1.5 text-xs leading-5 text-white/60">Delivery, stock, risk, and payment rules are revalidated on the server.</p></div>
-    </aside>
+    <aside className="hidden lg:block lg:sticky lg:top-24"><div className="rounded-2xl bg-[#172033] p-5 text-white"><ShieldCheck className="h-5 w-5 text-orange-400" /><p className="mt-4 text-base font-black">Secure checkout</p><p className="mt-1.5 text-xs leading-5 text-white/60">Delivery, stock, risk, and payment rules are revalidated on the server.</p></div></aside>
   </form>
 }
