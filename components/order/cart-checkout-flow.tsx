@@ -97,7 +97,15 @@ export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
     if (busy) return
     setBusy(true); setMessage('')
     const consent = getAnalyticsConsent()
-    const result = await createCartOrder({ ...form, email: '', postalCode: '', notes: '', checkoutRequestId, analyticsConsent: consent.analytics, marketingConsent: consent.marketing })
+    let result
+    try {
+      result = await createCartOrder({ ...form, email: '', postalCode: '', notes: '', checkoutRequestId, analyticsConsent: consent.analytics, marketingConsent: consent.marketing })
+    } catch (error) {
+      console.error('[checkout] cart confirm order failed', error)
+      setBusy(false)
+      setMessage('We could not place your order right now. Please try again.')
+      return
+    }
     setBusy(false)
     if (!result.ok) { setMessage(result.message); return }
     if ('paymentRequired' in result.data) { window.location.assign(result.data.redirectUrl); return }
