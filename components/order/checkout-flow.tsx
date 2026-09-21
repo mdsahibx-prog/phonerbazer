@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, CheckCircle2, LoaderCircle, MapPin, PackageCheck, ShieldCheck, Truck } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ChevronDown, LoaderCircle, MapPin, PackageCheck, Search, ShieldCheck, Truck } from 'lucide-react'
 
 import { createGuestOrderWithRisk, quoteGuestCodOrder } from '@/lib/orders/actions'
 import { getAnalyticsConsent } from '@/lib/analytics/client'
