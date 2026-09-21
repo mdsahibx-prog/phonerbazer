@@ -141,7 +141,15 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
     if (busy) return
     setBusy(true); setMessage('')
     const consent = getAnalyticsConsent()
-    const result = await createGuestOrderWithRisk({ ...form, productId, variantId, checkoutRequestId, analyticsConsent: consent.analytics, marketingConsent: consent.marketing })
+    let result
+    try {
+      result = await createGuestOrderWithRisk({ ...form, productId, variantId, checkoutRequestId, analyticsConsent: consent.analytics, marketingConsent: consent.marketing })
+    } catch (error) {
+      console.error('[checkout] confirm order failed', error)
+      setBusy(false)
+      setMessage('We could not place your order right now. Please try again.')
+      return
+    }
     setBusy(false)
     if (!result.ok) {
       setFieldErrors(result.fieldErrors ?? {})
