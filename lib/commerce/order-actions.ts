@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { after } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { loadOrderSuccessById } from '@/lib/orders/actions'
-import { normalizePhone } from '@/lib/orders/phone'
+import { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
 import { getCart } from './cart'
 import { quoteCartCheckout } from './checkout'
 import { assessCustomerRisk } from '@/lib/risk/service'
@@ -14,7 +14,7 @@ import { getPaymentsForOrder, initiatePaymentForOrder, paymentRequirementForRisk
 const cartOrderSchema = z.object({
   checkoutRequestId: z.string().uuid(),
   fullName: z.string().trim().min(2).max(120),
-  phone: z.string().trim().regex(/^(?:\+?88)?01[3-9]\d{8}$/),
+  phone: z.string().trim().transform(normalizePhone).refine(isValidBangladeshMobile, 'Enter a valid Bangladeshi mobile number.'),
   email: z.union([z.literal(''), z.string().trim().email()]).optional(),
   division: z.string().trim().min(2).max(80),
   district: z.string().trim().min(2).max(80),
