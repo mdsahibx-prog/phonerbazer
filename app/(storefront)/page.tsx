@@ -45,7 +45,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="bg-[#f6f7f9] py-5 sm:py-10 aria-labelledby="featured-products-heading">
+      <section className="bg-[#f6f7f9] py-5 sm:py-10" aria-labelledby="featured-products-heading">
         <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
           <div className="flex items-end justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-500">Fresh picks</p><h2 id="featured-products-heading" className="mt-1 text-xl font-black tracking-tight text-slate-950 sm:text-3xl">Featured <span className="text-orange-500">Products</span></h2></div><Link href="/products" className="shrink-0 text-[11px] font-black text-orange-600 sm:text-xs">View All <ArrowRight className="ml-0.5 inline h-3.5 w-3.5" /></Link></div>
           <div className="mt-4 sm:mt-5">{primaryProducts.length ? <ProductGrid products={primaryProducts} /> : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center"><PackageOpen className="mx-auto h-9 w-9 text-slate-400" /><p className="mt-3 text-sm font-bold text-slate-700">Published products will appear here.</p></div>}</div>
