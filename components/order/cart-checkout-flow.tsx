@@ -10,6 +10,7 @@ import { formatPrice } from '@/lib/services/storefront-utils'
 
 type CartSummary = { itemCount: number; subtotal: number; deliveryCharges: { dhakaCharge: number; outsideDhakaCharge: number } }
 type FormState = { fullName: string; phone: string; division: string; district: string; area: string; address: string }
+type Step = 'contact' | 'delivery' | 'review'
 type Quote = { items: Array<{ name: string; variantTitle: string; sku: string; quantity: number; unitPrice: number; lineTotal: number }>; subtotal: number; deliveryCharge: number; grandTotal: number; risk: { level: string; action: string } }
 
 const DIVISIONS = ['Dhaka', 'Chattogram', 'Rajshahi', 'Khulna', 'Barishal', 'Sylhet', 'Rangpur', 'Mymensingh'] as const
@@ -43,7 +44,7 @@ function SearchSelect({ label, value, options, placeholder, disabled = false, on
 export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
   const [form, setForm] = useState<FormState>({ fullName: '', phone: '', division: '', district: '', area: '', address: '' })
   const [quote, setQuote] = useState<Quote | null>(null)
-  const [step, setStep] = useState<'details' | 'review'>('details')
+  const [step, setStep] = useState<Step>('contact')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [checkoutRequestId] = useState(() => crypto.randomUUID())
@@ -52,6 +53,14 @@ export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
   function update(key: keyof FormState, value: string) {
     setForm((current) => ({ ...current, [key]: value }))
     setMessage('')
+  }
+
+  function continueToDelivery() {
+    const phone = form.phone.replace(/\D/g, '')
+    if (!form.fullName.trim()) { setMessage('Enter your name.'); return }
+    if (!/^01\d{9}$/.test(phone)) { setMessage('Enter a valid 11-digit mobile number.'); return }
+    setMessage('')
+    setStep('delivery')
   }
 
   async function requestQuote() {
@@ -78,15 +87,15 @@ export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
 
   return <form onSubmit={submitOrder} className="mx-auto grid max-w-6xl gap-5 pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start">
     <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-      <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+      <div className="px-0.5 pb-4">
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-orange-600"><PackageCheck className="h-4 w-4" /></span>
         <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-600">Cart checkout</p><h1 className="text-xl font-black text-slate-950 sm:text-2xl">Checkout</h1></div>
-        <span className="ml-auto text-[10px] font-bold text-slate-400">Step {step === 'details' ? '1' : '2'} of 2</span>
+        <div className="mt-4 flex items-center gap-2 text-[10px] font-black sm:text-xs"><span className={step === 'contact' ? 'text-orange-600' : 'text-slate-800'}>{step === 'contact' ? '1' : '✓'} Contact</span><span className="text-slate-300">→</span><span className={step === 'delivery' ? 'text-orange-600' : step === 'review' ? 'text-slate-800' : 'text-slate-400'}>{step === 'review' ? '✓' : '2'} Delivery</span><span className="text-slate-300">→</span><span className={step === 'review' ? 'text-orange-600' : 'text-slate-400'}>3 Review</span></div>
       </div>
       {message && <div role="alert" className="mt-4 rounded-xl bg-rose-50 px-3.5 py-3 text-xs font-semibold text-rose-700">{message}</div>}
 
-      {step === 'details' ? (
-        <div className="mt-5 space-y-6 pb-3">
+      {step === 'contact' ? (
+        <div className="mt-2 space-y-4 pb-24">
           <section>
             <div className="flex items-center gap-2"><UserRound className="h-4 w-4 text-orange-600" /><h2 className="text-sm font-black text-slate-950">Customer</h2></div>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -95,17 +104,16 @@ export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
             </div>
           </section>
 
-          <section className="border-t border-slate-100 pt-5">
-            <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-orange-600" /><h2 className="text-sm font-black text-slate-950">Delivery</h2></div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <SearchSelect label="Division" value={form.division} options={[...DIVISIONS]} placeholder="Select division" onChange={(v)=>{update('division',v);update('district','');update('area','')}} />
-              <SearchSelect label="District" value={form.district} options={DISTRICTS_BY_DIVISION[form.division]??[]} placeholder={form.division?'Select district':'Select division first'} disabled={!form.division} onChange={(v)=>{update('district',v);update('area','')}} />
-              <label className="text-xs font-black text-slate-800">Area / Thana<input value={form.area} onChange={(e)=>update('area',e.target.value)} required placeholder={form.district?'Search or enter area / thana':'Select district first'} className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none focus:border-orange-500 disabled:bg-slate-50" disabled={!form.district} /></label>
-              <label className="text-xs font-black text-slate-800 sm:col-span-2">Delivery Address<textarea value={form.address} onChange={(e)=>update('address',e.target.value)} required rows={2} placeholder="House/Road/Block, landmark etc." className="mt-1.5 w-full resize-none rounded-xl border border-slate-200 px-3.5 py-3 text-sm font-normal outline-none focus:border-orange-500" /></label>
+                    <section>
+            <div className="flex items-center gap-2"><UserRound className="h-4 w-4 text-orange-600" /><h2 className="text-base font-black text-slate-950">Almost there 👋</h2></div>
+            <p className="mt-1 text-xs text-slate-500">Just a few details to confirm your order.</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="text-xs font-black text-slate-800">Full name<input autoComplete="name" value={form.fullName} onChange={(e)=>update('fullName',e.target.value)} placeholder="Your full name" className="mt-1.5 h-12 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none focus:border-orange-500" /></label>
+              <label className="text-xs font-black text-slate-800">Mobile number<input autoComplete="tel" inputMode="tel" value={form.phone} onChange={(e)=>update('phone',e.target.value)} type="tel" placeholder="01XXXXXXXXX" className="mt-1.5 h-12 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none focus:border-orange-500" /></label>
             </div>
-            <p className="mt-2 text-[10px] leading-4 text-slate-400">Choose division and district first, then enter the local area or thana used by the courier.</p>
           </section>
-
+          <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 text-[10px] font-semibold text-slate-600"><span>✓ Cash on Delivery</span><span>✓ Secure order</span><span className="hidden min-[375px]:inline">✓ No account</span></div>
+          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/98 px-3 pt-2.5 pb-[calc(.625rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-18px_rgba(15,23,42,.35)] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none"><button type="button" disabled={busy} onClick={continueToDelivery} className="mx-auto flex min-h-12 w-full max-w-6xl items-center justify-center gap-2 rounded-xl bg-[var(--brand-orange)] px-5 text-sm font-black text-slate-950">Continue to delivery →</button></div>
           <button type="button" disabled={busy || !cart.itemCount} onClick={requestQuote} className="fixed inset-x-0 bottom-0 z-40 mx-auto inline-flex min-h-12 w-full max-w-6xl items-center justify-center gap-2 border-t border-slate-200 bg-orange-500 px-5 py-3 text-sm font-black text-slate-950 shadow-lg disabled:opacity-50 sm:static sm:rounded-full sm:border-0">{busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Checking delivery & total</> : <>Review Order <CheckCircle2 className="h-4 w-4" /></>}</button>
         </div>
       ) : (
