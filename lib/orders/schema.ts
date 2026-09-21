@@ -1,4 +1,5 @@
-import { z } from 'zod'\nimport { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
+import { z } from 'zod'
+import { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
 
 const optionalText = z.string().trim().max(500).optional().or(z.literal(''))
 
@@ -10,7 +11,7 @@ export const orderSelectionSchema = z.object({
 
 export const customerDetailsSchema = z.object({
   fullName: z.string().trim().min(2, 'Please enter your full name.').max(120, 'Name is too long.'),
-  phone: z.string().trim().regex(/^(?:\+?88)?01[3-9]\d{8}$/, 'Enter a valid Bangladeshi mobile number.'),
+  phone: z.string().trim().transform(normalizePhone).refine(isValidBangladeshMobile, 'Enter a valid Bangladeshi mobile number.'),
   email: z.union([z.literal(''), z.string().trim().email('Enter a valid email address.')]).optional(),
 })
 
@@ -34,12 +35,12 @@ export const orderQuoteInputSchema = orderSelectionSchema.merge(z.object({
 
 export const trackingLookupSchema = z.object({
   orderNumber: z.string().trim().regex(/^SG-\d{8}-[A-F0-9]{8}$/i, 'Enter the complete SahiGadget order number.'),
-  phone: z.string().trim().regex(/^(?:\+?88)?01[3-9]\d{8}$/, 'Enter the mobile number used for the order.'),
+  phone: z.string().trim().transform(normalizePhone).refine(isValidBangladeshMobile, 'Enter the mobile number used for the order.'),
 })
 
 export type GuestOrderInput = z.infer<typeof guestOrderInputSchema>
 export type OrderQuoteInput = z.infer<typeof orderQuoteInputSchema>
-export type TrackingLookupInput = z.infer<typeof trackingLookupSchema>
+export type TrackingLookupInput = z.infer<typeof trackingLookupInputSchema>
 
 export type Quote = {
   productName: string
