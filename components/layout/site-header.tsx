@@ -43,7 +43,7 @@ function SearchDropdown({ showDropdown, query, isSearching, suggestions, isMobil
       {isEmpty ? (
         <div className="p-4">
           <p className="mb-3 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-            <Sparkles className="h-3.5 w-3.5 text-emerald-600" /> Popular searches
+            <Sparkles className="h-3.5 w-3.5 text-orange-600" /> Popular searches
           </p>
           <div className="flex flex-wrap gap-2">
             {popularSearches.map((term) => (
@@ -72,7 +72,7 @@ function SearchDropdown({ showDropdown, query, isSearching, suggestions, isMobil
             <button
               type="button"
               onClick={onViewAll}
-              className="flex items-center gap-1 text-xs font-bold text-emerald-600 hover:underline"
+              className="flex items-center gap-1 text-xs font-bold text-orange-600 hover:underline"
             >
               View all <ArrowRight className="h-3 w-3" />
             </button>
@@ -98,8 +98,8 @@ function SearchDropdown({ showDropdown, query, isSearching, suggestions, isMobil
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold text-slate-900">{product.name}</p>
                   <div className="mt-0.5 flex items-center gap-2">
-                    <span className="text-xs font-black text-emerald-600">{priceRange}</span>
-                    <span className={`text-[10px] font-bold uppercase tracking-wider ${availability.tone === 'in' ? 'text-emerald-500' : availability.tone === 'low' ? 'text-amber-500' : 'text-rose-500'}`}>
+                    <span className="text-xs font-black text-orange-600">{priceRange}</span>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${availability.tone === 'in' ? 'text-orange-500' : availability.tone === 'low' ? 'text-amber-500' : 'text-rose-500'}`}>
                       {availability.label}
                     </span>
                   </div>
@@ -189,14 +189,14 @@ export function SiteHeader() {
 
   return (
     <>
-      <div className="border-b border-slate-200 bg-[#172033] px-4 py-2 text-center text-[10px] font-semibold uppercase tracking-widest text-slate-300 sm:text-[11px] sm:tracking-[0.18em]">
+      <div className="border-b border-slate-200 bg-[var(--brand-navy)] px-4 py-2 text-center text-[10px] font-semibold uppercase tracking-widest text-slate-300 sm:text-[11px] sm:tracking-[0.18em]">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-center gap-1 sm:flex-row sm:gap-0">
           <span className="text-orange-400">{siteConfig.tagline}</span>
           <span className="hidden mx-2 text-slate-600 sm:inline">•</span>
           <span>{siteConfig.brandPromise}</span>
         </div>
       </div>
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#172033]">
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-[var(--brand-navy)]">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
           <Link href="/" className="group flex min-w-0 shrink-0 items-center gap-2.5 sm:gap-3" aria-label={`${siteConfig.name} home`}>
             <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/10 shadow-lg shadow-black/20 ring-1 ring-slate-900/5 transition-transform duration-200 group-hover:-rotate-3 sm:h-11 sm:w-11 sm:rounded-2xl">
@@ -246,14 +246,14 @@ export function SiteHeader() {
                     <X className="h-4 w-4" />
                   </button>
                 )}
-                <button type="submit" className="ml-2 rounded-full bg-orange-500 px-4 py-2 text-xs font-black text-white transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2">Search</button>
+                <button type="submit" className="ml-2 rounded-full bg-orange-500 px-4 py-2 text-xs font-black text-white transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2">Search</button>
               </div>
             </form>
             <SearchDropdown showDropdown={showDropdown} query={query} isSearching={isSearching} suggestions={suggestions} onPopularSearch={selectPopularSearch} onViewAll={submitViewAll} onProductClick={closeSearchDropdown} />
           </div>
 
           <div className="flex items-center gap-2">
-            <Link href="/admin" className="hidden items-center gap-1.5 rounded-full border border-white/15 px-3 py-2 text-xs font-semibold text-white/70 transition-colors hover:border-slate-300 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 lg:inline-flex" aria-label="Open Admin Portal">
+            <Link href="/admin" className="hidden items-center gap-1.5 rounded-full border border-white/15 px-3 py-2 text-xs font-semibold text-white/70 transition-colors hover:border-slate-300 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 lg:inline-flex" aria-label="Open Admin Portal">
               <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
               Admin Portal
             </Link>
@@ -269,7 +269,7 @@ export function SiteHeader() {
         </div>
 
         {menuOpen && (
-          <div id="mobile-navigation" className="motion-safe:animate-[menu-in_180ms_ease-out_both] motion-reduce:animate-none border-t border-white/10 bg-[#172033] px-4 py-5 shadow-xl lg:hidden">
+          <div id="mobile-navigation" className="motion-safe:animate-[menu-in_180ms_ease-out_both] motion-reduce:animate-none border-t border-white/10 bg-[var(--brand-navy)] px-4 py-5 shadow-xl lg:hidden">
             <div ref={mobileSearchRef} className="relative mb-4">
                 <form onSubmit={submitSearch} className="flex items-center rounded-2xl border border-white/15 bg-white px-4 transition-colors focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-200" role="search">
                 <label className="sr-only" htmlFor="mobile-search">Search the catalogue</label>
@@ -291,7 +291,7 @@ export function SiteHeader() {
                     <X className="h-4 w-4" />
                   </button>
                 )}
-                <button type="submit" className="border-l border-slate-200 pl-2 text-xs font-bold text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2">Search</button>
+                <button type="submit" className="border-l border-slate-200 pl-2 text-xs font-bold text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2">Search</button>
               </form>
               <SearchDropdown showDropdown={showDropdown} query={query} isSearching={isSearching} suggestions={suggestions} isMobile onPopularSearch={selectPopularSearch} onViewAll={submitViewAll} onProductClick={closeSearchDropdown} />
             </div>
