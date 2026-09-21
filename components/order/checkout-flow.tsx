@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Check, CheckCircle2, ChevronDown, LoaderCircle, PackageCheck, Search, ShieldCheck } from 'lucide-react'
 
-import { createGuestOrderWithRisk, quoteGuestCodOrder } from '@/lib/orders/actions'\nimport { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
+import { createGuestOrderWithRisk, quoteGuestCodOrder } from '@/lib/orders/actions'
+import { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
 import { getAnalyticsConsent } from '@/lib/analytics/client'
 import type { OrderSuccessSummary, Quote } from '@/lib/orders/schema'
 import { formatPrice } from '@/lib/services/storefront-utils'
@@ -93,13 +94,28 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
     setMessage('')
   }
 
+  function validatePhone() {
+    if (!form.phone.trim()) {
+      setFieldErrors((current) => ({ ...current, phone: 'Enter your mobile number.' }))
+      return false
+    }
+    if (!isValidBangladeshMobile(form.phone)) {
+      setFieldErrors((current) => ({ ...current, phone: 'Please enter a valid Bangladesh mobile number.' }))
+      return false
+    }
+    const canonical = normalizePhone(form.phone)
+    setForm((current) => ({ ...current, phone: canonical }))
+    setFieldErrors((current) => ({ ...current, phone: '' }))
+    return true
+  }
+
   function continueToDelivery() {
     const errors: Record<string, string> = {}
     if (!form.fullName.trim()) errors.fullName = 'Enter your name.'
-    const phoneDigits = form.phone.replace(/\D/g, '')
-    if (!/^01\d{9}$/.test(phoneDigits)) errors.phone = 'Enter a valid 11-digit mobile number.'
+    if (!isValidBangladeshMobile(form.phone)) errors.phone = 'Please enter a valid Bangladesh mobile number.'
     setFieldErrors(errors)
     if (Object.keys(errors).length) return
+    setForm((current) => ({ ...current, phone: normalizePhone(current.phone) }))
     setStep('delivery')
   }
 
