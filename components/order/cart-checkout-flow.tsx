@@ -1,15 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, CheckCircle2, LoaderCircle, ShieldCheck } from 'lucide-react'
-import { quoteCartOrder, createCartOrder, saveCartCheckoutDraft } from '@/lib/commerce/order-actions'
+import { ArrowLeft, CheckCircle2, ChevronDown, LoaderCircle, MapPin, PackageCheck, Search, ShieldCheck, UserRound } from 'lucide-react'
+import { quoteCartOrder, createCartOrder } from '@/lib/commerce/order-actions'
 import { getAnalyticsConsent } from '@/lib/analytics/client'
 import type { OrderSuccessSummary } from '@/lib/orders/schema'
 import { formatPrice } from '@/lib/services/storefront-utils'
 
 type CartSummary = { itemCount: number; subtotal: number; deliveryCharges: { dhakaCharge: number; outsideDhakaCharge: number } }
-type FormState = { fullName: string; phone: string; email: string; division: string; district: string; area: string; address: string; postalCode: string; notes: string }
+type FormState = { fullName: string; phone: string; division: string; district: string; area: string; address: string }
 
 const DIVISIONS = ['Dhaka', 'Chattogram', 'Rajshahi', 'Khulna', 'Barishal', 'Sylhet', 'Rangpur', 'Mymensingh'] as const
 const DISTRICTS_BY_DIVISION: Record<string, string[]> = {
@@ -24,8 +24,24 @@ const DISTRICTS_BY_DIVISION: Record<string, string[]> = {
 }
 type Quote = { items: Array<{ name: string; variantTitle: string; sku: string; quantity: number; unitPrice: number; lineTotal: number }>; subtotal: number; deliveryCharge: number; grandTotal: number; risk: { level: string; action: string } }
 
+function SearchSelect({ label, value, options, placeholder, disabled = false, onChange }: { label: string; value: string; options: string[]; placeholder: string; disabled?: boolean; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const filtered = options.filter((option) => option.toLowerCase().includes(search.trim().toLowerCase()))
+  return <div className="relative">
+    <span className="text-xs font-black text-slate-800">{label}</span>
+    <button type="button" disabled={disabled} onClick={() => { setOpen((v) => !v); setSearch('') }} className="mt-1.5 flex h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3.5 text-left text-sm outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:bg-slate-50 disabled:text-slate-400">
+      <span className={value ? 'font-semibold text-slate-950' : 'text-slate-400'}>{value || placeholder}</span><ChevronDown className="h-4 w-4 text-slate-400" />
+    </button>
+    {open && !disabled && <div className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+      <div className="flex items-center gap-2 border-b border-slate-100 px-3"><Search className="h-4 w-4 text-slate-400" /><input autoFocus value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Type to search..." className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none" /></div>
+      <div className="max-h-56 overflow-y-auto p-1.5">{filtered.length ? filtered.map((option)=><button key={option} type="button" onClick={()=>{onChange(option);setOpen(false)}} className={`flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm hover:bg-orange-50 ${option===value?'bg-orange-50 font-black text-orange-700':'text-slate-700'}`}>{option}</button>) : <p className="px-3 py-4 text-xs text-slate-500">No matching options.</p>}</div>
+    </div>}
+  </div>
+}
+
 export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
-  const [form, setForm] = useState<FormState>({ fullName: '', phone: '', email: '', division: '', district: '', area: '', address: '', postalCode: '', notes: '' })
+  const [form, setForm] = useState<FormState>({ fullName: '', phone: '', division: '', district: '', area: '', address: '' })
   const [quote, setQuote] = useState<Quote | null>(null)
   const [step, setStep] = useState<'details' | 'review'>('details')
   const [busy, setBusy] = useState(false)
@@ -34,12 +50,6 @@ export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
   const router = useRouter()
 
   function update(key: keyof FormState, value: string) { setForm((current) => ({ ...current, [key]: value })); setMessage('') }
-
-  useEffect(() => {
-    if (!Object.values(form).some(Boolean)) return
-    const timer = window.setTimeout(() => { void saveCartCheckoutDraft({ ...form, checkoutRequestId }) }, 700)
-    return () => window.clearTimeout(timer)
-  }, [checkoutRequestId, form])
 
   async function requestQuote() {
     setBusy(true); setMessage('')
@@ -56,7 +66,7 @@ export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
     setBusy(false)
     if (!result.ok) { setMessage(result.message); return }
     if ('paymentRequired' in result.data) { window.location.assign(result.data.redirectUrl); return }
-    window.sessionStorage.setItem('sahigatget-last-order', JSON.stringify(result.data satisfies OrderSuccessSummary)); router.push('/order/success')
+    window.sessionStorage.setItem('sahigatget-last-order', JSON.stringify(result.data satisfies OrderSuccessSummary)); router.replace('/order/success')
   }
 
   return <form onSubmit={submitOrder} className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -66,14 +76,12 @@ export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
       <p className="mt-2 text-sm text-slate-500">Your quote, risk decision, stock, and payment route are rechecked securely by the server.</p>
       {message ? <p role="alert" className="mt-5 rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">{message}</p> : null}
       {step === 'details' ? <>
-        <div className="mt-7 grid gap-4 sm:grid-cols-2">{([['fullName','Full name'],['phone','Mobile number'],['email','Email (optional)']] as const).map(([key,label]) => <label key={key} className="text-sm font-semibold text-slate-700">{label}<input value={form[key]} onChange={(event) => update(key, event.target.value)} type={key === 'phone' ? 'tel' : key === 'email' ? 'email' : 'text'} required={!['email'].includes(key)} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal outline-none focus:border-orange-500" /></label>)}
-<label className="text-sm font-semibold text-slate-700">Division<select value={form.division} onChange={(e)=>{update('division',e.target.value);update('district','');update('area','')}} required className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal outline-none focus:border-orange-500"><option value="">Select division</option>{DIVISIONS.map(v=><option key={v}>{v}</option>)}</select></label>
-<label className="text-sm font-semibold text-slate-700">District<select value={form.district} onChange={(e)=>{update('district',e.target.value);update('area','')}} disabled={!form.division} required className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal outline-none focus:border-orange-500 disabled:bg-slate-50"><option value="">Select district</option>{(DISTRICTS_BY_DIVISION[form.division]??[]).map(v=><option key={v}>{v}</option>)}</select></label>
-<label className="text-sm font-semibold text-slate-700">Area / upazila<input value={form.area} onChange={(event)=>update('area',event.target.value)} required placeholder="Enter area or upazila" className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal outline-none focus:border-orange-500" /></label>
-<label className="text-sm font-semibold text-slate-700">Postal code (optional)<input value={form.postalCode} onChange={(event)=>update('postalCode',event.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal outline-none focus:border-orange-500" /></label><label className="text-sm font-semibold text-slate-700 sm:col-span-2">Full delivery address<textarea value={form.address} onChange={(event) => update('address', event.target.value)} required rows={3} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal outline-none focus:border-orange-500" /></label><label className="text-sm font-semibold text-slate-700 sm:col-span-2">Notes (optional)<textarea value={form.notes} onChange={(event) => update('notes', event.target.value)} rows={2} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal outline-none focus:border-orange-500" /></label></div>
-        <button type="button" disabled={busy || !cart.itemCount} onClick={requestQuote} className="mt-7 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white hover:bg-orange-600 hover:text-slate-950 disabled:opacity-50">{busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Checking securely…</> : <>Review order <CheckCircle2 className="h-4 w-4" /></>}</button>
+        <div className="mt-7 grid gap-4 sm:grid-cols-2">{<div className="grid gap-3 sm:grid-cols-2">
+<label className="text-xs font-black text-slate-800">Name<input value={form.fullName} onChange={(e)=>update('fullName',e.target.value)} required placeholder="Your full name" className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none focus:border-orange-500" /></label>
+<label className="text-xs font-black text-slate-800">Mobile number<input value={form.phone} onChange={(e)=>update('phone',e.target.value)} required type="tel" placeholder="01XXXXXXXXX" className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none focus:border-orange-500" /></label></div>
+        <button type="button" disabled={busy || !cart.itemCount} onClick={requestQuote} className="fixed inset-x-0 bottom-0 z-40 mx-auto inline-flex min-h-12 w-full max-w-6xl items-center justify-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white hover:bg-orange-600 hover:text-slate-950 disabled:opacity-50">{busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Checking securely…</> : <>Review order <CheckCircle2 className="h-4 w-4" /></>}</button>
       </> : <>
-        <div className="mb-4 rounded-2xl border border-orange-200 bg-orange-50 p-4 text-slate-950"><div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" /><div><p className="font-black">Prefer advance payment?</p><p className="mt-1 text-xs leading-5 text-slate-600">Eligible orders can be securely redirected to the configured online payment provider after confirmation. Payment credentials are never collected here.</p></div></div></div><div className="mt-7 rounded-2xl bg-slate-950 p-5 text-white"><div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 text-orange-300" /><div><p className="font-black">Server-controlled payment routing</p><p className="mt-1 text-xs leading-5 text-slate-300">Cash on Delivery remains available when permitted. If verification requires advance payment, you will be redirected to the configured secure provider.</p></div></div></div>
+        </div></div>
         <div className="mt-6 space-y-3 rounded-2xl border border-slate-200 p-5">{quote?.items.map((item) => <div key={`${item.sku}-${item.variantTitle}`} className="flex justify-between gap-4 text-sm"><span className="min-w-0"><span className="block font-black text-slate-950">{item.name}</span><span className="text-xs text-slate-500">{item.variantTitle || item.sku} × {item.quantity}</span></span><span className="shrink-0 font-bold text-slate-950">{formatPrice(item.lineTotal)}</span></div>)}<div className="flex justify-between border-t border-slate-100 pt-4 text-sm"><span>Subtotal</span><span className="font-bold">{formatPrice(quote?.subtotal ?? 0)}</span></div><div className="flex justify-between text-sm"><span>Delivery</span><span className="font-bold">{formatPrice(quote?.deliveryCharge ?? 0)}</span></div><div className="flex justify-between border-t border-slate-100 pt-4 text-base font-black"><span>Grand total</span><span>{formatPrice(quote?.grandTotal ?? 0)}</span></div></div>
         <div className="mt-6 grid gap-3 sm:grid-cols-2"><button type="button" disabled={busy} onClick={() => setStep('details')} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-slate-300 px-5 py-3 text-sm font-black text-slate-700"><ArrowLeft className="h-4 w-4" /> Edit details</button><button type="submit" disabled={busy} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-orange-500 px-5 py-3 text-sm font-black text-slate-950 disabled:opacity-50">{busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Confirming…</> : <>Place order <CheckCircle2 className="h-4 w-4" /></>}</button></div>
       </>}
