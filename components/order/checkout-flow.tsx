@@ -2,11 +2,12 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Check, ChevronDown, LoaderCircle, MapPin, PackageCheck, Search, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, Check, CheckCircle2, ChevronDown, LoaderCircle, PackageCheck, Search, ShieldCheck } from 'lucide-react'
 
 import { createGuestOrderWithRisk, quoteGuestCodOrder } from '@/lib/orders/actions'
 import { getAnalyticsConsent } from '@/lib/analytics/client'
 import type { OrderSuccessSummary, Quote } from '@/lib/orders/schema'
+import { formatPrice } from '@/lib/services/storefront-utils'
 
 type FormState = {
   fullName: string
@@ -183,7 +184,7 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
         <button type="button" disabled={busy} onClick={() => setStep('delivery')} className="mb-3 inline-flex items-center gap-1 text-xs font-bold text-slate-500"><ArrowLeft className="h-3.5 w-3.5" /> Edit delivery</button>
         <div className="divide-y divide-slate-100 rounded-xl border border-slate-200">
           <div className="p-3.5"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Delivery</p><p className="mt-1 text-xs font-bold text-slate-800">{form.fullName} · {form.phone}</p><p className="text-xs leading-5 text-slate-500">{[form.area, form.district, form.division].filter(Boolean).join(', ')}</p><p className="break-words text-xs leading-5 text-slate-600">{form.address}</p></div>
-          <div className="p-3.5"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Order</p>{quote?.items.map((item) => <div key={`${item.sku}-${item.variantTitle}`} className="flex items-center justify-between gap-3 py-1"><div className="min-w-0"><p className="truncate text-sm font-bold text-slate-900">{item.name}</p><p className="text-xs text-slate-500">Qty {item.quantity}{item.variantTitle ? ` · ${item.variantTitle}` : ''}</p></div><span className="shrink-0 text-sm font-black text-slate-800">{formatPrice(item.lineTotal)}</span></div>)}</div>
+          <div className="p-3.5"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Order</p><div className="flex items-center justify-between gap-3 py-1"><div className="min-w-0"><p className="truncate text-sm font-bold text-slate-900">{quote.productName}</p><p className="text-xs text-slate-500">Qty {quote.quantity}</p></div><span className="shrink-0 text-sm font-black text-slate-800">{formatPrice(quote.unitPrice * quote.quantity)}</span></div></div>
           <div className="p-3.5 text-sm"><div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span className="font-bold">{formatPrice(quote?.subtotal ?? 0)}</span></div><div className="mt-2 flex justify-between"><span className="text-slate-500">Delivery</span><span className="font-bold">{formatPrice(quote?.deliveryCharge ?? 0)}</span></div><div className="mt-2 flex justify-between border-t border-slate-100 pt-2"><span className="font-black">Total</span><span className="text-lg font-black">{formatPrice(total)}</span></div></div>
         </div>
         <div className="mt-3 flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-[11px] leading-5 text-slate-500"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" /> <span>Final stock, delivery and order details are securely verified before confirmation.</span></div>
@@ -192,7 +193,7 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
         </div>
       </div>}
 
-      {step === 'review' && quote?.risk.action === 'REQUIRE_PREPAYMENT' && <p className="mt-3 text-xs text-slate-500">If your order requires advance payment, you will be securely routed to the available payment option after confirmation.</p>}
+      
     </section>
     <aside className="hidden lg:block lg:sticky lg:top-24"><div className="rounded-2xl bg-[#172033] p-5 text-white"><ShieldCheck className="h-5 w-5 text-orange-400" /><p className="mt-4 text-base font-black">Secure checkout</p><p className="mt-1.5 text-xs leading-5 text-white/60">Delivery, stock, risk, and payment rules are revalidated on the server.</p></div></aside>
   </div>
