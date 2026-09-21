@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, CheckCircle2, ChevronDown, LoaderCircle, MapPin, PackageCheck, Search, ShieldCheck, UserRound } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ChevronDown, LoaderCircle, MapPin, PackageCheck, Search, ShieldCheck, Truck, UserRound } from 'lucide-react'
 import { quoteCartOrder, createCartOrder } from '@/lib/commerce/order-actions'
 import { getAnalyticsConsent } from '@/lib/analytics/client'
 import type { OrderSuccessSummary } from '@/lib/orders/schema'
@@ -10,6 +10,7 @@ import { formatPrice } from '@/lib/services/storefront-utils'
 
 type CartSummary = { itemCount: number; subtotal: number; deliveryCharges: { dhakaCharge: number; outsideDhakaCharge: number } }
 type FormState = { fullName: string; phone: string; division: string; district: string; area: string; address: string }
+type Quote = { items: Array<{ name: string; variantTitle: string; sku: string; quantity: number; unitPrice: number; lineTotal: number }>; subtotal: number; deliveryCharge: number; grandTotal: number; risk: { level: string; action: string } }
 
 const DIVISIONS = ['Dhaka', 'Chattogram', 'Rajshahi', 'Khulna', 'Barishal', 'Sylhet', 'Rangpur', 'Mymensingh'] as const
 const DISTRICTS_BY_DIVISION: Record<string, string[]> = {
@@ -22,7 +23,6 @@ const DISTRICTS_BY_DIVISION: Record<string, string[]> = {
   Rangpur: ['Dinajpur', 'Gaibandha', 'Kurigram', 'Lalmonirhat', 'Nilphamari', 'Panchagarh', 'Rangpur', 'Thakurgaon'],
   Mymensingh: ['Jamalpur', 'Mymensingh', 'Netrokona', 'Sherpur'],
 }
-type Quote = { items: Array<{ name: string; variantTitle: string; sku: string; quantity: number; unitPrice: number; lineTotal: number }>; subtotal: number; deliveryCharge: number; grandTotal: number; risk: { level: string; action: string } }
 
 function SearchSelect({ label, value, options, placeholder, disabled = false, onChange }: { label: string; value: string; options: string[]; placeholder: string; disabled?: boolean; onChange: (value: string) => void }) {
   const [open, setOpen] = useState(false)
@@ -49,9 +49,13 @@ export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
   const [checkoutRequestId] = useState(() => crypto.randomUUID())
   const router = useRouter()
 
-  function update(key: keyof FormState, value: string) { setForm((current) => ({ ...current, [key]: value })); setMessage('') }
+  function update(key: keyof FormState, value: string) {
+    setForm((current) => ({ ...current, [key]: value }))
+    setMessage('')
+  }
 
   async function requestQuote() {
+    if (busy || !cart.itemCount) return
     setBusy(true); setMessage('')
     const result = await quoteCartOrder({ checkoutRequestId, phone: form.phone, division: form.division })
     setBusy(false)
@@ -60,32 +64,75 @@ export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
   }
 
   async function submitOrder(event: React.FormEvent) {
-    event.preventDefault(); setBusy(true); setMessage('')
+    event.preventDefault()
+    if (busy) return
+    setBusy(true); setMessage('')
     const consent = getAnalyticsConsent()
-    const result = await createCartOrder({ ...form, checkoutRequestId, analyticsConsent: consent.analytics, marketingConsent: consent.marketing })
+    const result = await createCartOrder({ ...form, email: '', postalCode: '', notes: '', checkoutRequestId, analyticsConsent: consent.analytics, marketingConsent: consent.marketing })
     setBusy(false)
     if (!result.ok) { setMessage(result.message); return }
     if ('paymentRequired' in result.data) { window.location.assign(result.data.redirectUrl); return }
-    window.sessionStorage.setItem('sahigatget-last-order', JSON.stringify(result.data satisfies OrderSuccessSummary)); router.replace('/order/success')
+    window.sessionStorage.setItem('sahigatget-last-order', JSON.stringify(result.data satisfies OrderSuccessSummary))
+    router.replace('/order/success')
   }
 
-  return <form onSubmit={submitOrder} className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
-    <section className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-orange-600">Secure cart checkout</p>
-      <h1 className="mt-2 text-3xl font-black tracking-[-0.04em] text-slate-950">Delivery details</h1>
-      <p className="mt-2 text-sm text-slate-500">Your quote, risk decision, stock, and payment route are rechecked securely by the server.</p>
-      {message ? <p role="alert" className="mt-5 rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">{message}</p> : null}
-      {step === 'details' ? <>
-        <div className="mt-7 grid gap-4 sm:grid-cols-2">{<div className="grid gap-3 sm:grid-cols-2">
-<label className="text-xs font-black text-slate-800">Name<input value={form.fullName} onChange={(e)=>update('fullName',e.target.value)} required placeholder="Your full name" className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none focus:border-orange-500" /></label>
-<label className="text-xs font-black text-slate-800">Mobile number<input value={form.phone} onChange={(e)=>update('phone',e.target.value)} required type="tel" placeholder="01XXXXXXXXX" className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none focus:border-orange-500" /></label></div>
-        <button type="button" disabled={busy || !cart.itemCount} onClick={requestQuote} className="fixed inset-x-0 bottom-0 z-40 mx-auto inline-flex min-h-12 w-full max-w-6xl items-center justify-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white hover:bg-orange-600 hover:text-slate-950 disabled:opacity-50">{busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Checking securely…</> : <>Review order <CheckCircle2 className="h-4 w-4" /></>}</button>
-      </> : <>
-        </div></div>
-        <div className="mt-6 space-y-3 rounded-2xl border border-slate-200 p-5">{quote?.items.map((item) => <div key={`${item.sku}-${item.variantTitle}`} className="flex justify-between gap-4 text-sm"><span className="min-w-0"><span className="block font-black text-slate-950">{item.name}</span><span className="text-xs text-slate-500">{item.variantTitle || item.sku} × {item.quantity}</span></span><span className="shrink-0 font-bold text-slate-950">{formatPrice(item.lineTotal)}</span></div>)}<div className="flex justify-between border-t border-slate-100 pt-4 text-sm"><span>Subtotal</span><span className="font-bold">{formatPrice(quote?.subtotal ?? 0)}</span></div><div className="flex justify-between text-sm"><span>Delivery</span><span className="font-bold">{formatPrice(quote?.deliveryCharge ?? 0)}</span></div><div className="flex justify-between border-t border-slate-100 pt-4 text-base font-black"><span>Grand total</span><span>{formatPrice(quote?.grandTotal ?? 0)}</span></div></div>
-        <div className="mt-6 grid gap-3 sm:grid-cols-2"><button type="button" disabled={busy} onClick={() => setStep('details')} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-slate-300 px-5 py-3 text-sm font-black text-slate-700"><ArrowLeft className="h-4 w-4" /> Edit details</button><button type="submit" disabled={busy} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-orange-500 px-5 py-3 text-sm font-black text-slate-950 disabled:opacity-50">{busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Confirming…</> : <>Place order <CheckCircle2 className="h-4 w-4" /></>}</button></div>
-      </>}
+  return <form onSubmit={submitOrder} className="mx-auto grid max-w-6xl gap-5 pb-20 lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start">
+    <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+      <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-orange-600"><PackageCheck className="h-4 w-4" /></span>
+        <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-600">Cart checkout</p><h1 className="text-xl font-black text-slate-950 sm:text-2xl">Checkout</h1></div>
+        <span className="ml-auto text-[10px] font-bold text-slate-400">Step {step === 'details' ? '1' : '2'} of 2</span>
+      </div>
+      {message && <div role="alert" className="mt-4 rounded-xl bg-rose-50 px-3.5 py-3 text-xs font-semibold text-rose-700">{message}</div>}
+
+      {step === 'details' ? (
+        <div className="mt-5 space-y-6 pb-3">
+          <section>
+            <div className="flex items-center gap-2"><UserRound className="h-4 w-4 text-orange-600" /><h2 className="text-sm font-black text-slate-950">Customer</h2></div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <label className="text-xs font-black text-slate-800">Name<input value={form.fullName} onChange={(e)=>update('fullName',e.target.value)} required placeholder="Your full name" className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none focus:border-orange-500" /></label>
+              <label className="text-xs font-black text-slate-800">Mobile number<input value={form.phone} onChange={(e)=>update('phone',e.target.value)} required type="tel" placeholder="01XXXXXXXXX" className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none focus:border-orange-500" /></label>
+            </div>
+          </section>
+
+          <section className="border-t border-slate-100 pt-5">
+            <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-orange-600" /><h2 className="text-sm font-black text-slate-950">Delivery</h2></div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <SearchSelect label="Division" value={form.division} options={[...DIVISIONS]} placeholder="Select division" onChange={(v)=>{update('division',v);update('district','');update('area','')}} />
+              <SearchSelect label="District" value={form.district} options={DISTRICTS_BY_DIVISION[form.division]??[]} placeholder={form.division?'Select district':'Select division first'} disabled={!form.division} onChange={(v)=>{update('district',v);update('area','')}} />
+              <label className="text-xs font-black text-slate-800">Area / Thana<input value={form.area} onChange={(e)=>update('area',e.target.value)} required placeholder={form.district?'Search or enter area / thana':'Select district first'} className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none focus:border-orange-500 disabled:bg-slate-50" disabled={!form.district} /></label>
+              <label className="text-xs font-black text-slate-800 sm:col-span-2">Delivery Address<textarea value={form.address} onChange={(e)=>update('address',e.target.value)} required rows={2} placeholder="House/Road/Block, landmark etc." className="mt-1.5 w-full resize-none rounded-xl border border-slate-200 px-3.5 py-3 text-sm font-normal outline-none focus:border-orange-500" /></label>
+            </div>
+            <p className="mt-2 text-[10px] leading-4 text-slate-400">Choose division and district first, then enter the local area or thana used by the courier.</p>
+          </section>
+
+          <button type="button" disabled={busy || !cart.itemCount} onClick={requestQuote} className="fixed inset-x-0 bottom-0 z-40 mx-auto inline-flex min-h-12 w-full max-w-6xl items-center justify-center gap-2 border-t border-slate-200 bg-orange-500 px-5 py-3 text-sm font-black text-slate-950 shadow-lg disabled:opacity-50 sm:static sm:rounded-full sm:border-0">{busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Checking delivery & total</> : <>Review Order <CheckCircle2 className="h-4 w-4" /></>}</button>
+        </div>
+      ) : (
+        <div className="mt-5 pb-3">
+          <div className="divide-y divide-slate-100 rounded-xl border border-slate-200">
+            {quote?.items.map((item) => <div key={`${item.sku}-${item.variantTitle}`} className="flex justify-between gap-3 p-3.5"><div className="min-w-0"><p className="truncate text-sm font-bold text-slate-900">{item.name}</p><p className="text-xs text-slate-500">{item.variantTitle || item.sku} × {item.quantity}</p></div><p className="shrink-0 text-sm font-bold text-slate-900">{formatPrice(item.lineTotal)}</p></div>)}
+            <div className="flex items-center justify-between p-3.5 text-sm"><span className="text-slate-500">Subtotal</span><span className="font-bold">{formatPrice(quote?.subtotal ?? 0)}</span></div>
+            <div className="flex items-center justify-between p-3.5 text-sm"><span className="text-slate-500">Delivery</span><span className="font-bold">{formatPrice(quote?.deliveryCharge ?? 0)}</span></div>
+            <div className="flex items-center justify-between border-t border-slate-100 p-3.5"><span className="font-black text-slate-950">Total</span><span className="text-lg font-black text-slate-950">{formatPrice(quote?.grandTotal ?? 0)}</span></div>
+          </div>
+          <div className="mt-4 space-y-3 rounded-xl border border-slate-200 p-3.5">
+            <div className="flex items-start gap-2"><UserRound className="mt-0.5 h-4 w-4 text-orange-600" /><div><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Customer</p><p className="text-xs font-bold text-slate-800">{form.fullName} · {form.phone}</p></div></div>
+            <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 text-orange-600" /><div><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Delivery</p><p className="text-xs leading-5 text-slate-600">{form.division} · {form.district} · {form.area}<br />{form.address}</p></div></div>
+            <div className="flex items-start gap-2"><Truck className="mt-0.5 h-4 w-4 text-orange-600" /><div><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Payment / delivery</p><p className="text-xs text-slate-600">Final COD or advance-payment route is confirmed by the server.</p></div></div>
+          </div>
+          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 backdrop-blur sm:static sm:mt-5 sm:border-0 sm:bg-transparent sm:p-0">
+            <div className="mx-auto grid max-w-6xl grid-cols-[auto_1fr] gap-2">
+              <button type="button" disabled={busy} onClick={() => setStep('details')} className="inline-flex min-h-12 items-center justify-center gap-1.5 rounded-xl border border-slate-300 px-4 text-xs font-black text-slate-700 sm:rounded-full"><ArrowLeft className="h-4 w-4" /> Edit</button>
+              <button type="submit" disabled={busy} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 text-sm font-black text-slate-950 shadow-lg disabled:opacity-50 sm:rounded-full">{busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Securing order</> : <>Confirm Order <CheckCircle2 className="h-4 w-4" /></>}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
-    <aside className="h-fit rounded-[1.5rem] bg-slate-950 p-6 text-white"><p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-300">Order summary</p><div className="mt-6 flex justify-between text-sm text-slate-300"><span>{cart.itemCount} item{cart.itemCount === 1 ? '' : 's'}</span><span>{formatPrice(quote?.subtotal ?? cart.subtotal)}</span></div><p className="mt-4 border-t border-white/10 pt-4 text-xs leading-5 text-slate-400">Delivery is calculated from your location and revalidated from current server data.</p></aside>
+
+    <aside className="hidden lg:block lg:sticky lg:top-24">
+      <div className="rounded-2xl bg-[#172033] p-5 text-white"><ShieldCheck className="h-5 w-5 text-orange-400" /><p className="mt-4 text-base font-black">Secure checkout</p><p className="mt-1.5 text-xs leading-5 text-white/60">Delivery, stock, risk, and payment rules are revalidated on the server.</p></div>
+    </aside>
   </form>
 }
