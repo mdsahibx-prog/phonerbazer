@@ -21,7 +21,7 @@ export default async function HomePage() {
     <main className="flex-1 overflow-x-hidden bg-[#f6f7f9]">
       <HeroSection banners={banners} productCount={allProducts.length} brandCount={brands.length} categoryCount={categories.length} />
 
-      <section className="border-b border-black/10 bg-white py-3 sm:py-4" aria-label="Shopping benefits">
+      <section className="border-b border-slate-200 bg-[#f6f7f9] py-3 sm:py-4" aria-label="Shopping benefits">
         <div className="mx-auto grid max-w-7xl grid-cols-3 gap-2 px-3 sm:px-6 lg:px-8">
           <div className="flex items-center justify-center gap-2 text-center"><ShieldCheck className="hidden h-4 w-4 text-orange-500 sm:block" /><span className="text-[10px] font-bold text-slate-700 sm:text-xs">Verified products</span></div>
           <div className="flex items-center justify-center gap-2 border-x border-slate-100 text-center"><Truck className="hidden h-4 w-4 text-orange-500 sm:block" /><span className="text-[10px] font-bold text-slate-700 sm:text-xs">Delivery across BD</span></div>
@@ -45,17 +45,17 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="py-5 sm:py-10" aria-labelledby="featured-products-heading">
+      <section className="bg-[#f6f7f9] py-5 sm:py-10 aria-labelledby="featured-products-heading">
         <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
-          <div className="flex items-end justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-500">Fresh picks</p><h2 id="featured-products-heading" className="mt-1 text-xl font-black tracking-tight text-black sm:text-3xl">Featured <span className="text-orange-500">Products</span></h2></div><Link href="/products" className="shrink-0 text-[11px] font-black text-orange-600 sm:text-xs">View All <ArrowRight className="ml-0.5 inline h-3.5 w-3.5" /></Link></div>
+          <div className="flex items-end justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-500">Fresh picks</p><h2 id="featured-products-heading" className="mt-1 text-xl font-black tracking-tight text-slate-950 sm:text-3xl">Featured <span className="text-orange-500">Products</span></h2></div><Link href="/products" className="shrink-0 text-[11px] font-black text-orange-600 sm:text-xs">View All <ArrowRight className="ml-0.5 inline h-3.5 w-3.5" /></Link></div>
           <div className="mt-4 sm:mt-5">{primaryProducts.length ? <ProductGrid products={primaryProducts} /> : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center"><PackageOpen className="mx-auto h-9 w-9 text-slate-400" /><p className="mt-3 text-sm font-bold text-slate-700">Published products will appear here.</p></div>}</div>
         </div>
       </section>
 
       {bestDeals.length > 0 && (
-        <section className="border-y border-black/10 bg-[#172033] py-5 text-white sm:py-10" aria-labelledby="deals-heading">
+        <section className="border-y border-slate-200 bg-white py-5 text-white sm:py-10" aria-labelledby="deals-heading">
           <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
-            <div className="flex items-end justify-between gap-3"><div><p className="flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.16em] text-orange-600"><Sparkles className="h-3.5 w-3.5" /> Limited savings</p><h2 id="deals-heading" className="mt-1 text-xl font-black tracking-tight text-black sm:text-3xl">Exclusive <span className="text-orange-500">Deals</span></h2></div><Link href="/offers" className="shrink-0 text-[11px] font-black text-orange-600 sm:text-xs">View All <ArrowRight className="ml-0.5 inline h-3.5 w-3.5" /></Link></div>
+            <div className="flex items-end justify-between gap-3"><div><p className="flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.16em] text-orange-600"><Sparkles className="h-3.5 w-3.5" /> Limited savings</p><h2 id="deals-heading" className="mt-1 text-xl font-black tracking-tight text-slate-950 sm:text-3xl">Exclusive <span className="text-orange-500">Deals</span></h2></div><Link href="/offers" className="shrink-0 text-[11px] font-black text-orange-600 sm:text-xs">View All <ArrowRight className="ml-0.5 inline h-3.5 w-3.5" /></Link></div>
             <div className="mt-4 sm:mt-5"><ProductGrid products={bestDeals} /></div>
           </div>
         </section>
