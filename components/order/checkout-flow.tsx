@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Check, CheckCircle2, ChevronDown, LoaderCircle, PackageCheck, Search, ShieldCheck } from 'lucide-react'
+import Image from 'next/image'
 
 import { createGuestOrderWithRisk, quoteGuestCodOrder } from '@/lib/orders/actions'
 import { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
@@ -200,8 +201,25 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
         <button type="button" disabled={busy} onClick={() => setStep('delivery')} className="mb-3 inline-flex items-center gap-1 text-xs font-bold text-slate-500"><ArrowLeft className="h-3.5 w-3.5" /> Edit delivery</button>
         <div className="divide-y divide-slate-100 rounded-xl border border-slate-200">
           <div className="p-3.5"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Delivery</p><p className="mt-1 text-xs font-bold text-slate-800">{form.fullName} · {form.phone}</p><p className="text-xs leading-5 text-slate-500">{[form.area, form.district, form.division].filter(Boolean).join(', ')}</p><p className="break-words text-xs leading-5 text-slate-600">{form.address}</p></div>
-          <div className="p-3.5"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Order</p><div className="flex items-center justify-between gap-3 py-1"><div className="min-w-0"><p className="truncate text-sm font-bold text-slate-900">{quote.productName}</p><p className="text-xs text-slate-500">Qty {quote.quantity}</p></div><span className="shrink-0 text-sm font-black text-slate-800">{formatPrice(quote.unitPrice * quote.quantity)}</span></div></div>
-          <div className="p-3.5 text-sm"><div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span className="font-bold">{formatPrice(quote?.subtotal ?? 0)}</span></div><div className="mt-2 flex justify-between"><span className="text-slate-500">Delivery</span><span className="font-bold">{formatPrice(quote?.deliveryCharge ?? 0)}</span></div><div className="mt-2 flex justify-between border-t border-slate-100 pt-2"><span className="font-black">Total</span><span className="text-lg font-black">{formatPrice(total)}</span></div></div>
+          <div className="p-3.5"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Order</p>
+            <div className="flex gap-3 py-1">
+              <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-slate-50">
+                {quote.imageUrl ? <Image src={quote.imageUrl} alt={quote.productName} fill sizes="80px" className="object-contain p-1" /> : <div className="flex h-full items-center justify-center text-[10px] font-bold text-slate-400">No image</div>}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="break-words text-sm font-bold text-slate-900">{quote.productName}</p>
+                <p className="mt-1 text-xs text-slate-500">{quote.color ? `Color: ${quote.color}` : quote.variantTitle ? `Variant: ${quote.variantTitle}` : 'Selected variant'}</p>
+                <p className="mt-1 text-xs text-slate-500">Qty: {quote.quantity}</p>
+                <p className="mt-1 text-sm font-black text-slate-900">{formatPrice(quote.unitPrice)}</p>
+              </div>
+            </div>
+          </div>
+          <div className="p-3.5 text-sm">
+            <div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span className="font-bold">{formatPrice(quote.subtotal)}</span></div>
+            {quote.discountTotal > 0 ? <div className="mt-2 flex justify-between text-orange-700"><span>Discount saved</span><span className="font-bold">−{formatPrice(quote.discountTotal)}</span></div> : null}
+            <div className="mt-2 flex justify-between"><span className="text-slate-500">Delivery</span><span className="font-bold">{formatPrice(quote.deliveryCharge)}</span></div>
+            <div className="mt-2 flex justify-between border-t border-slate-100 pt-2"><span className="font-black">Total</span><span className="text-lg font-black">{formatPrice(total)}</span></div>
+          </div>
         </div>
         <div className="mt-3 flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-[11px] leading-5 text-slate-500"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" /> <span>Final stock, delivery and order details are securely verified before confirmation.</span></div>
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/98 px-3 pt-2.5 pb-[calc(.625rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-18px_rgba(15,23,42,.35)] backdrop-blur sm:static sm:mt-4 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
