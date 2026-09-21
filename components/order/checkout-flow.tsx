@@ -148,8 +148,8 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
             <h2 className="text-base font-black text-slate-950 sm:text-lg">Delivery information</h2>
             <p className="mt-1 text-xs text-slate-500 sm:text-sm">এলাকা নির্বাচন করলে আপনার ডেলিভারি জোন ও চার্জ সঠিকভাবে হিসাব করা হবে।</p>
             <div className="mt-5 grid gap-5 sm:grid-cols-2">
-              <SelectField label="Division" name="division" value={form.division} onChange={(value) => { update('division', value); update('district', ''); update('area', '') }} error={fieldErrors.division} placeholder="Select division" options={[...DIVISIONS]} />
-              <SelectField label="District" name="district" value={form.district} onChange={(value) => { update('district', value); update('area', '') }} error={fieldErrors.district} placeholder={form.division ? 'Select district' : 'Select division first'} options={DISTRICTS_BY_DIVISION[form.division] ?? []} disabled={!form.division} />
+              <SelectField label="Division" value={form.division} onChange={(value) => { update('division', value); update('district', ''); update('area', '') }} error={fieldErrors.division} placeholder="Select division" options={[...DIVISIONS]} />
+              <SelectField label="District" value={form.district} onChange={(value) => { update('district', value); update('area', '') }} error={fieldErrors.district} placeholder={form.division ? 'Select district' : 'Select division first'} options={DISTRICTS_BY_DIVISION[form.division] ?? []} disabled={!form.division} />
               <Input label="Area / Upazila" name="area" value={form.area} onChange={(value) => update('area', value)} error={fieldErrors.area} placeholder={form.district ? 'Search or enter area / thana' : 'Select district first'} />
               <label className="block sm:col-span-2">
                 <span className="flex items-center justify-between text-sm font-black text-slate-800">Full delivery address</span>
