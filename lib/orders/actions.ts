@@ -29,6 +29,7 @@ type VariantRow = {
   product_id: string
   sku: string
   variant_title: string
+  color: string | null
   price: number | string
   compare_at_price: number | string | null
   stock_quantity: number
