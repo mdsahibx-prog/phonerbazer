@@ -36,7 +36,7 @@ const PRODUCT_SELECT = `
   id,brand_id,category_id,name,slug,short_description,description,product_type,status,is_featured,is_published,warranty_policy,meta_title,meta_description,created_at,updated_at,
   brand:brands(id,name,slug,logo_url,description,meta_title,meta_description),
   category:categories(id,name,slug,description,image_url,sort_order,meta_title,meta_description),
-  product_images(id,image_url,alt_text,is_primary,sort_order)
+  product_images(id,variant_id,image_url,alt_text,is_primary,sort_order)
 `
 const STOREFRONT_VARIANT_SELECT = 'id,product_id,sku,variant_title,ram,storage,color,price,compare_at_price,is_in_stock,is_low_stock'
 
