@@ -201,7 +201,7 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
             </div>
           </div>
         </div>
-      )
+      )}
     </section>
     <aside className="space-y-4 lg:sticky lg:top-24">
       <div className="rounded-[1.5rem] bg-orange-500 p-6 text-slate-950">
