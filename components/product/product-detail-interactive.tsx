@@ -25,10 +25,14 @@ export function ProductDetailInteractive({ product, settings, phone }: { product
   const status = selected ? getPublicAvailability([selected]) : { label: 'Price on request', tone: 'out' as const }
   const discount = selected && selected.compare_at_price && selected.compare_at_price > selected.price ? Math.round(((selected.compare_at_price - selected.price) / selected.compare_at_price) * 100) : null
   const attributes = selected ? [selected.ram && ['RAM', selected.ram], selected.storage && ['Storage', selected.storage], selected.color && ['Colour', selected.color]].filter(Boolean) as string[][] : []
-  const imageCount = product.images.length
-  const activeImage = product.images[activeImageIndex] || product.images[0]
+  const variantImages = selected ? product.images.filter((image) => image.variant_id === selected.id).sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.sort_order - b.sort_order) : []
+  const displayImages = variantImages.length ? variantImages : product.images
+  const imageCount = displayImages.length
+  const activeImage = displayImages[activeImageIndex] || displayImages[0]
   const imageUrl = activeImage?.image_url || getProductImageUrl(product)
   useEffect(() => { if (selected) trackClientEvent({ eventName: 'view_item', commerce: { currency: 'BDT', value: selected.price, items: [{ item_id: selected.sku || selected.id, item_name: product.name, item_brand: product.brand?.name, item_category: product.category?.name, price: selected.price, quantity: 1 }] } }) }, [product.brand?.name, product.category?.name, product.name, selected])
+
+  useEffect(() => { setActiveImageIndex(0) }, [selectedId])
 
   function selectVariant(id: string) { const variant = product.variants.find((item) => item.id === id); if (variant) trackClientEvent({ eventName: 'select_item', commerce: { item_list_name: 'product_detail', items: [{ item_id: variant.sku || variant.id, item_name: product.name, price: variant.price, quantity: 1 }] } }); setSelectedId(id) }
 
@@ -91,7 +95,7 @@ export function ProductDetailInteractive({ product, settings, phone }: { product
           ) : null}
         </div>
 
-        {imageCount > 1 ? <div className="mt-4 flex gap-3 overflow-x-auto pb-2" aria-label="Product image gallery">{product.images.map((image, index) => <button key={image.id} type="button" onClick={() => selectImage(index)} aria-label={`View product image ${index + 1}`} aria-current={activeImageIndex === index ? 'true' : undefined} className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-2 bg-white p-1.5 transition duration-150 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200 ${activeImageIndex === index ? 'border-emerald-600 ring-2 ring-emerald-100' : 'border-slate-200 hover:border-slate-400'}`}>
+        {imageCount > 1 ? <div className="mt-4 flex gap-3 overflow-x-auto pb-2" aria-label="Product image gallery">{displayImages.map((image, index) => <button key={image.id} type="button" onClick={() => selectImage(index)} aria-label={`View product image ${index + 1}`} aria-current={activeImageIndex === index ? 'true' : undefined} className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-2 bg-white p-1.5 transition duration-150 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200 ${activeImageIndex === index ? 'border-emerald-600 ring-2 ring-emerald-100' : 'border-slate-200 hover:border-slate-400'}`}>
           <img src={image.image_url} alt={image.alt_text || `${product.name} image ${index + 1}`} loading="lazy" className="h-full w-full object-contain" />
         </button>)}</div> : null}
 
