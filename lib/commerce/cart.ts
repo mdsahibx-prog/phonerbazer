@@ -8,7 +8,7 @@ const CART_COOKIE = 'sahigadget-cart-token'
 const MAX_QUANTITY = 10
 
 type CartRow = { id: string; guest_token: string; status: string; expires_at: string }
-type CartItemRow = { id: string; product_id: string; variant_id: string; quantity: number; product?: { name: string; slug: string; product_type: string; image_url: string | null }; variant?: { sku: string; variant_title: string; price: number; compare_at_price: number | null; is_in_stock: boolean } }
+type CartItemRow = { id: string; product_id: string; variant_id: string; quantity: number; product?: { name: string; slug: string; product_type: string; image_url: string | null; product_images?: Array<{ image_url: string; variant_id: string | null; is_primary: boolean; sort_order: number }> }; variant?: { sku: string; variant_title: string; color: string | null; price: number; compare_at_price: number | null; is_in_stock: boolean } }
 
 function clampQuantity(value: number) { return Math.min(MAX_QUANTITY, Math.max(1, Math.floor(value || 1))) }
 
@@ -43,8 +43,8 @@ async function loadCartItems(cartId: string): Promise<CartItemRow[]> {
   const variantIds = Array.from(new Set(rows.map((row) => row.variant_id)))
 
   const [{ data: products, error: productsError }, { data: variants, error: variantsError }] = await Promise.all([
-    db.from('products').select('id,name,slug,product_type,product_images(image_url,is_primary,sort_order)').in('id', productIds),
-    db.from('product_variants').select('id,sku,variant_title,price,compare_at_price,stock_quantity,is_active').in('id', variantIds),
+    db.from('products').select('id,name,slug,product_type,product_images(image_url,variant_id,is_primary,sort_order)').in('id', productIds),
+    db.from('product_variants').select('id,sku,variant_title,color,price,compare_at_price,stock_quantity,is_active').in('id', variantIds),
   ])
 
   if (productsError || variantsError) throw new Error('Unable to load cart items.')
@@ -61,12 +61,13 @@ async function loadCartItems(cartId: string): Promise<CartItemRow[]> {
       variant_id: row.variant_id,
       quantity: row.quantity,
       product: product
-        ? { name: product.name, slug: product.slug, product_type: product.product_type, image_url: ((product.product_images as { image_url: string; is_primary: boolean; sort_order: number }[] | undefined) ?? []).sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.sort_order - b.sort_order)[0]?.image_url ?? null }
+        ? (() => { const images = ((product.product_images ?? []) as { image_url: string; variant_id: string | null; is_primary: boolean; sort_order: number }[]); const variantImage = images.filter((image) => image.variant_id === row.variant_id).sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.sort_order - b.sort_order)[0]; const fallback = images.filter((image) => image.variant_id === null).sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.sort_order - b.sort_order)[0]; return { name: product.name, slug: product.slug, product_type: product.product_type, image_url: variantImage?.image_url ?? fallback?.image_url ?? null } })()
         : undefined,
       variant: variant
         ? {
             sku: variant.sku,
             variant_title: variant.variant_title,
+            color: variant.color ?? null,
             price: Number(variant.price),
             compare_at_price: variant.compare_at_price === null ? null : Number(variant.compare_at_price),
             is_in_stock: Boolean(variant.is_active && Number(variant.stock_quantity) > 0),
