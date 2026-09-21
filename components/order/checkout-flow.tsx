@@ -1,28 +1,25 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, CheckCircle2, LoaderCircle, MapPin, PackageCheck, ShieldCheck, Truck } from 'lucide-react'
 
-import { createGuestOrderWithRisk, quoteGuestCodOrder, saveGuestOrderDraft } from '@/lib/orders/actions'
+import { createGuestOrderWithRisk, quoteGuestCodOrder } from '@/lib/orders/actions'
 import { getAnalyticsConsent } from '@/lib/analytics/client'
 import type { OrderSuccessSummary, Quote } from '@/lib/orders/schema'
 
 type FormState = {
   fullName: string
   phone: string
-  email: string
   division: string
   district: string
   area: string
   address: string
-  postalCode: string
-  notes: string
   quantity: number
 }
 
 const initialForm: FormState = {
-  fullName: '', phone: '', email: '', division: '', district: '', area: '', address: '', postalCode: '', notes: '', quantity: 1,
+  fullName: '', phone: '', division: '', district: '', area: '', address: '', quantity: 1,
 }
 
 const DIVISIONS = ['Dhaka', 'Chattogram', 'Rajshahi', 'Khulna', 'Barishal', 'Sylhet', 'Rangpur', 'Mymensingh'] as const
@@ -38,17 +35,26 @@ const DISTRICTS_BY_DIVISION: Record<string, string[]> = {
   Mymensingh: ['Jamalpur', 'Mymensingh', 'Netrokona', 'Sherpur'],
 }
 
-function SelectField({ label, name, value, onChange, options, error, placeholder, disabled = false }: { label: string; name: keyof FormState; value: string; onChange: (value: string) => void; options: string[]; error?: string; placeholder: string; disabled?: boolean }) {
-  return <label className="block">
-    <span className="flex items-center justify-between text-sm font-black text-slate-800">{label}</span>
-    <select name={name} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} className={`mt-2 h-12 w-full rounded-xl border bg-white px-4 text-sm text-slate-950 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 ${error ? 'border-rose-400' : 'border-slate-200'}`}>
-      <option value="">{placeholder}</option>
-      {options.map((option) => <option key={option} value={option}>{option}</option>)}
-    </select>
-    {error && <span className="mt-1.5 block text-xs font-bold text-rose-600">{error}</span>}
-  </label>
-}
+function SelectField({ label, value, options, placeholder, disabled = false, error, onChange }: { label: string; value: string; options: string[]; placeholder: string; disabled?: boolean; error?: string; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const filtered = options.filter((option) => option.toLowerCase().includes(search.trim().toLowerCase()))
 
+  return <div className="relative">
+    <span className="text-xs font-black text-slate-800 sm:text-sm">{label}</span>
+    <button type="button" disabled={disabled} onClick={() => { setOpen((current) => !current); setSearch('') }} className={`mt-1.5 flex h-12 w-full items-center justify-between rounded-xl border bg-white px-4 text-left text-sm text-slate-950 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 ${error ? 'border-rose-400' : 'border-slate-200'}`}>
+      <span className={value ? 'font-semibold' : 'text-slate-400'}>{value || placeholder}</span>
+      <span className="text-slate-400">⌄</span>
+    </button>
+    {open && !disabled && <div className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+      <div className="border-b border-slate-100 px-3"><input autoFocus value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Type to search..." className="h-11 w-full bg-transparent text-sm outline-none" /></div>
+      <div className="max-h-56 overflow-y-auto p-1.5">
+        {filtered.length ? filtered.map((option) => <button key={option} type="button" onClick={() => { onChange(option); setOpen(false) }} className={`flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm hover:bg-orange-50 ${option === value ? 'bg-orange-50 font-black text-orange-700' : 'text-slate-700'}`}>{option}</button>) : <p className="px-3 py-4 text-xs text-slate-500">No matching options.</p>}
+      </div>
+    </div>}
+    {error && <span className="mt-1 block text-[11px] font-bold text-rose-600">{error}</span>}
+  </div>
+}
 function money(value: number) {
   return `৳${new Intl.NumberFormat('en-BD', { maximumFractionDigits: 0 }).format(value)}`
 }
@@ -72,15 +78,6 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
     setFieldErrors((current) => ({ ...current, [name]: '' }))
     setMessage('')
   }
-
-  useEffect(() => {
-    const hasDraftData = Boolean(form.fullName || form.phone || form.email || form.division || form.district || form.area || form.address || form.postalCode || form.notes)
-    if (!hasDraftData) return
-    const timer = window.setTimeout(() => {
-      void saveGuestOrderDraft({ ...form, productId, variantId, checkoutRequestId, stage: step === 'review' ? 'QUOTED' : 'DETAILS_ENTERED' })
-    }, 700)
-    return () => window.clearTimeout(timer)
-  }, [checkoutRequestId, form, productId, step, variantId])
 
   async function requestQuote() {
     setBusy(true)
@@ -145,10 +142,7 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
             <div className="mt-5 grid gap-5 sm:grid-cols-2">
               <Input label="Full name" name="fullName" value={form.fullName} onChange={(value) => update('fullName', value)} error={fieldErrors.fullName} placeholder="Your full name" />
               <Input label="Mobile number" name="phone" value={form.phone} onChange={(value) => update('phone', value)} error={fieldErrors.phone} type="tel" placeholder="01XXXXXXXXX" />
-              <div className="sm:col-span-2">
-                <Input label="Email address" name="email" value={form.email} onChange={(value) => update('email', value)} error={fieldErrors.email} optional type="email" placeholder="you@example.com" />
               </div>
-            </div>
           </section>
           <section className="border-t border-slate-100 pt-8">
             <h2 className="text-base font-black text-slate-950 sm:text-lg">Delivery information</h2>
@@ -156,18 +150,13 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
             <div className="mt-5 grid gap-5 sm:grid-cols-2">
               <SelectField label="Division" name="division" value={form.division} onChange={(value) => { update('division', value); update('district', ''); update('area', '') }} error={fieldErrors.division} placeholder="Select division" options={[...DIVISIONS]} />
               <SelectField label="District" name="district" value={form.district} onChange={(value) => { update('district', value); update('area', '') }} error={fieldErrors.district} placeholder={form.division ? 'Select district' : 'Select division first'} options={DISTRICTS_BY_DIVISION[form.division] ?? []} disabled={!form.division} />
-              <Input label="Area / Upazila" name="area" value={form.area} onChange={(value) => update('area', value)} error={fieldErrors.area} placeholder={form.district ? 'Enter area or upazila' : 'Select district first'} />
-              <Input label="Postal code" name="postalCode" value={form.postalCode} onChange={(value) => update('postalCode', value)} error={fieldErrors.postalCode} optional placeholder="1460" />
+              <Input label="Area / Upazila" name="area" value={form.area} onChange={(value) => update('area', value)} error={fieldErrors.area} placeholder={form.district ? 'Search or enter area / thana' : 'Select district first'} />
               <label className="block sm:col-span-2">
                 <span className="flex items-center justify-between text-sm font-black text-slate-800">Full delivery address</span>
                 <textarea name="address" value={form.address} onChange={(event) => update('address', event.target.value)} rows={3} placeholder="House, road, landmark, village or area" className={`mt-2 w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100 ${fieldErrors.address ? 'border-rose-400' : 'border-slate-200'}`} />
                 {fieldErrors.address && <span className="mt-1.5 block text-xs font-bold text-rose-600">{fieldErrors.address}</span>}
               </label>
-              <label className="block sm:col-span-2">
-                <span className="flex items-center justify-between text-sm font-black text-slate-800">Delivery instructions <span className="text-xs font-medium text-slate-400">Optional</span></span>
-                <textarea name="notes" value={form.notes} onChange={(event) => update('notes', event.target.value)} rows={2} placeholder="Landmark, preferred delivery time, or any useful note" className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100" />
-              </label>
-            </div>
+              </div>
           </section>
           <section className="rounded-2xl bg-slate-50 p-5">
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -185,22 +174,7 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
         </div>
       ) : (
         <div className="mt-7">
-          <div className="mb-4 rounded-2xl border border-orange-200 bg-orange-50 p-4">
-            <div className="flex items-start gap-3">
-              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" />
-              <div>
-                <p className="font-black text-slate-950">Prefer advance payment?</p>
-                <p className="mt-1 text-xs leading-5 text-slate-600 sm:text-sm">After confirmation, eligible orders can be securely routed to online payment. No card, bKash, Nagad, or OTP details are collected in this form.</p>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-2xl bg-slate-950 p-5 text-white">
-            <div className="flex items-start gap-3">
-              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-orange-300" />
-              <div>
-                <p className="font-black">Secure payment options</p>
-                <p className="mt-1 text-xs leading-5 text-slate-300 sm:text-sm sm:leading-6">The server confirms the available payment route. Cash on delivery may be available, while eligible orders can be securely redirected for advance payment.</p>
-              </div>
+          
             </div>
           </div>
           <div className="mt-7 rounded-2xl border border-slate-200 p-5">
@@ -236,7 +210,7 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
             <p className="font-black text-slate-950">Delivery to</p>
             <p className="mt-2 break-words text-xs leading-5 text-slate-600 sm:text-sm sm:leading-6">
               {form.fullName} · {form.phone}<br />
-              {form.address}, {form.area}, {form.district}, {form.division}{form.postalCode ? ` – ${form.postalCode}` : ''}
+              {form.address}, {form.area}, {form.district}, {form.division}
             </p>
           </div>
           <div className="mt-7 grid gap-3 sm:grid-cols-2">
