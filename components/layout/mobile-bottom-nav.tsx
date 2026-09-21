@@ -13,6 +13,8 @@ const items = [
 
 export function MobileBottomNav() {
   const pathname = usePathname()
+  const checkoutFlow = pathname === '/order' || pathname.startsWith('/order/') || pathname.startsWith('/payment/status')
+  if (checkoutFlow) return null
   return (
     <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[var(--brand-navy)]/98 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-8px_24px_-20px_rgba(15,23,42,0.5)] backdrop-blur lg:hidden">
       <div className="mx-auto grid max-w-md grid-cols-4">
