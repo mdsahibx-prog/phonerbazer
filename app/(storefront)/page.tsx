@@ -29,13 +29,17 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="bg-white py-5 sm:py-10" aria-labelledby="featured-categories-heading">
+      <section className="bg-white py-6 sm:py-12" aria-labelledby="featured-categories-heading">
         <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
           <div className="flex items-end justify-between gap-3">
-            <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-500">Shop by type</p><h2 id="featured-categories-heading" className="mt-1 text-xl font-black tracking-tight text-black sm:text-3xl">Featured <span className="text-orange-500">Categories</span></h2></div>
-            <Link href="/categories" className="shrink-0 text-[11px] font-black text-orange-600 sm:text-xs">View All <ArrowRight className="ml-0.5 inline h-3.5 w-3.5" /></Link>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-orange-500">Shop by type</p>
+              <h2 id="featured-categories-heading" className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Find your <span className="text-orange-500">perfect match</span></h2>
+              <p className="mt-1 max-w-xl text-[11px] font-medium text-slate-500 sm:text-sm">Explore phones, wearables and everyday tech by category.</p>
+            </div>
+            <Link href="/categories" className="inline-flex shrink-0 items-center gap-1 rounded-full border border-slate-200 px-3 py-2 text-[10px] font-black text-slate-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600 sm:px-4 sm:text-xs">View all <ArrowRight className="h-3.5 w-3.5" /></Link>
           </div>
-          <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-6">
+          <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3 lg:grid-cols-6">
             {categories.slice(0, 8).map((category: StorefrontCategory) => <CategoryCard key={category.id} category={category} />)}
           </div>
         </div>
