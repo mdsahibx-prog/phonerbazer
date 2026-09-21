@@ -203,7 +203,7 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
         </div>
       )}
     </section>
-    <aside className="space-y-4 lg:sticky lg:top-24">
+    <aside className="hidden lg:block lg:sticky lg:top-24 space-y-4">
       <div className="rounded-[1.5rem] bg-orange-500 p-6 text-slate-950">
         <Truck className="h-6 w-6" />
         <p className="mt-5 text-lg font-black">Clear delivery pricing</p>
