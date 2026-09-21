@@ -33,7 +33,7 @@ type VariantRow = {
   compare_at_price: number | string | null
   stock_quantity: number
   is_active: boolean
-  product: { id: string; name: string; is_published: boolean; warranty_policy: string } | null
+  product: { id: string; name: string; is_published: boolean; warranty_policy: string; product_images: Array<{ image_url: string; variant_id: string | null; is_primary: boolean; sort_order: number }> } | null
 }
 
 type SettingsRow = { key: string; value: unknown }
@@ -60,7 +60,7 @@ async function loadVariantQuote(selection: { productId: string; variantId: strin
   const admin = createAdminClient()
   const { data, error } = await admin
     .from('product_variants')
-    .select('id,product_id,sku,variant_title,price,compare_at_price,stock_quantity,is_active,product:products!inner(id,name,is_published,warranty_policy)')
+    .select('id,product_id,sku,variant_title,ram,storage,color,price,compare_at_price,stock_quantity,is_active,product:products!inner(id,name,is_published,warranty_policy,product_images(image_url,variant_id,is_primary,sort_order))')
     .eq('id', selection.variantId)
     .eq('product_id', selection.productId)
     .maybeSingle()
@@ -74,6 +74,8 @@ async function loadVariantQuote(selection: { productId: string; variantId: strin
   ])
   if (settingsResult.error) throw new Error('Delivery configuration is unavailable.')
 
+  const variantImages = (variant.product?.product_images ?? []).filter((image) => image.variant_id === variant.id).sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.sort_order - b.sort_order)
+  const variantImageUrl = variantImages[0]?.image_url ?? ((variant.product?.product_images ?? []).find((image) => image.is_primary)?.image_url ?? null)
   const unitPrice = numeric(variant.price)
   const compareAtPrice = variant.compare_at_price === null ? null : numeric(variant.compare_at_price)
   if (unitPrice === null || unitPrice < 0) throw new Error('The selected variant has no valid selling price.')
@@ -84,6 +86,8 @@ async function loadVariantQuote(selection: { productId: string; variantId: strin
   return {
     productName: variant.product.name,
     variantTitle: variant.variant_title,
+    color: variant.color ?? null,
+    imageUrl: variantImageUrl,
     sku: variant.sku,
     quantity: selection.quantity,
     unitPrice,
