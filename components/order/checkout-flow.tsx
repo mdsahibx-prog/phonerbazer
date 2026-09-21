@@ -180,7 +180,7 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
         </div>
       </div>}
 
-      {step === 'review' && <div className="px-0.5 pt-2 pb-[calc(7.5rem+env(safe-area-inset-bottom))] sm:pb-0">
+      {step === 'review' && quote && <div className="px-0.5 pt-2 pb-[calc(7.5rem+env(safe-area-inset-bottom))] sm:pb-0">
         <button type="button" disabled={busy} onClick={() => setStep('delivery')} className="mb-3 inline-flex items-center gap-1 text-xs font-bold text-slate-500"><ArrowLeft className="h-3.5 w-3.5" /> Edit delivery</button>
         <div className="divide-y divide-slate-100 rounded-xl border border-slate-200">
           <div className="p-3.5"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Delivery</p><p className="mt-1 text-xs font-bold text-slate-800">{form.fullName} · {form.phone}</p><p className="text-xs leading-5 text-slate-500">{[form.area, form.district, form.division].filter(Boolean).join(', ')}</p><p className="break-words text-xs leading-5 text-slate-600">{form.address}</p></div>
