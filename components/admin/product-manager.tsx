@@ -4,7 +4,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMemo, useState, useTransition } from 'react'
 import { useForm } from 'react-hook-form'
-import { Archive, ImagePlus, Pencil, Plus, Save, Tag, Trash2, Upload } from 'lucide-react'
+import { Archive, Boxes, CheckCircle2, ImagePlus, Pencil, Plus, Search, Save, Tag, Trash2, Upload, AlertTriangle, Layers3 } from 'lucide-react'
 
 import { archiveProduct, deleteProductImage, removeBrandLogo, saveBrand, saveCategory, saveProduct, saveVariant, uploadBrandLogo, uploadProductImage } from '@/lib/admin/actions'
 import { brandSchema, categorySchema, productSchema, variantSchema } from '@/lib/admin/schema'
@@ -21,9 +21,37 @@ function ResultMessage({ message }: { message: string | null }) {
 export function ProductManager({ products, brands, categories, images }: ProductManagerProps) {
   const [tab, setTab] = useState<'products' | 'brands' | 'categories' | 'variants' | 'images'>('products')
   const tabs = [
-    ['products', 'Products'], ['brands', 'Brands'], ['categories', 'Categories'], ['variants', 'Variants'], ['images', 'Images'],
+    ['products', 'Products', Boxes], ['variants', 'Variants', Layers3], ['images', 'Media', ImagePlus], ['brands', 'Brands', Tag], ['categories', 'Categories', Layers3],
   ] as const
-  return <div><div className="mb-5 flex gap-2 overflow-x-auto pb-1">{tabs.map(([value, label]) => <button type="button" key={value} onClick={() => setTab(value)} className={`h-9 shrink-0 rounded-full px-4 text-sm font-semibold transition ${tab === value ? 'bg-slate-950 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'}`}>{label}</button>)}</div>{tab === 'products' ? <ProductTab products={products} brands={brands} categories={categories} /> : null}{tab === 'brands' ? <BrandTab brands={brands} /> : null}{tab === 'categories' ? <CategoryTab categories={categories} /> : null}{tab === 'variants' ? <VariantTab products={products} /> : null}{tab === 'images' ? <ImageTab products={products} images={images} /> : null}</div>
+  const published = products.filter((p) => p.is_published).length
+  const lowStock = products.flatMap((p) => p.product_variants ?? []).filter((v: any) => Number(v.stock_quantity ?? 0) <= Number(v.low_stock_threshold ?? 5)).length
+  const activeBrands = brands.filter((b) => b.is_active).length
+  return <div className="space-y-6">
+    <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="bg-[radial-gradient(circle_at_top_right,rgba(255,107,0,0.14),transparent_35%),linear-gradient(135deg,#151c2f,#202a43)] p-6 text-white sm:p-7">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div><div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white/75">Catalogue control center</div>
+            <h2 className="text-2xl font-black tracking-tight sm:text-3xl">Manage your catalogue</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/65">One workspace for products, variants, pricing, inventory signals, brands, categories, and product media.</p>
+          </div>
+          <button type="button" onClick={() => setTab('products')} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 text-sm font-black text-white shadow-lg shadow-orange-950/20 hover:bg-orange-400"><Plus className="h-4 w-4" /> Add product</button>
+        </div>
+      </div>
+      <div className="grid divide-y border-t border-slate-100 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
+        <div className="p-4"><p className="text-xl font-black text-slate-950">{products.length}</p><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Products</p></div>
+        <div className="p-4"><p className="text-xl font-black text-emerald-700">{published}</p><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Published</p></div>
+        <div className="p-4"><p className="text-xl font-black text-amber-600">{lowStock}</p><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Low-stock variants</p></div>
+        <div className="p-4"><p className="text-xl font-black text-slate-950">{activeBrands}</p><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Active brands</p></div>
+      </div>
+    </section>
+    <div className="grid gap-2 sm:grid-cols-5">
+      {tabs.map(([value, label, Icon]) => <button type="button" key={value} onClick={() => setTab(value)} className={`group flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${tab === value ? 'border-orange-200 bg-orange-50 text-orange-700 shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}>
+        <span className="flex items-center gap-2 text-sm font-bold"><Icon className="h-4 w-4" />{label}</span><span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{value === 'products' ? products.length : value === 'variants' ? products.reduce((n,p) => n + (p.product_variants?.length ?? 0), 0) : value === 'images' ? images.length : value === 'brands' ? brands.length : categories.length}</span>
+      </button>)}
+    </div>
+    {lowStock > 0 ? <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><div><p className="text-sm font-black">Inventory attention needed</p><p className="mt-1 text-xs leading-5 text-amber-800">{lowStock} variant{lowStock === 1 ? '' : 's'} are at or below their low-stock threshold. Review Variants before publishing more promotions.</p></div></div> : null}
+    {tab === 'products' ? <ProductTab products={products} brands={brands} categories={categories} /> : null}{tab === 'brands' ? <BrandTab brands={brands} /> : null}{tab === 'categories' ? <CategoryTab categories={categories} /> : null}{tab === 'variants' ? <VariantTab products={products} /> : null}{tab === 'images' ? <ImageTab products={products} images={images} /> : null}
+  </div>
 }
 
 function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 'images'>) {
