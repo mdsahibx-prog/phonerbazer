@@ -171,6 +171,7 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
         <details className="rounded-xl border border-slate-200 bg-white">
           <summary className="cursor-pointer list-none px-4 py-3 text-sm font-bold text-slate-800">Search & merchandising</summary>
           <div className="space-y-4 border-t border-slate-100 p-4">
+            <div className="mb-3 flex justify-end"><button type="button" onClick={fillSeoFromContent} className="text-[10px] font-bold text-orange-600 hover:text-orange-700">Fill from product content</button></div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div><label className={labelClass}>SEO title</label><input className={inputClass} placeholder="Product name + key selling point" {...form.register('metaTitle')} /></div>
               <div><label className={labelClass}>SEO description</label><textarea className="min-h-20 w-full rounded-lg border border-slate-200 p-3 text-sm" placeholder="Short search-engine friendly description." {...form.register('metaDescription')} /></div>
