@@ -6,7 +6,7 @@ import { useMemo, useState, useTransition } from 'react'
 import { useForm } from 'react-hook-form'
 import { Archive, Boxes, ImagePlus, Pencil, Plus, Search, Save, Tag, Trash2, Upload, AlertTriangle, Layers3 } from 'lucide-react'
 
-import { archiveProduct, deleteProductImage, getProductImagesForAdmin, removeBrandLogo, saveBrand, saveCategory, saveProduct, saveVariant, uploadBrandLogo, uploadProductImage } from '@/lib/admin/actions'
+import { archiveProduct, deleteProductImage, getProductImagesForAdmin, removeBrandLogo, saveBrand, saveCategory, uploadCategoryImage, saveProduct, saveVariant, uploadBrandLogo, uploadProductImage } from '@/lib/admin/actions'
 import { brandSchema, categorySchema, productSchema, variantSchema } from '@/lib/admin/schema'
 
 const inputClass = 'h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100'
@@ -286,9 +286,109 @@ function BrandTab({ brands }: { brands: any[] }) {
 }
 
 function CategoryTab({ categories }: { categories: any[] }) {
-  const [message, setMessage] = useState<string | null>(null); const [isPending, startTransition] = useTransition()
+  const [message, setMessage] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
+  const [search, setSearch] = useState('')
+  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [localCategories, setLocalCategories] = useState(categories)
   const form = useForm<any>({ resolver: zodResolver(categorySchema), defaultValues: { name: '', slug: '', description: '', imageUrl: '', sortOrder: 0, isActive: true, metaTitle: '', metaDescription: '' } })
-  return <div className="grid gap-6 lg:grid-cols-[.7fr_1.3fr]"><section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h2 className="font-semibold">Create or edit category</h2><form className="mt-5 space-y-4" onSubmit={form.handleSubmit((values: any) => startTransition(async () => { const result = await saveCategory(values); setMessage(result.message); if (result.ok) form.reset() }))}><div><label className={labelClass}>Name</label><input className={inputClass} {...form.register('name')} /></div><div><label className={labelClass}>Slug</label><input className={inputClass} {...form.register('slug')} /></div><div><label className={labelClass}>Sort order</label><input type="number" className={inputClass} {...form.register('sortOrder')} /></div><div><label className={labelClass}>Description</label><textarea className="min-h-20 w-full rounded-lg border border-slate-200 p-3 text-sm" {...form.register('description')} /></div><div><label className={labelClass}>Image URL</label><input className={inputClass} {...form.register('imageUrl')} /></div><label className="flex items-center gap-2 text-sm"><input type="checkbox" {...form.register('isActive')} /> Active</label><button disabled={isPending} className="inline-flex h-10 items-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white"><Tag className="h-4 w-4" />Save category</button></form><ResultMessage message={message} /></section><section className="rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="border-b border-slate-100 px-5 py-4"><h2 className="font-semibold">Categories</h2></div><ul className="divide-y divide-slate-100">{categories.map((category) => <li key={category.id} className="flex items-center justify-between px-5 py-4"><div><p className="font-semibold">{category.name}</p><p className="text-xs text-slate-500">/{category.slug} · position {category.sort_order}</p></div><span className={`text-xs font-semibold ${category.is_active ? 'text-emerald-700' : 'text-slate-500'}`}>{category.is_active ? 'Active' : 'Inactive'}</span></li>)}</ul></section></div>
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return localCategories.filter((category: any) => {
+      const matchesSearch = !q || [category.name, category.slug, category.description].some((value) => String(value ?? '').toLowerCase().includes(q))
+      const matchesActive = activeFilter === 'all' || (activeFilter === 'active' && category.is_active) || (activeFilter === 'inactive' && !category.is_active)
+      return matchesSearch && matchesActive
+    })
+  }, [localCategories, search, activeFilter])
+
+  function reset() {
+    setEditingId(null)
+    form.reset({ name: '', slug: '', description: '', imageUrl: '', sortOrder: 0, isActive: true, metaTitle: '', metaDescription: '' })
+  }
+
+  function edit(category: any) {
+    setEditingId(category.id)
+    form.reset({ id: category.id, name: category.name, slug: category.slug, description: category.description ?? '', imageUrl: category.image_url ?? '', sortOrder: category.sort_order ?? 0, isActive: category.is_active, metaTitle: category.meta_title ?? '', metaDescription: category.meta_description ?? '' })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function generateSlug() {
+    const name = String(form.getValues('name') ?? '').trim()
+    if (!name) return
+    form.setValue('slug', name.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''))
+  }
+
+  async function uploadImage(file: File) {
+    const data = new FormData()
+    data.set('file', file)
+    if (editingId) data.set('categoryId', editingId)
+    startTransition(async () => {
+      const result = await uploadCategoryImage(data)
+      setMessage(result.message)
+      if (result.ok && result.data?.logoUrl) {
+        form.setValue('imageUrl', result.data.logoUrl)
+        if (editingId) setLocalCategories((items: any[]) => items.map((item) => item.id === editingId ? { ...item, image_url: result.data?.logoUrl } : item))
+      }
+    })
+  }
+
+  const imageUrl = form.watch('imageUrl')
+
+  return <div className="space-y-6">
+    <div className="grid gap-6 xl:grid-cols-[.75fr_1.25fr]">
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-600">{editingId ? 'Editing category' : 'Category setup'}</p><h2 className="mt-1 text-lg font-black text-slate-950">{editingId ? 'Update category' : 'Create category'}</h2><p className="mt-1 text-sm leading-5 text-slate-500">Use a clear name, a clean image, and a simple description. The same category image can power storefront category cards.</p></div>
+          {editingId ? <button type="button" onClick={reset} className="text-xs font-bold text-slate-500 hover:text-slate-900">Cancel</button> : null}
+        </div>
+        <form className="mt-5 space-y-4" onSubmit={form.handleSubmit((values: any) => startTransition(async () => {
+          const result = await saveCategory(values)
+          setMessage(result.message)
+          if (result.ok) {
+            const next = { ...values, id: values.id ?? crypto.randomUUID(), image_url: values.imageUrl, sort_order: values.sortOrder, is_active: values.isActive }
+            setLocalCategories((items: any[]) => values.id ? items.map((item) => item.id === values.id ? { ...item, ...next } : item) : [...items, next])
+            reset()
+          }
+        }))}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div><label className={labelClass}>Category name</label><input className={inputClass} placeholder="e.g. Smartphones" {...form.register('name')} /></div>
+            <div><div className="mb-1.5 flex items-center justify-between"><label className={labelClass + " mb-0"}>Slug</label><button type="button" onClick={generateSlug} className="text-[10px] font-bold text-orange-600">Generate</button></div><input className={inputClass} placeholder="smartphones" {...form.register('slug')} /></div>
+          </div>
+          <div><label className={labelClass}>Category image</label>
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3">
+              <div className="flex items-center gap-3">
+                {imageUrl ? <img src={imageUrl} alt="" className="h-20 w-20 rounded-xl object-cover ring-1 ring-slate-200" /> : <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-slate-200 text-xs font-bold text-slate-500">No image</div>}
+                <div className="min-w-0 flex-1"><p className="text-sm font-bold text-slate-800">Upload category photo</p><p className="mt-1 text-xs text-slate-500">JPEG, PNG, WebP or AVIF · max 3 MB</p><label className="mt-2 inline-flex cursor-pointer items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800"><Upload className="h-3.5 w-3.5" />{isPending ? 'Uploading…' : 'Choose photo'}<input type="file" accept="image/jpeg,image/png,image/webp,image/avif" className="hidden" disabled={isPending} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadImage(file) }} /></label></div>
+              </div>
+            </div>
+          </div>
+          <div><label className={labelClass}>Description</label><textarea className="min-h-20 w-full rounded-lg border border-slate-200 p-3 text-sm outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100" placeholder="Short customer-facing explanation of what belongs in this category." {...form.register('description')} /></div>
+          <div className="grid gap-4 sm:grid-cols-2"><div><label className={labelClass}>Display order</label><input type="number" min="0" className={inputClass} {...form.register('sortOrder', { valueAsNumber: true })} /></div><label className="flex items-center gap-2 self-end pb-2 text-sm font-semibold text-slate-700"><input type="checkbox" {...form.register('isActive')} /> Active on storefront</label></div>
+          <details className="rounded-xl border border-slate-200"><summary className="cursor-pointer list-none px-4 py-3 text-sm font-bold">SEO settings</summary><div className="space-y-3 border-t border-slate-100 p-4"><input className={inputClass} placeholder="SEO title" {...form.register('metaTitle')} /><textarea className="min-h-20 w-full rounded-lg border border-slate-200 p-3 text-sm" placeholder="SEO description" {...form.register('metaDescription')} /></div></details>
+          <div className="flex gap-2"><button disabled={isPending} className="inline-flex h-10 items-center gap-2 rounded-lg bg-orange-500 px-4 text-sm font-black text-white hover:bg-orange-600"><Tag className="h-4 w-4" />{editingId ? 'Save changes' : 'Create category'}</button>{editingId ? <button type="button" onClick={reset} className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-bold text-slate-600">Cancel</button> : null}</div>
+        </form>
+        <ResultMessage message={message} />
+      </section>
+
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 p-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"><div><h2 className="font-black text-slate-950">Category library</h2><p className="mt-1 text-sm text-slate-500">{filtered.length} of {localCategories.length} categories · Search and manage storefront organization.</p></div><button type="button" onClick={() => { setSearch(''); setActiveFilter('all') }} className="text-xs font-bold text-slate-500">Reset</button></div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto]"><div className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={search} onChange={(event) => setSearch(event.target.value)} className="h-10 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-sm outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100" placeholder="Search categories…" /></div><select value={activeFilter} onChange={(event) => setActiveFilter(event.target.value as typeof activeFilter)} className={inputClass}><option value="all">All</option><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+        </div>
+        <div className="divide-y divide-slate-100">
+          {filtered.map((category: any) => <div key={category.id} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50">
+            {category.image_url ? <img src={category.image_url} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-xl object-cover ring-1 ring-slate-200" /> : <div className="h-12 w-12 shrink-0 rounded-xl bg-slate-100" />}
+            <div className="min-w-0 flex-1"><p className="truncate font-bold text-slate-900">{category.name}</p><p className="mt-0.5 truncate text-xs text-slate-500">/{category.slug} · Order {category.sort_order}</p></div>
+            <span className={`hidden rounded-full px-2 py-1 text-[10px] font-bold sm:inline-flex ${category.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{category.is_active ? 'Active' : 'Inactive'}</span>
+            <button type="button" onClick={() => edit(category)} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100" aria-label={`Edit ${category.name}`}><Pencil className="h-4 w-4" /></button>
+          </div>)}
+          {!filtered.length ? <div className="p-10 text-center text-sm text-slate-500">No categories match your filters.</div> : null}
+        </div>
+      </section>
+    </div>
+  </div>
 }
 
 function VariantTab({ products }: { products: any[] }) {
