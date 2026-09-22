@@ -2,11 +2,11 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- server data is serialized from Supabase relation responses and revalidated by server actions. */
 
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import { ClipboardList, Download, MapPin, PackageCheck, Save, ShieldCheck } from 'lucide-react'
 
 import { createPathaoShipmentAction, refreshPathaoShipmentStatusAction, requestManualPathaoReversePickupAction } from '@/lib/admin/delivery-actions'
-import { updateOrderStatus } from '@/lib/admin/actions'
+import { getAdminOrderDetail, updateOrderStatus } from '@/lib/admin/actions'
 import { riskCategoryForLevel } from '@/lib/risk/categories'
 
 const statuses = ['PENDING', 'CONFIRMED', 'PROCESSING', 'READY_TO_SHIP', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'RETURN_REQUESTED', 'RETURNED']
@@ -18,13 +18,39 @@ const riskLabels: Record<string, string> = { ALLOW: 'COD permitted', ALLOW_WITH_
 
 export function OrdersManager({ orders, invoiceGenerationEnabled }: { orders: any[]; invoiceGenerationEnabled: boolean }) {
   const [selectedId, setSelectedId] = useState(orders[0]?.id ?? '')
-  const selected = useMemo(() => orders.find((order) => order.id === selectedId) ?? orders[0], [orders, selectedId])
-  return <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+  const [selected, setSelected] = useState<any | null>(orders[0] ?? null)
+  const [detailLoading, setDetailLoading] = useState(Boolean(orders[0]))
+  const [detailError, setDetailError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!selectedId) { setSelected(null); return }
+    let active = true
+    setDetailLoading(true)
+    setDetailError(null)
+    getAdminOrderDetail(selectedId).then((detail) => {
+      if (active) { setSelected(detail); setDetailLoading(false) }
+    }).catch(() => {
+      if (active) { setDetailError('Unable to load this order detail. Please try again.'); setDetailLoading(false) }
+    })
+    return () => { active = false }
+  }, [selectedId])
+
+  return <div className="space-y-4">
+    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div><p className="text-xs font-bold uppercase tracking-wider text-slate-500">Data export</p><p className="mt-1 text-sm text-slate-600">Download compact, gzip-compressed CSV files for the last 30, 90, 180, or 365 days.</p></div>
+        <div className="flex flex-wrap gap-2">
+          {[30,90,180,365].map((days) => <a key={days} href={`/api/admin/orders/export?format=customers&days=${days}`} className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 hover:border-orange-300 hover:text-orange-700"><Download className="h-3.5 w-3.5" />Customers {days}d</a>)}
+          <a href="/api/admin/orders/export?format=orders&days=365" className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#151C2F] px-3 text-xs font-bold text-white hover:bg-slate-800"><Download className="h-3.5 w-3.5" />Orders 1 year</a>
+        </div>
+      </div>
+    </section>
+    <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-100 px-5 py-4"><h2 className="font-semibold">Orders</h2><p className="mt-1 text-sm text-slate-500">Search results are capped at 100 records per request.</p></div>
-      {orders.length ? <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-3">Order</th><th className="px-5 py-3">Customer</th><th className="px-5 py-3">Order status</th><th className="px-5 py-3">Courier</th><th className="px-5 py-3">Risk / payment</th><th className="px-5 py-3 text-right">Total</th></tr></thead><tbody>{orders.map((order) => { const shipment = (order.shipments ?? []).find((item: any) => item.provider === 'PATHAO') ?? (order.shipments ?? [])[0]; const risk = (order.risk_assessments ?? [])[0]; const paymentLabel = order.payment_requirement === 'FULL_ADVANCE' ? 'Advance' : order.payment_requirement === 'MANUAL_REVIEW' ? 'Review' : 'COD'; return <tr key={order.id} onClick={() => setSelectedId(order.id)} className={`cursor-pointer border-t border-slate-100 transition hover:bg-slate-50 ${selected?.id === order.id ? 'bg-emerald-50/60' : ''}`}><td className="px-5 py-3"><p className="font-mono text-xs font-bold text-slate-800">{order.order_number}</p><p className="mt-1 text-xs text-slate-500">{new Date(order.created_at).toLocaleDateString('en-BD')}</p></td><td className="px-5 py-3"><p className="font-semibold text-slate-900">{order.customer_name_snapshot}</p><p className="text-xs text-slate-500">{order.customer_phone_snapshot}</p></td><td className="px-5 py-3"><span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">{order.order_status}</span></td><td className="px-5 py-3"><span className={`rounded-full px-2 py-1 text-xs font-semibold ${shipment?.provider_shipment_id ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>{shipment?.provider_shipment_id ? `Pathao · ${shipment.status}` : 'Not created'}</span></td><td className="px-5 py-3"><p className="text-xs font-semibold text-slate-800">{risk ? riskCategoryForLevel(risk.level) : 'Pending'} · {paymentLabel}</p><p className="mt-1 max-w-44 truncate text-xs text-slate-500">{risk ? (riskLabels[risk.action] ?? risk.action) : 'Risk assessment pending'}</p></td><td className="px-5 py-3 text-right font-semibold">{currency.format(Number(order.grand_total))}</td></tr> })}</tbody></table></div> : <div className="p-10 text-center"><ClipboardList className="mx-auto h-6 w-6 text-slate-400" /><p className="mt-3 text-sm text-slate-500">No orders match this view.</p></div>}
+      {orders.length ? <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-3">Order</th><th className="px-5 py-3">Customer</th><th className="px-5 py-3">Order status</th><th className="px-5 py-3">Courier</th><th className="px-5 py-3">Risk / payment</th><th className="px-5 py-3 text-right">Total</th></tr></thead><tbody>{orders.map((order) => { const shipment = (order.shipments ?? []).find((item: any) => item.provider === 'PATHAO') ?? (order.shipments ?? [])[0]; const risk = (order.risk_assessments ?? [])[0]; const paymentLabel = order.payment_requirement === 'FULL_ADVANCE' ? 'Advance' : order.payment_requirement === 'MANUAL_REVIEW' ? 'Review' : 'COD'; return <tr key={order.id} onClick={() => setSelectedId(order.id)} className={`cursor-pointer border-t border-slate-100 border-l-4 transition ${selected?.id === order.id ? 'border-l-orange-500 bg-orange-50' : 'border-l-transparent hover:bg-slate-50'}`}><td className="px-5 py-3"><p className="font-mono text-xs font-bold text-slate-800">{order.order_number}</p><p className="mt-1 text-xs text-slate-500">{new Date(order.created_at).toLocaleDateString('en-BD')}</p></td><td className="px-5 py-3"><p className="font-semibold text-slate-900">{order.customer_name_snapshot}</p><p className="text-xs text-slate-500">{order.customer_phone_snapshot}</p></td><td className="px-5 py-3"><span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">{order.order_status}</span></td><td className="px-5 py-3"><span className={`rounded-full px-2 py-1 text-xs font-semibold ${shipment?.provider_shipment_id ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>{shipment?.provider_shipment_id ? `Pathao · ${shipment.status}` : 'Not created'}</span></td><td className="px-5 py-3"><p className="text-xs font-semibold text-slate-800">{risk ? riskCategoryForLevel(risk.level) : 'Pending'} · {paymentLabel}</p><p className="mt-1 max-w-44 truncate text-xs text-slate-500">{risk ? (riskLabels[risk.action] ?? risk.action) : 'Risk assessment pending'}</p></td><td className="px-5 py-3 text-right font-semibold">{currency.format(Number(order.grand_total))}</td></tr> })}</tbody></table></div> : <div className="p-10 text-center"><ClipboardList className="mx-auto h-6 w-6 text-slate-400" /><p className="mt-3 text-sm text-slate-500">No orders match this view.</p></div>}
     </section>
-    {selected ? <OrderDetail key={selected.id} order={selected} invoiceGenerationEnabled={invoiceGenerationEnabled} /> : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">Select an order to see its operational detail.</div>}
+    {detailLoading ? <div className="rounded-2xl border border-orange-200 bg-orange-50/50 p-8 text-center"><div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-orange-200 border-t-orange-600" /><p className="mt-3 text-sm font-semibold text-slate-700">Loading order detail…</p><p className="mt-1 text-xs text-slate-500">Only the selected order is loaded.</p></div> : detailError ? <div className="rounded-2xl border border-rose-200 bg-rose-50 p-8 text-center text-sm font-semibold text-rose-800">{detailError}</div> : selected ? <OrderDetail key={selected.id} order={selected} invoiceGenerationEnabled={invoiceGenerationEnabled} /> : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">Select an order to see its operational detail.</div>}
   </div>
 }
 
