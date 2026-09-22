@@ -6,7 +6,7 @@ import { useMemo, useState, useTransition } from 'react'
 import { useForm } from 'react-hook-form'
 import { Archive, Boxes, ImagePlus, Pencil, Plus, Search, Save, Tag, Trash2, Upload, AlertTriangle, Layers3 } from 'lucide-react'
 
-import { archiveProduct, deleteProductImage, removeBrandLogo, saveBrand, saveCategory, saveProduct, saveVariant, uploadBrandLogo, uploadProductImage } from '@/lib/admin/actions'
+import { archiveProduct, deleteProductImage, getProductImagesForAdmin, removeBrandLogo, saveBrand, saveCategory, saveProduct, saveVariant, uploadBrandLogo, uploadProductImage } from '@/lib/admin/actions'
 import { brandSchema, categorySchema, productSchema, variantSchema } from '@/lib/admin/schema'
 
 const inputClass = 'h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100'
@@ -20,12 +20,24 @@ function ResultMessage({ message }: { message: string | null }) {
 
 export function ProductManager({ products, brands, categories, images }: ProductManagerProps) {
   const [tab, setTab] = useState<'products' | 'brands' | 'categories' | 'variants' | 'images'>('products')
+  const [mediaItems, setMediaItems] = useState<any[]>(images)
+  const [mediaLoading, setMediaLoading] = useState(false)
   const tabs = [
     ['products', 'Products', Boxes], ['variants', 'Variants', Layers3], ['images', 'Media', ImagePlus], ['brands', 'Brands', Tag], ['categories', 'Categories', Layers3],
   ] as const
   const published = products.filter((p) => p.is_published).length
   const lowStock = products.flatMap((p) => p.product_variants ?? []).filter((v: any) => Number(v.stock_quantity ?? 0) <= Number(v.low_stock_threshold ?? 5)).length
   const activeBrands = brands.filter((b) => b.is_active).length
+
+  async function openTab(nextTab: typeof tab) {
+    setTab(nextTab)
+    if (nextTab !== 'images' || mediaItems.length || mediaLoading) return
+    setMediaLoading(true)
+    const loaded = await getProductImagesForAdmin()
+    setMediaItems(loaded)
+    setMediaLoading(false)
+  }
+
   return <div className="space-y-6">
     <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
       <div className="bg-[radial-gradient(circle_at_top_right,rgba(255,107,0,0.14),transparent_35%),linear-gradient(135deg,#151c2f,#202a43)] p-6 text-white sm:p-7">
@@ -34,7 +46,7 @@ export function ProductManager({ products, brands, categories, images }: Product
             <h2 className="text-2xl font-black tracking-tight sm:text-3xl">Manage your catalogue</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-white/65">One workspace for products, variants, pricing, inventory signals, brands, categories, and product media.</p>
           </div>
-          <button type="button" onClick={() => setTab('products')} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 text-sm font-black text-white shadow-lg shadow-orange-950/20 hover:bg-orange-400"><Plus className="h-4 w-4" /> Add product</button>
+          <button type="button" onClick={() => openTab('products')} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 text-sm font-black text-white shadow-lg shadow-orange-950/20 hover:bg-orange-400"><Plus className="h-4 w-4" /> Add product</button>
         </div>
       </div>
       <div className="grid divide-y border-t border-slate-100 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
@@ -45,12 +57,12 @@ export function ProductManager({ products, brands, categories, images }: Product
       </div>
     </section>
     <div className="grid gap-2 sm:grid-cols-5">
-      {tabs.map(([value, label, Icon]) => <button type="button" key={value} onClick={() => setTab(value)} className={`group flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${tab === value ? 'border-orange-200 bg-orange-50 text-orange-700 shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}>
-        <span className="flex items-center gap-2 text-sm font-bold"><Icon className="h-4 w-4" />{label}</span><span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{value === 'products' ? products.length : value === 'variants' ? products.reduce((n,p) => n + (p.product_variants?.length ?? 0), 0) : value === 'images' ? images.length : value === 'brands' ? brands.length : categories.length}</span>
+      {tabs.map(([value, label, Icon]) => <button type="button" key={value} onClick={() => openTab(value)} className={`group flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${tab === value ? 'border-orange-200 bg-orange-50 text-orange-700 shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}>
+        <span className="flex items-center gap-2 text-sm font-bold"><Icon className="h-4 w-4" />{label}</span><span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{value === 'products' ? products.length : value === 'variants' ? products.reduce((n,p) => n + (p.product_variants?.length ?? 0), 0) : value === 'images' ? mediaItems.length : value === 'brands' ? brands.length : categories.length}</span>
       </button>)}
     </div>
     {lowStock > 0 ? <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><div><p className="text-sm font-black">Inventory attention needed</p><p className="mt-1 text-xs leading-5 text-amber-800">{lowStock} variant{lowStock === 1 ? '' : 's'} are at or below their low-stock threshold. Review Variants before publishing more promotions.</p></div></div> : null}
-    {tab === 'products' ? <ProductTab products={products} brands={brands} categories={categories} /> : null}{tab === 'brands' ? <BrandTab brands={brands} /> : null}{tab === 'categories' ? <CategoryTab categories={categories} /> : null}{tab === 'variants' ? <VariantTab products={products} /> : null}{tab === 'images' ? <ImageTab products={products} images={images} /> : null}
+    {tab === 'products' ? <ProductTab products={products} brands={brands} categories={categories} /> : null}{tab === 'brands' ? <BrandTab brands={brands} /> : null}{tab === 'categories' ? <CategoryTab categories={categories} /> : null}{tab === 'variants' ? <VariantTab products={products} /> : null}{tab === 'images' ? (mediaLoading ? <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">Loading media library…</div> : <ImageTab products={products} images={mediaItems} />) : null}
   </div>
 }
 
