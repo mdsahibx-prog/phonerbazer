@@ -120,7 +120,7 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
   function generateSlug() {
     const name = String(form.getValues('name') ?? '').trim()
     if (!name) return
-    form.setValue('slug', name.toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''))
+    form.setValue('slug', name.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''))
   }
 
   function fillSeoFromContent() {
