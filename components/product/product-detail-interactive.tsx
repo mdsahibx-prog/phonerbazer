@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { trackClientEvent } from '@/lib/analytics/client'
-import { Check, ChevronLeft, ChevronRight, MapPin, PackageCheck, ShieldCheck } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, MapPin, PackageCheck, Phone, ShieldCheck } from 'lucide-react'
 import { addToCartAction } from '@/lib/commerce/actions'
 import { prepareGuestCheckoutAction } from '@/lib/commerce/actions'
 
