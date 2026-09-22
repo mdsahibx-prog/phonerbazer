@@ -243,6 +243,38 @@ export async function removeBrandLogo(brandId: string): Promise<AdminActionResul
   }
 }
 
+export async function uploadCategoryImage(formData: FormData): Promise<AdminActionResult> {
+  try {
+    const session = await requireAdmin(['OWNER', 'ADMIN'])
+    const file = formData.get('file')
+    const categoryId = formData.get('categoryId')
+    if (!(file instanceof File)) return { ok: false, message: 'Choose an image file.' }
+    if (categoryId && (typeof categoryId !== 'string' || !zUuid(categoryId))) return { ok: false, message: 'Invalid category reference.' }
+    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif'])
+    if (!allowedTypes.has(file.type) || file.size <= 0 || file.size > 3 * 1024 * 1024) {
+      return { ok: false, message: 'Use JPEG, PNG, WebP, or AVIF up to 3 MB.' }
+    }
+    const extension = file.type === 'image/jpeg' ? 'jpg' : file.type.split('/')[1]
+    const storagePath = `categories/${randomUUID()}.${extension}`
+    const db = createAdminClient()
+    const upload = await db.storage.from('product-images').upload(storagePath, file, { contentType: file.type, upsert: false, cacheControl: '31536000' })
+    if (upload.error) throw new Error(upload.error.message)
+    const { data: publicUrl } = db.storage.from('product-images').getPublicUrl(storagePath)
+    if (typeof categoryId === 'string' && categoryId) {
+      const { error } = await db.from('categories').update({ image_url: publicUrl.publicUrl, updated_at: new Date().toISOString() }).eq('id', categoryId)
+      if (error) {
+        await db.storage.from('product-images').remove([storagePath])
+        throw new Error(error.message)
+      }
+    }
+    await writeAdminAuditLog({ actorUserId: session.userId, action: 'CATEGORY_IMAGE_UPLOADED', entityType: 'category', entityId: typeof categoryId === 'string' ? categoryId : undefined, details: { content_type: file.type, size: file.size } })
+    refreshAdminRoutes()
+    return { ok: true, message: 'Category image uploaded.', data: { logoUrl: publicUrl.publicUrl } }
+  } catch (error) {
+    return actionFailure(error)
+  }
+}
+
 export async function saveCategory(input: unknown): Promise<AdminActionResult> {
   try {
     const session = await requireAdmin(['OWNER', 'ADMIN'])
