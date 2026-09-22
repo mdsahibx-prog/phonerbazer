@@ -57,15 +57,148 @@ export function ProductManager({ products, brands, categories, images }: Product
 function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 'images'>) {
   const [message, setMessage] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
-  const form = useForm<any>({ resolver: zodResolver(productSchema), defaultValues: { name: '', slug: '', brandId: null, categoryId: null, productType: 'phone', status: 'draft', isPublished: false, isFeatured: false, shortDescription: '', description: '', warrantyPolicy: '7 Days Guarantee & 1 Year Service Warranty. Manufacturer warranty terms apply where applicable.', metaTitle: '', metaDescription: '' } })
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft' | 'archived'>('all')
+  const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all')
+  const form = useForm<any>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      name: '', slug: '', brandId: null, categoryId: null, productType: 'phone', status: 'draft',
+      isPublished: false, isFeatured: false, shortDescription: '', description: '',
+      warrantyPolicy: '7 Days Guarantee & 1 Year Service Warranty. Manufacturer warranty terms apply where applicable.',
+      metaTitle: '', metaDescription: '',
+    },
+  })
   const editingId = form.watch('id')
 
+  const filteredProducts = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return products.filter((product: any) => {
+      const variants = product.product_variants ?? []
+      const matchesSearch = !query || [
+        product.name, product.slug, product.brands?.name, product.categories?.name,
+        ...variants.flatMap((variant: any) => [variant.sku, variant.variant_title, variant.color]),
+      ].some((value) => String(value ?? '').toLowerCase().includes(query))
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'published' && product.is_published) ||
+        (statusFilter === 'draft' && !product.is_published && product.status === 'draft') ||
+        (statusFilter === 'archived' && product.status === 'archived')
+      const matchesStock =
+        stockFilter === 'all' ||
+        (stockFilter === 'out' && variants.some((variant: any) => Number(variant.stock_quantity ?? 0) <= 0)) ||
+        (stockFilter === 'low' && variants.some((variant: any) => Number(variant.stock_quantity ?? 0) <= Number(variant.low_stock_threshold ?? 5)))
+      return matchesSearch && matchesStatus && matchesStock
+    })
+  }, [products, search, statusFilter, stockFilter])
+
   function editProduct(product: any) {
-    form.reset({ id: product.id, name: product.name, slug: product.slug, brandId: product.brand_id, categoryId: product.category_id, productType: product.product_type, status: product.status, isPublished: product.is_published, isFeatured: product.is_featured, shortDescription: product.short_description ?? '', description: product.description ?? '', warrantyPolicy: product.warranty_policy, metaTitle: product.meta_title ?? '', metaDescription: product.meta_description ?? '' })
+    form.reset({
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      brandId: product.brand_id,
+      categoryId: product.category_id,
+      productType: product.product_type,
+      status: product.status,
+      isPublished: product.is_published,
+      isFeatured: product.is_featured,
+      shortDescription: product.short_description ?? '',
+      description: product.description ?? '',
+      warrantyPolicy: product.warranty_policy ?? '',
+      metaTitle: product.meta_title ?? '',
+      metaDescription: product.meta_description ?? '',
+    })
+    setMessage(null)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  return <div className="grid gap-6 xl:grid-cols-[.8fr_1.2fr]"><section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><h2 className="font-semibold text-slate-950">{editingId ? 'Edit product' : 'New product'}</h2><p className="mt-1 text-sm text-slate-500">Price and stock are managed on variants.</p></div>{editingId ? <button type="button" onClick={() => form.reset()} className="text-xs font-semibold text-slate-500 hover:text-slate-900">Cancel edit</button> : null}</div><form className="mt-5 space-y-4" onSubmit={form.handleSubmit((values) => startTransition(async () => { const result = await saveProduct(values); setMessage(result.message); if (result.ok) form.reset() }))}><div className="grid gap-4 sm:grid-cols-2"><div><label className={labelClass}>Product name</label><input className={inputClass} {...form.register('name')} /><p className="mt-1 text-xs text-rose-600">{typeof form.formState.errors.name?.message === 'string' ? form.formState.errors.name.message : ''}</p></div><div><label className={labelClass}>Slug</label><input className={inputClass} placeholder="example-phone" {...form.register('slug')} /></div></div><div className="grid gap-4 sm:grid-cols-2"><div><label className={labelClass}>Brand</label><select className={inputClass} value={form.watch('brandId') ?? ''} onChange={(event) => form.setValue('brandId', event.target.value || null)}><option value="">No brand</option>{brands.map((brand: any) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></div><div><label className={labelClass}>Category</label><select className={inputClass} value={form.watch('categoryId') ?? ''} onChange={(event) => form.setValue('categoryId', event.target.value || null)}><option value="">No category</option>{categories.map((category: any) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div></div><div className="grid gap-4 sm:grid-cols-2"><div><label className={labelClass}>Product type</label><select className={inputClass} {...form.register('productType')}><option value="phone">Phone</option><option value="feature_phone">Feature phone</option><option value="accessory">Accessory</option></select></div><div><label className={labelClass}>Lifecycle</label><select className={inputClass} {...form.register('status')}><option value="draft">Draft</option><option value="active">Active</option><option value="archived">Archived</option></select></div></div><div><label className={labelClass}>Warranty policy</label><textarea className="min-h-20 w-full rounded-lg border border-slate-200 bg-white p-3 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100" {...form.register('warrantyPolicy')} /></div><div><label className={labelClass}>Short description</label><textarea className="min-h-18 w-full rounded-lg border border-slate-200 bg-white p-3 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100" {...form.register('shortDescription')} /></div><div><label className={labelClass}>Full description</label><textarea className="min-h-28 w-full rounded-lg border border-slate-200 bg-white p-3 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100" {...form.register('description')} /></div><div className="grid gap-4 sm:grid-cols-2"><div><label className={labelClass}>SEO title</label><input className={inputClass} {...form.register('metaTitle')} /></div><div><label className={labelClass}>SEO description</label><input className={inputClass} {...form.register('metaDescription')} /></div></div><div className="flex flex-wrap gap-4"><label className="flex items-center gap-2 text-sm font-medium text-slate-700"><input type="checkbox" {...form.register('isPublished')} /> Publish to storefront</label><label className="flex items-center gap-2 text-sm font-medium text-slate-700"><input type="checkbox" {...form.register('isFeatured')} /> Featured</label></div><button disabled={isPending} className="inline-flex h-10 items-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"><Save className="h-4 w-4" />{isPending ? 'Saving…' : editingId ? 'Save product' : 'Create product'}</button></form><ResultMessage message={message} /></section><section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="border-b border-slate-100 px-5 py-4"><h2 className="font-semibold text-slate-950">Product catalogue</h2><p className="mt-1 text-sm text-slate-500">Archiving preserves historical order references.</p></div>{products.length ? <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-3">Product</th><th className="px-5 py-3">Publication</th><th className="px-5 py-3">Variants</th><th className="px-5 py-3 text-right">Actions</th></tr></thead><tbody>{products.map((product: any) => <tr key={product.id} className="border-t border-slate-100"><td className="px-5 py-3"><p className="font-semibold text-slate-900">{product.name}</p><p className="mt-1 text-xs text-slate-500">{product.brands?.name ?? 'No brand'} · {product.categories?.name ?? 'No category'}</p></td><td className="px-5 py-3"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${product.is_published ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{product.is_published ? 'Published' : product.status}</span></td><td className="px-5 py-3 text-slate-600">{product.product_variants?.length ?? 0}</td><td className="px-5 py-3"><div className="flex justify-end gap-2"><button onClick={() => editProduct(product)} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-950" aria-label={`Edit ${product.name}`}><Pencil className="h-4 w-4" /></button><button onClick={() => startTransition(async () => { if (!window.confirm('Archive this product? It will be unpublished but historical records remain.')) return; const result = await archiveProduct(product.id); setMessage(result.message) })} className="rounded-lg p-2 text-rose-600 hover:bg-rose-50" aria-label={`Archive ${product.name}`}><Archive className="h-4 w-4" /></button></div></td></tr>)}</tbody></table></div> : <p className="p-8 text-sm text-slate-500">No products are available yet.</p>}</section></div>
+  function resetProduct() {
+    form.reset()
+    setMessage(null)
+  }
+
+  return <div className="grid gap-6 xl:grid-cols-[.82fr_1.18fr]">
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-600">{editingId ? 'Editing catalogue item' : 'Quick product setup'}</p>
+          <h2 className="mt-1 font-semibold text-slate-950">{editingId ? 'Edit product' : 'New product'}</h2>
+          <p className="mt-1 text-sm text-slate-500">Complete the essentials here. Price, stock, variants and images stay in their dedicated workspaces.</p>
+        </div>
+        {editingId ? <button type="button" onClick={resetProduct} className="shrink-0 text-xs font-semibold text-slate-500 hover:text-slate-950">Cancel</button> : null}
+      </div>
+
+      <form className="mt-5 space-y-4" onSubmit={form.handleSubmit((values) => startTransition(async () => {
+        const result = await saveProduct(values)
+        setMessage(result.message)
+        if (result.ok) form.reset()
+      }))}>
+        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+          <div className="mb-3 flex items-center justify-between"><p className="text-xs font-black uppercase tracking-[0.12em] text-slate-700">Core details</p><span className="text-[10px] font-semibold text-slate-400">Required first</span></div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div><label className={labelClass}>Product name</label><input autoComplete="off" className={inputClass} placeholder="e.g. Samsung Galaxy A56" {...form.register('name')} /><p className="mt-1 text-xs text-rose-600">{typeof form.formState.errors.name?.message === 'string' ? form.formState.errors.name.message : ''}</p></div>
+            <div><label className={labelClass}>Slug</label><input autoComplete="off" className={inputClass} placeholder="samsung-galaxy-a56" {...form.register('slug')} /></div>
+            <div><label className={labelClass}>Brand</label><select className={inputClass} value={form.watch('brandId') ?? ''} onChange={(event) => form.setValue('brandId', event.target.value || null)}><option value="">Select brand</option>{brands.map((brand: any) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></div>
+            <div><label className={labelClass}>Category</label><select className={inputClass} value={form.watch('categoryId') ?? ''} onChange={(event) => form.setValue('categoryId', event.target.value || null)}><option value="">Select category</option>{categories.map((category: any) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div>
+            <div><label className={labelClass}>Product type</label><select className={inputClass} {...form.register('productType')}><option value="phone">Phone</option><option value="feature_phone">Feature phone</option><option value="accessory">Accessory</option></select></div>
+            <div><label className={labelClass}>Lifecycle</label><select className={inputClass} {...form.register('status')}><option value="draft">Draft</option><option value="active">Active</option><option value="archived">Archived</option></select></div>
+          </div>
+        </div>
+
+        <details open className="rounded-xl border border-slate-200 bg-white">
+          <summary className="cursor-pointer list-none px-4 py-3 text-sm font-bold text-slate-800">Storefront content</summary>
+          <div className="space-y-4 border-t border-slate-100 p-4">
+            <div><label className={labelClass}>Short description</label><textarea className="min-h-20 w-full rounded-lg border border-slate-200 bg-white p-3 text-sm outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100" placeholder="One clear sentence that helps a shopper understand the product." {...form.register('shortDescription')} /></div>
+            <div><label className={labelClass}>Full description</label><textarea className="min-h-28 w-full rounded-lg border border-slate-200 bg-white p-3 text-sm outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100" placeholder="Key features, compatibility, included items and other useful buying information." {...form.register('description')} /></div>
+            <div><label className={labelClass}>Warranty policy</label><textarea className="min-h-20 w-full rounded-lg border border-slate-200 bg-white p-3 text-sm outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100" placeholder="Warranty or service terms shown to customers." {...form.register('warrantyPolicy')} /></div>
+          </div>
+        </details>
+
+        <details className="rounded-xl border border-slate-200 bg-white">
+          <summary className="cursor-pointer list-none px-4 py-3 text-sm font-bold text-slate-800">Search & merchandising</summary>
+          <div className="space-y-4 border-t border-slate-100 p-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div><label className={labelClass}>SEO title</label><input className={inputClass} placeholder="Product name + key selling point" {...form.register('metaTitle')} /></div>
+              <div><label className={labelClass}>SEO description</label><textarea className="min-h-20 w-full rounded-lg border border-slate-200 p-3 text-sm" placeholder="Short search-engine friendly description." {...form.register('metaDescription')} /></div>
+            </div>
+            <div className="flex flex-wrap gap-4">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-700"><input type="checkbox" {...form.register('isPublished')} /> Publish to storefront</label>
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-700"><input type="checkbox" {...form.register('isFeatured')} /> Feature on storefront</label>
+            </div>
+          </div>
+        </details>
+
+        <button disabled={isPending} className="inline-flex h-11 items-center gap-2 rounded-xl bg-orange-500 px-5 text-sm font-black text-white shadow-sm transition hover:bg-orange-600 disabled:opacity-60"><Save className="h-4 w-4" />{isPending ? 'Saving…' : editingId ? 'Save product' : 'Create product'}</button>
+      </form>
+      <ResultMessage message={message} />
+    </section>
+
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-100 p-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div><h2 className="font-semibold text-slate-950">Product catalogue</h2><p className="mt-1 text-sm text-slate-500">{filteredProducts.length} of {products.length} products shown · Search by name, brand, category, slug or SKU.</p></div>
+          <button type="button" onClick={() => { setSearch(''); setStatusFilter('all'); setStockFilter('all') }} className="text-xs font-bold text-slate-500 hover:text-slate-950">Reset filters</button>
+        </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+          <div className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={search} onChange={(event) => setSearch(event.target.value)} className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100" placeholder="Search products, brands, SKU…" aria-label="Search catalogue" /></div>
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} className={inputClass} aria-label="Filter publication status"><option value="all">All status</option><option value="published">Published</option><option value="draft">Draft</option><option value="archived">Archived</option></select>
+          <select value={stockFilter} onChange={(event) => setStockFilter(event.target.value as typeof stockFilter)} className={inputClass} aria-label="Filter stock"><option value="all">All stock</option><option value="low">Low stock</option><option value="out">Out of stock</option></select>
+        </div>
+      </div>
+      {filteredProducts.length ? <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-3">Product</th><th className="px-5 py-3">Publication</th><th className="px-5 py-3">Variants / stock</th><th className="px-5 py-3 text-right">Actions</th></tr></thead><tbody>{filteredProducts.map((product: any) => {
+        const variants = product.product_variants ?? []
+        const low = variants.filter((variant: any) => Number(variant.stock_quantity ?? 0) <= Number(variant.low_stock_threshold ?? 5)).length
+        const out = variants.filter((variant: any) => Number(variant.stock_quantity ?? 0) <= 0).length
+        return <tr key={product.id} className="border-t border-slate-100 hover:bg-slate-50/70">
+          <td className="px-5 py-3"><p className="font-semibold text-slate-900">{product.name}</p><p className="mt-1 text-xs text-slate-500">{product.brands?.name ?? 'No brand'} · {product.categories?.name ?? 'No category'}</p></td>
+          <td className="px-5 py-3"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${product.is_published ? 'bg-emerald-50 text-emerald-700' : product.status === 'archived' ? 'bg-rose-50 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>{product.is_published ? 'Published' : product.status}</span></td>
+          <td className="px-5 py-3"><div className="flex flex-wrap gap-1.5 text-xs"><span className="rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-600">{variants.length} variants</span>{low ? <span className="rounded-full bg-amber-50 px-2 py-1 font-semibold text-amber-700">{low} low</span> : null}{out ? <span className="rounded-full bg-rose-50 px-2 py-1 font-semibold text-rose-700">{out} out</span> : null}</div></td>
+          <td className="px-5 py-3"><div className="flex justify-end gap-2"><button type="button" onClick={() => editProduct(product)} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-950" aria-label={`Edit ${product.name}`}><Pencil className="h-4 w-4" /></button><button type="button" onClick={() => startTransition(async () => { if (!window.confirm('Archive this product? It will be unpublished but historical records remain.')) return; const result = await archiveProduct(product.id); setMessage(result.message) })} className="rounded-lg p-2 text-rose-600 hover:bg-rose-50" aria-label={`Archive ${product.name}`}><Archive className="h-4 w-4" /></button></div></td>
+        </tr>
+      })}</tbody></table></div> : <div className="p-10 text-center"><p className="font-semibold text-slate-800">No products match these filters.</p><p className="mt-1 text-sm text-slate-500">Try a different search or reset the filters.</p></div>}
+    </section>
+  </div>
 }
 
 function BrandTab({ brands }: { brands: any[] }) {
