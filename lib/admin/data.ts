@@ -73,15 +73,14 @@ export async function getAdminDashboardData() {
 export async function getProductManagementData() {
   await requireAdmin(['OWNER', 'ADMIN'])
   const db = createAdminClient()
-  const [products, brands, categories, images] = await Promise.all([
+  const [products, brands, categories] = await Promise.all([
     db.from('products').select('id, name, slug, status, is_published, is_featured, product_type, warranty_policy, short_description, description, meta_title, meta_description, brand_id, category_id, brands(name), categories(name), product_variants(id, sku, variant_title, color, price, compare_at_price, stock_quantity, low_stock_threshold, is_active)').order('updated_at', { ascending: false }).limit(100),
     db.from('brands').select('id, name, slug, description, logo_url, is_active, meta_title, meta_description').order('name').limit(100),
     db.from('categories').select('id, name, slug, description, image_url, sort_order, is_active, meta_title, meta_description').order('sort_order').limit(100),
-    db.from('product_images').select('id, product_id, variant_id, storage_path, image_url, alt_text, sort_order, is_primary').order('sort_order').limit(250),
   ])
 
-  ;[products, brands, categories, images].forEach((result) => assertNoError(result.error))
-  return { products: products.data ?? [], brands: brands.data ?? [], categories: categories.data ?? [], images: images.data ?? [] }
+  ;[products, brands, categories].forEach((result) => assertNoError(result.error))
+  return { products: products.data ?? [], brands: brands.data ?? [], categories: categories.data ?? [], images: [] }
 }
 
 export async function getInventoryData() {
