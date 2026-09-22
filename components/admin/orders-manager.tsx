@@ -52,6 +52,7 @@ export function OrdersManager({ orders, invoiceGenerationEnabled }: { orders: an
     </section>
     {detailLoading ? <div className="rounded-2xl border border-orange-200 bg-orange-50/50 p-8 text-center"><div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-orange-200 border-t-orange-600" /><p className="mt-3 text-sm font-semibold text-slate-700">Loading order detail…</p><p className="mt-1 text-xs text-slate-500">Only the selected order is loaded.</p></div> : detailError ? <div className="rounded-2xl border border-rose-200 bg-rose-50 p-8 text-center text-sm font-semibold text-rose-800">{detailError}</div> : selected ? <OrderDetail key={selected.id} order={selected} invoiceGenerationEnabled={invoiceGenerationEnabled} /> : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">Select an order to see its operational detail.</div>}
   </div>
+  </div>
 }
 
 function OrderDetail({ order, invoiceGenerationEnabled }: { order: any; invoiceGenerationEnabled: boolean }) {
