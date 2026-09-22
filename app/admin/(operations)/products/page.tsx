@@ -8,5 +8,5 @@ export const metadata: Metadata = { title: 'Catalogue operations', robots: { ind
 
 export default async function ProductManagementPage() {
   const data = await getProductManagementData()
-  return <div><AdminPageHeader eyebrow="Catalogue operations" title="Products, variants & media" description="Create and update the published catalogue with server-validated pricing, warranty, lifecycle, and image controls. Archiving preserves historical orders." /><ProductManager {...data} /></div>
+  return <div><AdminPageHeader eyebrow="Catalogue operations" title="Products, variants & media" description="A focused workspace for products, variants, pricing, inventory signals, brands, categories, and media — with server-validated catalogue controls." /><ProductManager {...data} /></div>
 }
