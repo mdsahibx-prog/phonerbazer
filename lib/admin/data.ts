@@ -19,8 +19,12 @@ export async function getAdminDashboardData() {
   await requireAdmin()
   const db = createAdminClient()
   const today = dayStartIso()
+  const trendStart = new Date()
+  trendStart.setHours(0, 0, 0, 0)
+  trendStart.setDate(trendStart.getDate() - 13)
+  const trendStartIso = trendStart.toISOString()
 
-  const [todayOrders, pending, processing, delivered, cancelled, recent, variants] = await Promise.all([
+  const [todayOrders, pending, processing, delivered, cancelled, recent, variants, trendOrders] = await Promise.all([
     db.from('orders').select('id, grand_total, created_at').gte('created_at', today).order('created_at', { ascending: false }).limit(250),
     db.from('orders').select('*', { count: 'exact', head: true }).eq('order_status', 'PENDING'),
     db.from('orders').select('*', { count: 'exact', head: true }).eq('order_status', 'PROCESSING'),
@@ -28,9 +32,27 @@ export async function getAdminDashboardData() {
     db.from('orders').select('*', { count: 'exact', head: true }).eq('order_status', 'CANCELLED'),
     db.from('orders').select('id, order_number, customer_name_snapshot, order_status, payment_status, grand_total, created_at').order('created_at', { ascending: false }).limit(8),
     db.from('product_variants').select('id, sku, variant_title, stock_quantity, low_stock_threshold, products(name)').eq('is_active', true).order('stock_quantity', { ascending: true }).limit(50),
+    db.from('orders').select('created_at, grand_total, order_status').gte('created_at', trendStartIso).order('created_at', { ascending: true }).limit(2000),
   ])
 
-  ;[todayOrders, pending, processing, delivered, cancelled, recent, variants].forEach((result) => assertNoError(result.error))
+  ;[todayOrders, pending, processing, delivered, cancelled, recent, variants, trendOrders].forEach((result) => assertNoError(result.error))
+
+  const trendMap = new Map<string, { sales: number; orders: number }>()
+  for (let i = 0; i < 14; i += 1) {
+    const date = new Date(trendStart)
+    date.setDate(trendStart.getDate() + i)
+    trendMap.set(date.toISOString().slice(0, 10), { sales: 0, orders: 0 })
+  }
+  for (const order of trendOrders.data ?? []) {
+    if (order.order_status === 'CANCELLED') continue
+    const key = new Date(order.created_at).toISOString().slice(0, 10)
+    const bucket = trendMap.get(key)
+    if (bucket) {
+      bucket.sales += Number(order.grand_total ?? 0)
+      bucket.orders += 1
+    }
+  }
+  const salesTrend = Array.from(trendMap.entries()).map(([date, value]) => ({ date, ...value }))
 
   const todaySales = (todayOrders.data ?? []).reduce((total, order) => total + Number(order.grand_total ?? 0), 0)
   const lowStock = (variants.data ?? []).filter((variant) => Number(variant.stock_quantity) <= Number(variant.low_stock_threshold))
@@ -44,6 +66,7 @@ export async function getAdminDashboardData() {
     cancelledOrders: cancelled.count ?? 0,
     recentOrders: recent.data ?? [],
     lowStock,
+    salesTrend,
   }
 }
 
