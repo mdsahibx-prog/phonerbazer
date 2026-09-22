@@ -52,7 +52,22 @@ export async function GET(request: NextRequest) {
       const key = phone || email || o.customer_id || o.id
       const parts = nameParts(o.customer_name_snapshot ?? '')
       const current = map.get(key)
-      if (!current) map.set(key,{phone,email,first:parts[0],last:parts[1],city:o.shipping_district ?? o.shipping_area ?? '',state:o.shipping_division ?? '',zip:o.shipping_postal_code ?? '',external:o.customer_id ?? o.id,value:Number(o.grand_total ?? 0),orders:1,last:o.created_at})
+      if (!current) {
+        const customer = {
+          phone,
+          email,
+          first: parts[0],
+          last: parts[1],
+          city: o.shipping_district ?? o.shipping_area ?? '',
+          state: o.shipping_division ?? '',
+          zip: o.shipping_postal_code ?? '',
+          external: o.customer_id ?? o.id,
+          value: Number(o.grand_total ?? 0),
+          orders: 1,
+          last: o.created_at,
+        }
+        map.set(key, customer)
+      }
       else { current.value += Number(o.grand_total ?? 0); current.orders += 1; if (new Date(o.created_at) > new Date(current.last)) current.last = o.created_at }
     }
     for (const c of map.values()) lines.push(row([c.phone,c.email,c.first,c.last,c.city,c.state,c.zip,'BD',c.external,c.value,'BDT',c.orders,c.last]))
