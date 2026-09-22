@@ -565,6 +565,22 @@ export async function saveAdminUser(input: unknown): Promise<AdminActionResult> 
   }
 }
 
+export async function getProductImagesForAdmin(): Promise<any[]> {
+  try {
+    await requireAdmin(['OWNER', 'ADMIN'])
+    const db = createAdminClient()
+    const { data, error } = await db
+      .from('product_images')
+      .select('id, product_id, variant_id, storage_path, image_url, alt_text, sort_order, is_primary')
+      .order('sort_order')
+      .limit(250)
+    if (error) throw new Error(error.message)
+    return data ?? []
+  } catch {
+    return []
+  }
+}
+
 export async function uploadProductImage(formData: FormData): Promise<AdminActionResult> {
   try {
     const session = await requireAdmin(['OWNER', 'ADMIN'])
