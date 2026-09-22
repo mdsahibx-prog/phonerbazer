@@ -4,7 +4,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMemo, useState, useTransition } from 'react'
 import { useForm } from 'react-hook-form'
-import { Archive, Boxes, CheckCircle2, ImagePlus, Pencil, Plus, Search, Save, Tag, Trash2, Upload, AlertTriangle, Layers3 } from 'lucide-react'
+import { Archive, Boxes, ImagePlus, Pencil, Plus, Search, Save, Tag, Trash2, Upload, AlertTriangle, Layers3 } from 'lucide-react'
 
 import { archiveProduct, deleteProductImage, removeBrandLogo, saveBrand, saveCategory, saveProduct, saveVariant, uploadBrandLogo, uploadProductImage } from '@/lib/admin/actions'
 import { brandSchema, categorySchema, productSchema, variantSchema } from '@/lib/admin/schema'
@@ -117,6 +117,19 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
     form.reset()
     setMessage(null)
   }
+  function generateSlug() {
+    const name = String(form.getValues('name') ?? '').trim()
+    if (!name) return
+    form.setValue('slug', name.toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''))
+  }
+
+  function fillSeoFromContent() {
+    const name = String(form.getValues('name') ?? '').trim()
+    const shortDescription = String(form.getValues('shortDescription') ?? '').trim()
+    if (name && !form.getValues('metaTitle')) form.setValue('metaTitle', name)
+    if (shortDescription && !form.getValues('metaDescription')) form.setValue('metaDescription', shortDescription.slice(0, 155))
+  }
+
 
   return <div className="grid gap-6 xl:grid-cols-[.82fr_1.18fr]">
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -138,7 +151,7 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
           <div className="mb-3 flex items-center justify-between"><p className="text-xs font-black uppercase tracking-[0.12em] text-slate-700">Core details</p><span className="text-[10px] font-semibold text-slate-400">Required first</span></div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div><label className={labelClass}>Product name</label><input autoComplete="off" className={inputClass} placeholder="e.g. Samsung Galaxy A56" {...form.register('name')} /><p className="mt-1 text-xs text-rose-600">{typeof form.formState.errors.name?.message === 'string' ? form.formState.errors.name.message : ''}</p></div>
-            <div><label className={labelClass}>Slug</label><input autoComplete="off" className={inputClass} placeholder="samsung-galaxy-a56" {...form.register('slug')} /></div>
+            <div><div className="mb-1.5 flex items-center justify-between"><label className={labelClass + " mb-0"}>Slug</label><button type="button" onClick={generateSlug} className="text-[10px] font-bold text-orange-600 hover:text-orange-700">Generate</button></div><input autoComplete="off" className={inputClass} placeholder="samsung-galaxy-a56" {...form.register('slug')} /></div>
             <div><label className={labelClass}>Brand</label><select className={inputClass} value={form.watch('brandId') ?? ''} onChange={(event) => form.setValue('brandId', event.target.value || null)}><option value="">Select brand</option>{brands.map((brand: any) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></div>
             <div><label className={labelClass}>Category</label><select className={inputClass} value={form.watch('categoryId') ?? ''} onChange={(event) => form.setValue('categoryId', event.target.value || null)}><option value="">Select category</option>{categories.map((category: any) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div>
             <div><label className={labelClass}>Product type</label><select className={inputClass} {...form.register('productType')}><option value="phone">Phone</option><option value="feature_phone">Feature phone</option><option value="accessory">Accessory</option></select></div>
