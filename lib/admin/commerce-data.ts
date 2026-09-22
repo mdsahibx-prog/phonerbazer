@@ -8,10 +8,10 @@ export async function getCommerceOperationsSummary() {
   const since = today.toISOString()
   const [carts, checkouts, risks, events, shipments] = await Promise.all([
     db.from('carts').select('id', { count: 'exact', head: true }).eq('status', 'ACTIVE'),
-    db.from('checkout_sessions').select('id,status', { count: 'exact' }).gte('last_activity_at', since).limit(500),
-    db.from('risk_assessments').select('id,level,action', { count: 'exact' }).gte('created_at', since).limit(500),
-    db.from('commerce_events').select('id,event_name', { count: 'exact' }).gte('occurred_at', since).limit(500),
-    db.from('shipments').select('id,status', { count: 'exact' }).in('status', ['IN_TRANSIT', 'OUT_FOR_DELIVERY']).limit(500),
+    db.from('checkout_sessions').select('status', { count: 'exact' }).gte('last_activity_at', since).limit(300),
+    db.from('risk_assessments').select('level', { count: 'exact' }).gte('created_at', since).limit(300),
+    db.from('commerce_events').select('event_name', { count: 'exact' }).gte('occurred_at', since).limit(300),
+    db.from('shipments').select('id', { count: 'exact', head: true }).in('status', ['IN_TRANSIT', 'OUT_FOR_DELIVERY']),
   ])
   const checkoutRows = (checkouts.data ?? []) as Array<{ status?: string }>
   const riskRows = (risks.data ?? []) as Array<{ level?: string }>
