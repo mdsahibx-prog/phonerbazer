@@ -93,7 +93,7 @@ async function resolveVariantIds(supabase: Awaited<ReturnType<typeof createClien
 
 const HOMEPAGE_BRAND_SELECT = 'id,name,slug,logo_url,description,meta_title,meta_description'
 const HOMEPAGE_CATEGORY_SELECT = 'id,name,slug,description,image_url,sort_order,meta_title,meta_description'
-const HOMEPAGE_BANNER_SELECT = '*'
+const HOMEPAGE_BANNER_SELECT = 'id,desktop_image_url,mobile_image_url,heading,description,primary_cta_text,primary_cta_url,secondary_cta_text,secondary_cta_url,is_active,sort_order,created_at,updated_at'
 
 const getHomepageBanners = unstable_cache(
   async () => {
@@ -115,18 +115,9 @@ export async function getHomepageHero() {
   const banners = await getHomepageBanners()
   if (banners.length > 0) return { banners, productCount: 0, brandCount: 0, categoryCount: 0 }
 
-  const supabase = createPublicClient()
-  const [products, brands, categories] = await Promise.all([
-    supabase.from('products').select('id', { count: 'exact', head: true }).eq('is_published', true),
-    supabase.from('brands').select('id', { count: 'exact', head: true }).eq('is_active', true),
-    supabase.from('categories').select('id', { count: 'exact', head: true }).eq('is_active', true),
-  ])
-  return {
-    banners,
-    productCount: products.count ?? 0,
-    brandCount: brands.count ?? 0,
-    categoryCount: categories.count ?? 0,
-  }
+  // The fallback hero only needs to render the fallback copy. Avoid three exact-count
+  // queries on the critical homepage path when there are no active banners.
+  return { banners, productCount: 0, brandCount: 0, categoryCount: 0 }
 }
 
 export const getHomepageFeaturedProducts = unstable_cache(
