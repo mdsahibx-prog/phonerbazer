@@ -1,5 +1,5 @@
 {
   "framework": "nextjs",
-  "buildCommand": "NODE_OPTIONS=--max-old-space-size=4096 pnpm build",
+  "buildCommand": "pnpm build",
   "installCommand": "pnpm install --frozen-lockfile"
 }
