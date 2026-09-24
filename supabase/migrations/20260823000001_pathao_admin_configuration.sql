@@ -22,4 +22,4 @@ ALTER TABLE public.delivery_provider_credentials
 
 ALTER TABLE public.delivery_provider_credentials
   ADD CONSTRAINT delivery_provider_credentials_base_url_check
-  CHECK (base_url = 'https://api-hermes.pathao.com');
+  CHECK (provider <> 'PATHAO' OR base_url = 'https://api-hermes.pathao.com');
