@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
-import { getProducts } from '@/lib/services/storefront'
+import { getSearchSuggestions } from '@/lib/services/storefront'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const q = searchParams.get('q')?.trim() || ''
   if (!q) return NextResponse.json({ products: [] })
   try {
-    const result = await getProducts({ query: q, pageSize: 6 })
-    const products = result.products.map((product) => ({
+    const productsResult = await getSearchSuggestions(q, 6)
+    const products = productsResult.map((product) => ({
       id: product.id,
       name: product.name,
       slug: product.slug,
