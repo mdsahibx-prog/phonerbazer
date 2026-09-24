@@ -32,7 +32,14 @@ type RawProduct = ProductRow & {
 }
 type RawStorefrontVariant = Omit<StorefrontVariant, 'price' | 'compare_at_price'> & { price: number | string; compare_at_price: number | string | null }
 
-const PRODUCT_SELECT = `
+const PRODUCT_CARD_SELECT = `
+  id,brand_id,category_id,name,slug,product_type,is_featured,is_published,created_at,
+  brand:brands(id,name,slug,logo_url),
+  category:categories(id,name,slug),
+  product_images(id,variant_id,image_url,alt_text,is_primary,sort_order)
+`
+const PRODUCT_LIST_SELECT = PRODUCT_CARD_SELECT
+const PRODUCT_DETAIL_SELECT = `
   id,brand_id,category_id,name,slug,short_description,description,product_type,status,is_featured,is_published,warranty_policy,meta_title,meta_description,created_at,updated_at,
   brand:brands(id,name,slug,logo_url,description,meta_title,meta_description),
   category:categories(id,name,slug,description,image_url,sort_order,meta_title,meta_description),
@@ -87,8 +94,8 @@ async function resolveVariantIds(supabase: Awaited<ReturnType<typeof createClien
 export const getHomepageData = unstable_cache(async () => {
   const supabase = createPublicClient()
   const [latestResult, featuredResult, brandsResult, categoriesResult, bannersResult] = await Promise.all([
-    supabase.from('products').select(PRODUCT_SELECT).eq('is_published', true).order('created_at', { ascending: false }).limit(12),
-    supabase.from('products').select(PRODUCT_SELECT).eq('is_published', true).eq('is_featured', true).order('created_at', { ascending: false }).limit(8),
+    supabase.from('products').select(PRODUCT_CARD_SELECT).eq('is_published', true).order('created_at', { ascending: false }).limit(12),
+    supabase.from('products').select(PRODUCT_CARD_SELECT).eq('is_published', true).eq('is_featured', true).order('created_at', { ascending: false }).limit(8),
     supabase.from('brands').select('id,name,slug,logo_url,description,meta_title,meta_description').eq('is_active', true).order('name'),
     supabase.from('categories').select('id,name,slug,description,image_url,sort_order,meta_title,meta_description').eq('is_active', true).order('sort_order').order('name'),
     supabase.from('homepage_banners').select('*').eq('is_active', true).order('sort_order', { ascending: true }).order('created_at', { ascending: false }),
@@ -128,7 +135,7 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Product
     brandId = data?.id ?? '__missing__'
   }
   const [searchIds, variantIds] = await Promise.all([filters.query ? resolveProductIdsForSearch(supabase, filters.query) : Promise.resolve(null), resolveVariantIds(supabase, filters)])
-  let query = supabase.from('products').select(PRODUCT_SELECT, { count: 'exact' }).eq('is_published', true)
+  let query = supabase.from('products').select(PRODUCT_LIST_SELECT, { count: 'exact' }).eq('is_published', true)
   if (categoryId) query = query.eq('category_id', categoryId)
   if (brandId) query = query.eq('brand_id', brandId)
   if (filters.productType) query = query.eq('product_type', filters.productType)
@@ -159,7 +166,7 @@ export async function getFeaturedProducts(limit = 4) {
 
 export async function getProductById(id: string) {
   const supabase = await createClient()
-  const { data, error } = await supabase.from('products').select(PRODUCT_SELECT).eq('id', id).eq('is_published', true).maybeSingle()
+  const { data, error } = await supabase.from('products').select(PRODUCT_DETAIL_SELECT).eq('id', id).eq('is_published', true).maybeSingle()
   if (error) throw new Error('Unable to load this product.')
   if (!data) return null
   const row = data as unknown as RawProduct
@@ -170,7 +177,7 @@ export async function getProductById(id: string) {
 const getCachedProductBySlug = unstable_cache(
   async (slug: string) => {
     const supabase = createPublicClient()
-    const { data, error } = await supabase.from('products').select(PRODUCT_SELECT).eq('slug', slug).eq('is_published', true).maybeSingle()
+    const { data, error } = await supabase.from('products').select(PRODUCT_DETAIL_SELECT).eq('slug', slug).eq('is_published', true).maybeSingle()
     if (error) throw new Error('Unable to load this product.')
     if (!data) return null
     const row = data as unknown as RawProduct
@@ -185,17 +192,58 @@ export async function getProductBySlug(slug: string) {
   return getCachedProductBySlug(slug)
 }
 
+async function getProductCards(filters: ProductFilters = {}): Promise<StorefrontProduct[]> {
+  const supabase = await createClient()
+  const pageSize = Math.min(Math.max(filters.pageSize ?? 12, 1), 24)
+  const [searchIds, variantIds] = await Promise.all([
+    filters.query ? resolveProductIdsForSearch(supabase, filters.query) : Promise.resolve(null),
+    resolveVariantIds(supabase, filters),
+  ])
+  let query = supabase.from('products').select(PRODUCT_CARD_SELECT).eq('is_published', true).limit(pageSize)
+  if (filters.category) {
+    const { data } = await supabase.from('categories').select('id').eq('slug', filters.category).eq('is_active', true).maybeSingle()
+    query = query.eq('category_id', data?.id ?? '__missing__')
+  }
+  if (filters.brand) {
+    const { data } = await supabase.from('brands').select('id').eq('slug', filters.brand).eq('is_active', true).maybeSingle()
+    query = query.eq('brand_id', data?.id ?? '__missing__')
+  }
+  if (filters.productType) query = query.eq('product_type', filters.productType)
+  if (filters.sort === 'featured') query = query.eq('is_featured', true)
+  if (searchIds) {
+    if (!searchIds.length) return []
+    query = query.in('id', searchIds)
+  }
+  if (variantIds) {
+    if (!variantIds.length) return []
+    query = query.in('id', Array.from(new Set(variantIds)))
+  }
+  if (filters.sort !== 'price-asc' && filters.sort !== 'price-desc') query = query.order('created_at', { ascending: false })
+  const { data, error } = await query
+  if (error) throw new Error('Unable to load product cards.')
+  const rows = (data ?? []) as unknown as RawProduct[]
+  const variantsByProduct = await getVariantsByProductId(supabase, rows.map((row) => row.id))
+  const products = rows.map((row) => normalizeProduct(row, variantsByProduct.get(row.id) ?? []))
+  if (filters.sort === 'price-asc' || filters.sort === 'price-desc') products.sort((a, b) => (getStartingPrice(a) ?? Number.MAX_SAFE_INTEGER) - (getStartingPrice(b) ?? Number.MAX_SAFE_INTEGER))
+  if (filters.sort === 'price-desc') products.reverse()
+  return products
+}
+
+export async function getSearchSuggestions(query: string, limit = 6): Promise<StorefrontProduct[]> {
+  return getProductCards({ query, pageSize: Math.min(Math.max(limit, 1), 12) })
+}
+
 export async function getRelatedProducts(product: StorefrontProduct, limit = 4) {
   // Prefer the same category. This is both more relevant to shoppers and cheaper
   // than loading three full product pools on every product-page request.
   if (product.category) {
-    const categoryResult = await getProducts({ category: product.category.slug, pageSize: Math.min(12, Math.max(limit + 1, 6)) })
+    const categoryResult = await getProductCards({ category: product.category.slug, pageSize: Math.min(12, Math.max(limit + 1, 6)) })
     const categoryProducts = categoryResult.products.filter((candidate) => candidate.id !== product.id)
     if (categoryProducts.length >= limit) return categoryProducts.slice(0, limit)
 
     const fallbackResults = await Promise.all([
-      product.product_type ? getProducts({ productType: product.product_type, pageSize: 12 }) : Promise.resolve({ products: [] as StorefrontProduct[] }),
-      product.brand ? getProducts({ brand: product.brand.slug, pageSize: 12 }) : Promise.resolve({ products: [] as StorefrontProduct[] }),
+      product.product_type ? getProductCards({ productType: product.product_type, pageSize: 12 }) : Promise.resolve([] as StorefrontProduct[]),
+      product.brand ? getProductCards({ brand: product.brand.slug, pageSize: 12 }) : Promise.resolve([] as StorefrontProduct[]),
     ])
     const candidates = new Map<string, { product: StorefrontProduct; score: number }>()
     const tokens = product.name.toLowerCase().split(/[^a-z0-9]+/).filter((token) => token.length > 2)
@@ -212,16 +260,16 @@ export async function getRelatedProducts(product: StorefrontProduct, limit = 4) 
       }
     }
     addCandidates(categoryProducts, 100)
-    addCandidates(fallbackResults[0].products, 50)
-    addCandidates(fallbackResults[1].products, 35)
+    addCandidates(fallbackResults[0], 50)
+    addCandidates(fallbackResults[1], 35)
     return Array.from(candidates.values()).sort((a, b) => b.score - a.score || a.product.name.localeCompare(b.product.name)).slice(0, limit).map(({ product: candidate }) => candidate)
   }
 
   const fallback = await Promise.all([
-    product.product_type ? getProducts({ productType: product.product_type, pageSize: 12 }) : Promise.resolve({ products: [] as StorefrontProduct[] }),
-    product.brand ? getProducts({ brand: product.brand.slug, pageSize: 12 }) : Promise.resolve({ products: [] as StorefrontProduct[] }),
+    product.product_type ? getProductCards({ productType: product.product_type, pageSize: 12 }) : Promise.resolve([] as StorefrontProduct[]),
+    product.brand ? getProductCards({ brand: product.brand.slug, pageSize: 12 }) : Promise.resolve([] as StorefrontProduct[]),
   ])
-  return Array.from(new Map([...fallback[0].products, ...fallback[1].products].filter((candidate) => candidate.id !== product.id).map((candidate) => [candidate.id, candidate])).values()).slice(0, limit)
+  return Array.from(new Map([...fallback[0], ...fallback[1]].filter((candidate) => candidate.id !== product.id).map((candidate) => [candidate.id, candidate])).values()).slice(0, limit)
 }
 
 export async function getBrands() {
