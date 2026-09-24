@@ -159,10 +159,24 @@ CREATE TABLE IF NOT EXISTS public.orders (
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
--- Add foreign key constraint for order_id in imei_inventory now that orders table exists
-ALTER TABLE public.imei_inventory 
-    ADD CONSTRAINT fk_imei_order 
-    FOREIGN KEY (order_id) REFERENCES public.orders(id) ON DELETE SET NULL;
+-- Add the foreign key only when it does not already exist.
+-- This keeps the foundation migration safe for Supabase Preview databases that
+-- may already contain the base schema.
+DO $ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'fk_imei_order'
+      AND conrelid = 'public.imei_inventory'::regclass
+  ) THEN
+    ALTER TABLE public.imei_inventory
+      ADD CONSTRAINT fk_imei_order
+      FOREIGN KEY (order_id)
+      REFERENCES public.orders(id)
+      ON DELETE SET NULL;
+  END IF;
+END $;
 
 -- 11. Order Items Table
 CREATE TABLE IF NOT EXISTS public.order_items (
