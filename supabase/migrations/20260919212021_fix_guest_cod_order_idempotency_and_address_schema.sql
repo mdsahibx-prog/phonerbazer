@@ -1,0 +1,3 @@
+-- Historical migration marker.
+-- The guest COD idempotency/address fix is represented by the current migration chain.
+-- Kept under the remote migration version so Supabase Preview can reconcile history.
