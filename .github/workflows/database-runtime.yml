@@ -73,6 +73,9 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Performance audit
+        run: pnpm performance:audit
+
       - name: Stop isolated Supabase stack
         if: always()
         run: supabase stop --no-backup
