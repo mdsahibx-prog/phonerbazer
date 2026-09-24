@@ -238,7 +238,7 @@ export async function getRelatedProducts(product: StorefrontProduct, limit = 4) 
   // than loading three full product pools on every product-page request.
   if (product.category) {
     const categoryResult = await getProductCards({ category: product.category.slug, pageSize: Math.min(12, Math.max(limit + 1, 6)) })
-    const categoryProducts = categoryResult.filter((candidate) => candidate.id !== product.id)
+    const categoryProducts = categoryResult.filter((candidate: StorefrontProduct) => candidate.id !== product.id)
     if (categoryProducts.length >= limit) return categoryProducts.slice(0, limit)
 
     const fallbackResults = await Promise.all([
