@@ -1,0 +1,3 @@
+-- Historical migration marker.
+-- The final inventory initial-variant RPC fix is represented by the current 20260921030002 migration.
+-- Kept under the remote migration version so Supabase Preview can reconcile history.
