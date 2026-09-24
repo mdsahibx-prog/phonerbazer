@@ -1,0 +1,3 @@
+-- Historical migration marker.
+-- The admin inventory adjustment RPC is already represented in the repository's current migration chain.
+-- Kept under the remote migration version so Supabase Preview can reconcile history.
