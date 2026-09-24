@@ -1,0 +1,3 @@
+-- Historical migration marker.
+-- The storefront variants view hardening is already represented by the existing 20260813000004 migration.
+-- Kept under the remote migration version so Supabase Preview can reconcile history.
