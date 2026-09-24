@@ -7,7 +7,26 @@ export async function GET(request: Request) {
   if (!q) return NextResponse.json({ products: [] })
   try {
     const result = await getProducts({ query: q, pageSize: 6 })
-    return NextResponse.json({ products: result.products })
+    const products = result.products.map((product) => ({
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      variants: product.variants.map((variant) => ({
+        price: variant.price,
+        compare_at_price: variant.compare_at_price,
+        is_in_stock: variant.is_in_stock,
+        is_low_stock: variant.is_low_stock,
+      })),
+      images: product.images.map((image) => ({
+        id: image.id,
+        image_url: image.image_url,
+        alt_text: image.alt_text,
+        is_primary: image.is_primary,
+        sort_order: image.sort_order,
+        variant_id: image.variant_id,
+      })),
+    }))
+    return NextResponse.json({ products })
   } catch {
     return NextResponse.json({ products: [] }, { status: 500 })
   }
