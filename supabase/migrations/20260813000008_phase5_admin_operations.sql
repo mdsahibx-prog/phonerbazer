@@ -18,7 +18,7 @@ AS $$
   LIMIT 1;
 $$;
 
-CREATE OR REPLACE FUNCTION private.has_role(p_allowed_roles text[])
+CREATE OR REPLACE FUNCTION private.has_role(roles text[])
 RETURNS boolean
 LANGUAGE sql
 STABLE
@@ -31,7 +31,7 @@ AS $$
       FROM public.admin_users
       WHERE user_id = auth.uid()
         AND is_active = TRUE
-        AND role = ANY(p_allowed_roles)
+        AND role = ANY(roles)
     );
 $$;
 
