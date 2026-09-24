@@ -26,7 +26,7 @@ This directly addresses the Section 1 finding that header search had debounce bu
 
 File: `app/api/search/route.ts`
 
-The search API still uses the existing authoritative `getProducts` search pipeline, but it no longer serializes the complete normalized product object to the browser.
+The search API now uses a dedicated lightweight `getSearchSuggestions` path. It keeps the existing authoritative PostgreSQL/Supabase search resolution, removes the unnecessary exact-count query, and serializes only the fields required by the header suggestion UI.
 
 The response is limited to fields required by the header suggestion UI:
 - id
@@ -37,6 +37,36 @@ The response is limited to fields required by the header suggestion UI:
 
 No search semantics, product pricing logic, stock validation, or backend query authority was changed.
 
+
+
+### 3. Purpose-specific storefront product projections
+
+File: `lib/services/storefront.ts`
+
+Added separate projections for:
+- product cards/homepage/listing data;
+- full product-detail data.
+
+Homepage and related/search card paths no longer request SEO metadata, long descriptions, internal status fields, or oversized brand/category/image relations when those consumers do not render them. Product detail keeps the complete projection required for metadata, structured data, specifications, warranty, and description.
+
+Related-product loading now uses a no-count lightweight card path instead of the exact-count catalogue path.
+
+### 4. Automated performance-audit foundation
+
+Added:
+- `performance.config.ts`
+- `scripts/performance/audit.ts`
+- `scripts/performance/database.ts`
+- `scripts/performance/queries.ts`
+- `scripts/performance/bundle.ts`
+- `scripts/performance/images.ts`
+- `scripts/performance/routes.ts`
+- `scripts/performance/lighthouse.ts`
+- `scripts/performance/report.ts`
+- `scripts/performance/thresholds.ts`
+
+Added `pnpm performance:audit` and wired it after the existing build in the database-runtime CI workflow. The audit reports unavailable external/browser/database measurements as `NOT MEASURED` rather than inventing values or failing for missing optional services.
+
 ## Deliberately not changed
 
 - checkout/order validation
@@ -44,8 +74,7 @@ No search semantics, product pricing logic, stock validation, or backend query a
 - payment verification
 - courier logic
 - Supabase RLS/authentication
-- PRODUCT_SELECT
-- exact catalogue count
+- checkout/order validation and transactional data authority
 - image priority/LCP behavior
 - SiteHeader server/client boundary
 
