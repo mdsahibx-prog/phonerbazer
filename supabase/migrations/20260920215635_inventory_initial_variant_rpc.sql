@@ -1,0 +1,3 @@
+-- Historical migration marker.
+-- Inventory initial-variant RPC is represented by the current 20260921030001/002 migration chain.
+-- Kept under the remote migration version so Supabase Preview can reconcile history.
