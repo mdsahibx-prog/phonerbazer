@@ -1,0 +1,3 @@
+-- Historical migration marker.
+-- The guest COD address schema fix is represented by the current 20260920000100 migration.
+-- Kept under the remote migration version so Supabase Preview can reconcile history.
