@@ -1,10 +1,18 @@
 import { NextResponse } from 'next/server'
 import { getSearchSuggestions } from '@/lib/services/storefront'
 
+const MIN_SEARCH_LENGTH = 2
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const q = searchParams.get('q')?.trim() || ''
-  if (!q) return NextResponse.json({ products: [] })
+
+  if (q.length < MIN_SEARCH_LENGTH) {
+    return NextResponse.json({ products: [] }, {
+      headers: { 'Cache-Control': 'no-store' },
+    })
+  }
+
   try {
     const productsResult = await getSearchSuggestions(q, 6)
     const products = productsResult.map((product) => ({
@@ -23,10 +31,12 @@ export async function GET(request: Request) {
         alt_text: image.alt_text,
         is_primary: image.is_primary,
         sort_order: image.sort_order,
-        variant_id: image.variant_id,
       })),
     }))
-    return NextResponse.json({ products })
+
+    return NextResponse.json({ products }, {
+      headers: { 'Cache-Control': 'no-store' },
+    })
   } catch {
     return NextResponse.json({ products: [] }, { status: 500 })
   }
