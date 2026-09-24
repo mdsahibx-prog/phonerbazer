@@ -252,8 +252,8 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
 -- Insert Default Delivery Charges & Settings
 INSERT INTO public.settings (key, value, description)
 VALUES 
-('delivery_charges', '{\"dhaka\": 80, \"outside_dhaka\": 130}'::jsonb, 'Standard delivery charges for Dhaka and Outside Dhaka in BDT'),
-('business_policy', '{\"guarantee_days\": 7, \"service_warranty_years\": 1, \"policy_text\": \"7 Days Guarantee & 1 Year Service Warranty. Manufacturer warranty terms apply where applicable.\"}'::jsonb, 'SahiGadget standard guarantee and warranty policy')
+('delivery_charges', '{"dhaka": 80, "outside_dhaka": 130}'::jsonb, 'Standard delivery charges for Dhaka and Outside Dhaka in BDT'),
+('business_policy', '{"guarantee_days": 7, "service_warranty_years": 1, "policy_text": "7 Days Guarantee & 1 Year Service Warranty. Manufacturer warranty terms apply where applicable."}'::jsonb, 'SahiGadget standard guarantee and warranty policy')
 ON CONFLICT (key) DO NOTHING;
 
 -- Create Indexes for Performance
