@@ -1,0 +1,3 @@
+-- Historical migration marker.
+-- Inventory receiving and weighted-average costing is represented by the current 20260921030000 migration.
+-- Kept under the remote migration version so Supabase Preview can reconcile history.
