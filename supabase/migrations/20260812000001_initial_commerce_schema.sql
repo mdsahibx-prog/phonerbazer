@@ -44,8 +44,8 @@ CREATE TABLE IF NOT EXISTS public.products (
     slug VARCHAR(255) UNIQUE NOT NULL,
     short_description TEXT,
     description TEXT,
-    product_type VARCHAR(50) DEFAULT 'phone' NOT NULL, -- phone, feature_phone, accessory
-    status VARCHAR(50) DEFAULT 'draft' NOT NULL, -- draft, active, archived
+    product_type VARCHAR(50) DEFAULT 'phone' NOT NULL,
+    status VARCHAR(50) DEFAULT 'draft' NOT NULL,
     is_featured BOOLEAN DEFAULT FALSE NOT NULL,
     is_published BOOLEAN DEFAULT FALSE NOT NULL,
     warranty_policy TEXT DEFAULT '7 Days Guarantee & 1 Year Service Warranty' NOT NULL,
@@ -60,10 +60,10 @@ CREATE TABLE IF NOT EXISTS public.product_variants (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     product_id UUID REFERENCES public.products(id) ON DELETE CASCADE NOT NULL,
     sku VARCHAR(100) UNIQUE NOT NULL,
-    variant_title VARCHAR(255) NOT NULL, -- e.g. "8GB / 128GB - Midnight Black"
-    ram VARCHAR(50), -- e.g. "8GB"
-    storage VARCHAR(50), -- e.g. "128GB"
-    color VARCHAR(100), -- e.g. "Midnight Black"
+    variant_title VARCHAR(255) NOT NULL,
+    ram VARCHAR(50),
+    storage VARCHAR(50),
+    color VARCHAR(100),
     price DECIMAL(10,2) NOT NULL CHECK (price >= 0),
     compare_at_price DECIMAL(10,2) CHECK (compare_at_price >= 0),
     stock_quantity INTEGER DEFAULT 0 NOT NULL CHECK (stock_quantity >= 0),
@@ -77,11 +77,11 @@ CREATE TABLE IF NOT EXISTS public.product_variants (
 CREATE TABLE IF NOT EXISTS public.stock_movements (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     variant_id UUID REFERENCES public.product_variants(id) ON DELETE CASCADE NOT NULL,
-    change_amount INTEGER NOT NULL, -- positive for restock/return, negative for sale/damage/adjustment
-    movement_type VARCHAR(50) NOT NULL, -- RESTOCK, SALE, RETURN, DAMAGE, ADJUSTMENT, RESERVATION, RELEASE
-    reference_id UUID, -- order_id or reference ID if applicable
+    change_amount INTEGER NOT NULL,
+    movement_type VARCHAR(50) NOT NULL,
+    reference_id UUID,
     notes TEXT,
-    created_by UUID, -- admin_users(id) or auth.users(id)
+    created_by UUID,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
@@ -92,8 +92,8 @@ CREATE TABLE IF NOT EXISTS public.imei_inventory (
     imei_1 VARCHAR(100) UNIQUE NOT NULL,
     imei_2 VARCHAR(100),
     serial_number VARCHAR(100),
-    status VARCHAR(50) DEFAULT 'in_stock' NOT NULL, -- in_stock, allocated, sold, returned, defective
-    order_id UUID, -- References orders(id) later
+    status VARCHAR(50) DEFAULT 'in_stock' NOT NULL,
+    order_id UUID,
     sold_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS public.imei_inventory (
 -- 7. Customers Table
 CREATE TABLE IF NOT EXISTS public.customers (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID, -- Optional link to auth.users
+    user_id UUID,
     full_name VARCHAR(255) NOT NULL,
     phone VARCHAR(50) NOT NULL,
     email VARCHAR(255),
@@ -127,10 +127,10 @@ CREATE TABLE IF NOT EXISTS public.customer_addresses (
 -- 9. Admin Users & Role RBAC Table
 CREATE TABLE IF NOT EXISTS public.admin_users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID UNIQUE NOT NULL, -- Links to auth.users(id)
+    user_id UUID UNIQUE NOT NULL,
     full_name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
-    role VARCHAR(50) DEFAULT 'STAFF' NOT NULL, -- OWNER, ADMIN, STAFF
+    role VARCHAR(50) DEFAULT 'STAFF' NOT NULL,
     is_active BOOLEAN DEFAULT TRUE NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
@@ -139,16 +139,16 @@ CREATE TABLE IF NOT EXISTS public.admin_users (
 -- 10. Orders Table
 CREATE TABLE IF NOT EXISTS public.orders (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    order_number VARCHAR(50) UNIQUE NOT NULL, -- e.g. SG-20260812-1001
+    order_number VARCHAR(50) UNIQUE NOT NULL,
     customer_id UUID REFERENCES public.customers(id) ON DELETE RESTRICT NOT NULL,
     subtotal DECIMAL(10,2) NOT NULL CHECK (subtotal >= 0),
     discount_total DECIMAL(10,2) DEFAULT 0.00 NOT NULL CHECK (discount_total >= 0),
     delivery_charge DECIMAL(10,2) NOT NULL CHECK (delivery_charge >= 0),
     grand_total DECIMAL(10,2) NOT NULL CHECK (grand_total >= 0),
     payment_method VARCHAR(50) DEFAULT 'COD' NOT NULL,
-    payment_status VARCHAR(50) DEFAULT 'pending' NOT NULL, -- pending, paid, refunded
-    order_status VARCHAR(50) DEFAULT 'PENDING' NOT NULL, -- PENDING, CONFIRMED, PROCESSING, READY_TO_SHIP, SHIPPED, DELIVERED, CANCELLED, RETURNED
-    delivery_zone VARCHAR(50) NOT NULL, -- dhaka, outside_dhaka
+    payment_status VARCHAR(50) DEFAULT 'pending' NOT NULL,
+    order_status VARCHAR(50) DEFAULT 'PENDING' NOT NULL,
+    delivery_zone VARCHAR(50) NOT NULL,
     shipping_address TEXT NOT NULL,
     shipping_area VARCHAR(100) NOT NULL,
     customer_name_snapshot VARCHAR(255) NOT NULL,
@@ -162,7 +162,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
 -- Add the foreign key only when it does not already exist.
 -- This keeps the foundation migration safe for Supabase Preview databases that
 -- may already contain the base schema.
-DO $ 
+DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1
@@ -176,7 +176,7 @@ BEGIN
       REFERENCES public.orders(id)
       ON DELETE SET NULL;
   END IF;
-END $;
+END $$;
 
 -- 11. Order Items Table
 CREATE TABLE IF NOT EXISTS public.order_items (
@@ -200,14 +200,14 @@ CREATE TABLE IF NOT EXISTS public.order_status_history (
     previous_status VARCHAR(50),
     new_status VARCHAR(50) NOT NULL,
     notes TEXT,
-    changed_by UUID, -- references admin_users(id) or auth.users(id)
+    changed_by UUID,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
 -- 13. Invoices Table
 CREATE TABLE IF NOT EXISTS public.invoices (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    invoice_number VARCHAR(50) UNIQUE NOT NULL, -- e.g. INV-20260812-1001
+    invoice_number VARCHAR(50) UNIQUE NOT NULL,
     order_id UUID REFERENCES public.orders(id) ON DELETE RESTRICT NOT NULL,
     subtotal DECIMAL(10,2) NOT NULL CHECK (subtotal >= 0),
     discount_total DECIMAL(10,2) DEFAULT 0.00 NOT NULL CHECK (discount_total >= 0),
@@ -252,8 +252,8 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
 -- Insert Default Delivery Charges & Settings
 INSERT INTO public.settings (key, value, description)
 VALUES 
-('delivery_charges', '{"dhaka": 80, "outside_dhaka": 130}'::jsonb, 'Standard delivery charges for Dhaka and Outside Dhaka in BDT'),
-('business_policy', '{"guarantee_days": 7, "service_warranty_years": 1, "policy_text": "7 Days Guarantee & 1 Year Service Warranty. Manufacturer warranty terms apply where applicable."}'::jsonb, 'SahiGadget standard guarantee and warranty policy')
+('delivery_charges', '{\"dhaka\": 80, \"outside_dhaka\": 130}'::jsonb, 'Standard delivery charges for Dhaka and Outside Dhaka in BDT'),
+('business_policy', '{\"guarantee_days\": 7, \"service_warranty_years\": 1, \"policy_text\": \"7 Days Guarantee & 1 Year Service Warranty. Manufacturer warranty terms apply where applicable.\"}'::jsonb, 'SahiGadget standard guarantee and warranty policy')
 ON CONFLICT (key) DO NOTHING;
 
 -- Create Indexes for Performance
