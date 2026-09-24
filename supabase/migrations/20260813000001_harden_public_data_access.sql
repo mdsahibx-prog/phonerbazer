@@ -84,7 +84,9 @@ DROP POLICY IF EXISTS "Allow read order by tracking token" ON public.orders;
 DROP POLICY IF EXISTS "Allow public read active variants" ON public.product_variants;
 REVOKE SELECT ON public.product_variants FROM anon, authenticated;
 
-CREATE OR REPLACE VIEW public.storefront_variants AS
+DROP VIEW IF EXISTS public.storefront_variants;
+
+CREATE VIEW public.storefront_variants AS
 SELECT
   variant.id,
   variant.product_id,
