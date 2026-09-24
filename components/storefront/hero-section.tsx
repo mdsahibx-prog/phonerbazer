@@ -79,7 +79,7 @@ export function HeroSection({ banners, productCount, brandCount, categoryCount }
   const destination = activeBanner.primary_cta_url?.trim() || '/products'
   const previousIndex = (activeIndex - 1 + banners.length) % banners.length
   const nextIndex = (activeIndex + 1) % banners.length
-  const visibleIndexes = new Set([activeIndex, previousIndex, nextIndex])
+  const visibleIndexes = new Set([activeIndex, nextIndex])
 
   function markLoaded(id: string) {
     setLoadedSlides((previous) => {
@@ -178,7 +178,7 @@ export function HeroSection({ banners, productCount, brandCount, categoryCount }
                   alt=""
                 fill
                 sizes="100vw"
-                priority={idx === 0}
+                priority={false}
                 loading={idx === 0 ? 'eager' : 'lazy'}
                 quality={82}
                 onLoad={() => markLoaded(banner.id)}
