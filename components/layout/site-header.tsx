@@ -18,7 +18,6 @@ const navItems = [
   { label: 'Brands', href: '/brands' },
 ]
 
-// Real popular searches based on available catalogue data
 const popularSearches = ['Samsung', 'Feature Phone', 'Smartwatch', 'SKMEI', 'Watch']
 
 type SearchDropdownProps = {
@@ -47,14 +46,7 @@ function SearchDropdown({ showDropdown, query, isSearching, suggestions, isMobil
           </p>
           <div className="flex flex-wrap gap-2">
             {popularSearches.map((term) => (
-              <button
-                key={term}
-                type="button"
-                onClick={() => onPopularSearch(term)}
-                className="rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-950 hover:text-white"
-              >
-                {term}
-              </button>
+              <button key={term} type="button" onClick={() => onPopularSearch(term)} className="rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-950 hover:text-white">{term}</button>
             ))}
           </div>
         </div>
@@ -69,39 +61,22 @@ function SearchDropdown({ showDropdown, query, isSearching, suggestions, isMobil
         <div className="py-2">
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2">
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Catalogue matches ({suggestions.length})</p>
-            <button
-              type="button"
-              onClick={onViewAll}
-              className="flex items-center gap-1 text-xs font-bold text-orange-600 hover:underline"
-            >
-              View all <ArrowRight className="h-3 w-3" />
-            </button>
+            <button type="button" onClick={onViewAll} className="flex items-center gap-1 text-xs font-bold text-orange-600 hover:underline">View all <ArrowRight className="h-3 w-3" /></button>
           </div>
           {suggestions.map((product) => {
             const imageUrl = getProductPrimaryImage(product)
             const priceRange = getProductPriceRange(product)
             const availability = getProductAvailability(product)
             return (
-              <Link
-                key={product.id}
-                href={`/products/${product.slug}`}
-                onClick={onProductClick}
-                className="flex items-center gap-3 border-b border-slate-50 px-4 py-3 transition hover:bg-slate-50 last:border-0"
-              >
+              <Link key={product.id} href={`/products/${product.slug}`} onClick={onProductClick} className="flex items-center gap-3 border-b border-slate-50 px-4 py-3 transition hover:bg-slate-50 last:border-0">
                 <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
-                  {imageUrl ? (
-                    <img src={imageUrl} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-xs font-black text-slate-300">SG</div>
-                  )}
+                  {imageUrl ? <img src={imageUrl} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-xs font-black text-slate-300">SG</div>}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold text-slate-900">{product.name}</p>
                   <div className="mt-0.5 flex items-center gap-2">
                     <span className="text-xs font-black text-orange-600">{priceRange}</span>
-                    <span className={`text-[10px] font-bold uppercase tracking-wider ${availability.tone === 'in' ? 'text-orange-500' : availability.tone === 'low' ? 'text-amber-500' : 'text-rose-500'}`}>
-                      {availability.label}
-                    </span>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${availability.tone === 'in' ? 'text-orange-500' : availability.tone === 'low' ? 'text-amber-500' : 'text-rose-500'}`}>{availability.label}</span>
                   </div>
                 </div>
               </Link>
@@ -131,7 +106,7 @@ export function SiteHeader() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node) && 
+      if (searchRef.current && !searchRef.current.contains(event.target as Node) &&
           mobileSearchRef.current && !mobileSearchRef.current.contains(event.target as Node)) {
         setShowDropdown(false)
       }
@@ -142,22 +117,34 @@ export function SiteHeader() {
 
   useEffect(() => {
     const trimmed = query.trim()
-    if (trimmed.length < 2) return
+    if (trimmed.length < 2) {
+      setIsSearching(false)
+      return
+    }
 
+    const controller = new AbortController()
     const timer = setTimeout(async () => {
       setIsSearching(true)
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`)
+        const res = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`, {
+          signal: controller.signal,
+          cache: 'no-store',
+        })
+        if (!res.ok) throw new Error('Search request failed')
         const data = await res.json()
-        setSuggestions(data.products || [])
-      } catch {
-        setSuggestions([])
+        if (!controller.signal.aborted) setSuggestions(data.products || [])
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        if (!controller.signal.aborted) setSuggestions([])
       } finally {
-        setIsSearching(false)
+        if (!controller.signal.aborted) setIsSearching(false)
       }
     }, 300)
 
-    return () => clearTimeout(timer)
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
   }, [query])
 
   function selectPopularSearch(term: string) {
@@ -211,11 +198,7 @@ export function SiteHeader() {
           <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary navigation">
             {navItems.map((item) => {
               const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
-              return (
-                <Link key={item.href} href={item.href} className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${active ? 'bg-orange-500 text-white' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}>
-                  {item.label}
-                </Link>
-              )
+              return <Link key={item.href} href={item.href} className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${active ? 'bg-orange-500 text-white' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}>{item.label}</Link>
             })}
           </nav>
 
@@ -224,28 +207,8 @@ export function SiteHeader() {
               <label className="sr-only" htmlFor="desktop-search">Search the catalogue</label>
               <div className="flex w-full items-center rounded-full border border-white/15 bg-white px-4 transition-colors focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-200">
                 <Search className="mr-2 h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
-                <input 
-                  id="desktop-search" data-search-input
-                  value={query} 
-                  onChange={(event) => {
-                    setQuery(event.target.value)
-                    setShowDropdown(true)
-                  }}
-                  onFocus={() => setShowDropdown(true)}
-                  autoComplete="off"
-                  placeholder="Search phones, gadgets, or SKU" 
-                  className="h-10 min-w-0 flex-1 appearance-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                />
-                {query && (
-                  <button 
-                    type="button" 
-                    onClick={() => { setQuery(''); setSuggestions([]) }} 
-                    className="mr-2 text-slate-400 hover:text-slate-700"
-                    aria-label="Clear search"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
+                <input id="desktop-search" data-search-input value={query} onChange={(event) => { setQuery(event.target.value); setShowDropdown(true) }} onFocus={() => setShowDropdown(true)} autoComplete="off" placeholder="Search phones, gadgets, or SKU" className="h-10 min-w-0 flex-1 appearance-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                {query && <button type="button" onClick={() => { setQuery(''); setSuggestions([]) }} className="mr-2 text-slate-400 hover:text-slate-700" aria-label="Clear search"><X className="h-4 w-4" /></button>}
                 <button type="submit" className="ml-2 rounded-full bg-orange-500 px-4 py-2 text-xs font-black text-white transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2">Search</button>
               </div>
             </form>
@@ -253,58 +216,32 @@ export function SiteHeader() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Link href="/admin" className="hidden items-center gap-1.5 rounded-full border border-white/15 px-3 py-2 text-xs font-semibold text-white/70 transition-colors hover:border-slate-300 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 lg:inline-flex" aria-label="Open Admin Portal">
-              <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-              Admin Portal
-            </Link>
+            <Link href="/admin" className="hidden items-center gap-1.5 rounded-full border border-white/15 px-3 py-2 text-xs font-semibold text-white/70 transition-colors hover:border-slate-300 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 lg:inline-flex" aria-label="Open Admin Portal"><ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />Admin Portal</Link>
             <Link href="/track-order" className="hidden text-sm font-semibold text-white/65 transition-colors hover:text-white lg:block">Track order</Link>
             <Link href="/cart" className="hidden items-center gap-1.5 text-sm font-semibold text-white/65 transition-colors hover:text-white lg:inline-flex" aria-label="Open your cart"><ShoppingBag className="h-4 w-4" aria-hidden="true" />Your cart</Link>
-            <Button asChild className="hidden rounded-full bg-orange-500 text-white transition-transform duration-150 hover:-translate-y-0.5 hover:bg-orange-400 motion-reduce:transform-none lg:inline-flex">
-              <Link href="/products">Shop now</Link>
-            </Button>
-            <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-white transition-colors hover:bg-white/10 lg:hidden" onClick={() => { setMenuOpen((open) => !open); if (!menuOpen) setShowDropdown(false); }} aria-expanded={menuOpen} aria-controls="mobile-navigation" aria-label={menuOpen ? 'Close menu' : 'Open menu'}>
-              {menuOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
-            </button>
+            <Button asChild className="hidden rounded-full bg-orange-500 text-white transition-transform duration-150 hover:-translate-y-0.5 hover:bg-orange-400 motion-reduce:transform-none lg:inline-flex"><Link href="/products">Shop now</Link></Button>
+            <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-white transition-colors hover:bg-white/10 lg:hidden" onClick={() => { setMenuOpen((open) => !open); if (!menuOpen) setShowDropdown(false) }} aria-expanded={menuOpen} aria-controls="mobile-navigation" aria-label={menuOpen ? 'Close menu' : 'Open menu'}>{menuOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}</button>
           </div>
         </div>
 
         {menuOpen && (
           <div id="mobile-navigation" className="motion-safe:animate-[menu-in_180ms_ease-out_both] motion-reduce:animate-none border-t border-white/10 bg-[var(--brand-navy)] px-4 py-5 shadow-xl lg:hidden">
             <div ref={mobileSearchRef} className="relative mb-4">
-                <form onSubmit={submitSearch} className="flex items-center rounded-2xl border border-white/15 bg-white px-4 transition-colors focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-200" role="search">
+              <form onSubmit={submitSearch} className="flex items-center rounded-2xl border border-white/15 bg-white px-4 transition-colors focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-200" role="search">
                 <label className="sr-only" htmlFor="mobile-search">Search the catalogue</label>
                 <Search className="mr-2 h-4 w-4 text-slate-400" aria-hidden="true" />
-                <input 
-                  id="mobile-search" data-search-input
-                  value={query} 
-                  onChange={(event) => {
-                    setQuery(event.target.value)
-                    setShowDropdown(true)
-                  }}
-                  onFocus={() => setShowDropdown(true)}
-                  autoComplete="off"
-                  placeholder="Search phones, gadgets, SKU" 
-                  className="h-11 min-w-0 flex-1 appearance-none bg-transparent text-sm outline-none placeholder:text-slate-400 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                />
-                {query && (
-                  <button type="button" onClick={() => { setQuery(''); setSuggestions([]) }} className="mr-2 text-slate-400">
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
+                <input id="mobile-search" data-search-input value={query} onChange={(event) => { setQuery(event.target.value); setShowDropdown(true) }} onFocus={() => setShowDropdown(true)} autoComplete="off" placeholder="Search phones, gadgets, SKU" className="h-11 min-w-0 flex-1 appearance-none bg-transparent text-sm outline-none placeholder:text-slate-400 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                {query && <button type="button" onClick={() => { setQuery(''); setSuggestions([]) }} className="mr-2 text-slate-400"><X className="h-4 w-4" /></button>}
                 <button type="submit" className="border-l border-slate-200 pl-2 text-xs font-bold text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2">Search</button>
               </form>
               <SearchDropdown showDropdown={showDropdown} query={query} isSearching={isSearching} suggestions={suggestions} isMobile onPopularSearch={selectPopularSearch} onViewAll={submitViewAll} onProductClick={closeSearchDropdown} />
             </div>
-            
             <nav className="grid gap-1 border-t border-white/10 pt-3" aria-label="Mobile navigation">
               <Link href="/" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10">Home</Link>
               {navItems.map((item) => <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10">{item.label}</Link>)}
               <Link href="/track-order" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10">Track order</Link>
               <Link href="/cart" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10"><ShoppingBag className="h-4 w-4" aria-hidden="true" />Your cart</Link>
-              <Link href="/admin" onClick={() => setMenuOpen(false)} className="mt-2 flex items-center gap-2 rounded-xl border border-white/15 px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10" aria-label="Open Admin Portal">
-                <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-                Admin Portal
-              </Link>
+              <Link href="/admin" onClick={() => setMenuOpen(false)} className="mt-2 flex items-center gap-2 rounded-xl border border-white/15 px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10" aria-label="Open Admin Portal"><ShieldCheck className="h-4 w-4" aria-hidden="true" />Admin Portal</Link>
             </nav>
           </div>
         )}
