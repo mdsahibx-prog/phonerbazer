@@ -1,0 +1,3 @@
+-- Historical migration marker.
+-- The schema is already represented by the repository's existing 202608* migrations.
+-- Kept under the remote migration version so Supabase Preview can reconcile history.
