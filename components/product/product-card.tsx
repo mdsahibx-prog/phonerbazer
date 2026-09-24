@@ -28,6 +28,6 @@ export function ProductCard({ product, priority = false }: { product: Storefront
   </article>
 }
 
-export function ProductGrid({ products }: { products: StorefrontProduct[] }) {
-  return <div className="grid min-w-0 grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4">{products.map((product, index) => <ProductCard key={product.id} product={product} priority={index === 0} />)}</div>
+export function ProductGrid({ products, priorityFirst = true }: { products: StorefrontProduct[]; priorityFirst?: boolean }) {
+  return <div className="grid min-w-0 grid-cols-2 gap-2 sm:gap-5 lg:grid-cols-4">{products.map((product, index) => <ProductCard key={product.id} product={product} priority={priorityFirst && index === 0} />)}</div>
 }
