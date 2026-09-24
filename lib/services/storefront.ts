@@ -91,6 +91,150 @@ async function resolveVariantIds(supabase: Awaited<ReturnType<typeof createClien
   return (data ?? []).map((row) => row.product_id)
 }
 
+const HOMEPAGE_BRAND_SELECT = 'id,name,slug,logo_url,description,meta_title,meta_description'
+const HOMEPAGE_CATEGORY_SELECT = 'id,name,slug,description,image_url,sort_order,meta_title,meta_description'
+const HOMEPAGE_BANNER_SELECT = '*'
+
+const getHomepageBanners = unstable_cache(
+  async () => {
+    const supabase = createPublicClient()
+    const { data, error } = await supabase
+      .from('homepage_banners')
+      .select(HOMEPAGE_BANNER_SELECT)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: false })
+    if (error) return []
+    return (data ?? []) as HomepageBanner[]
+  },
+  ['homepage-banners'],
+  { revalidate: 60, tags: ['homepage:banners'] },
+)
+
+export async function getHomepageHero() {
+  const banners = await getHomepageBanners()
+  if (banners.length > 0) return { banners, productCount: 0, brandCount: 0, categoryCount: 0 }
+
+  const supabase = createPublicClient()
+  const [products, brands, categories] = await Promise.all([
+    supabase.from('products').select('id', { count: 'exact', head: true }).eq('is_published', true),
+    supabase.from('brands').select('id', { count: 'exact', head: true }).eq('is_active', true),
+    supabase.from('categories').select('id', { count: 'exact', head: true }).eq('is_active', true),
+  ])
+  return {
+    banners,
+    productCount: products.count ?? 0,
+    brandCount: brands.count ?? 0,
+    categoryCount: categories.count ?? 0,
+  }
+}
+
+export const getHomepageFeaturedProducts = unstable_cache(
+  async () => {
+    const supabase = createPublicClient()
+    const { data, error } = await supabase
+      .from('products')
+      .select(PRODUCT_CARD_SELECT)
+      .eq('is_published', true)
+      .eq('is_featured', true)
+      .order('created_at', { ascending: false })
+      .limit(8)
+    if (error) return []
+    const rows = (data ?? []) as unknown as RawProduct[]
+    const variantsByProduct = await getVariantsByProductId(supabase, rows.map((row) => row.id))
+    return rows.map((row) => normalizeProduct(row, variantsByProduct.get(row.id) ?? []))
+  },
+  ['homepage-featured-products'],
+  { revalidate: 30, tags: ['homepage:products'] },
+)
+
+export const getHomepageLatestProducts = unstable_cache(
+  async () => {
+    const supabase = createPublicClient()
+    const { data, error } = await supabase
+      .from('products')
+      .select(PRODUCT_CARD_SELECT)
+      .eq('is_published', true)
+      .order('created_at', { ascending: false })
+      .limit(8)
+    if (error) return []
+    const rows = (data ?? []) as unknown as RawProduct[]
+    const variantsByProduct = await getVariantsByProductId(supabase, rows.map((row) => row.id))
+    return rows.map((row) => normalizeProduct(row, variantsByProduct.get(row.id) ?? []))
+  },
+  ['homepage-latest-products'],
+  { revalidate: 30, tags: ['homepage:products'] },
+)
+
+export const getHomepageCategories = unstable_cache(
+  async () => {
+    const supabase = createPublicClient()
+    const { data, error } = await supabase
+      .from('categories')
+      .select(HOMEPAGE_CATEGORY_SELECT)
+      .eq('is_active', true)
+      .order('sort_order')
+      .order('name')
+    if (error) return []
+    return (data ?? []) as StorefrontCategory[]
+  },
+  ['homepage-categories'],
+  { revalidate: 300, tags: ['homepage:categories'] },
+)
+
+export const getHomepageBrands = unstable_cache(
+  async () => {
+    const supabase = createPublicClient()
+    const { data, error } = await supabase
+      .from('brands')
+      .select(HOMEPAGE_BRAND_SELECT)
+      .eq('is_active', true)
+      .order('name')
+    if (error) return []
+    return (data ?? []) as StorefrontBrand[]
+  },
+  ['homepage-brands'],
+  { revalidate: 300, tags: ['homepage:brands'] },
+)
+
+export const getHomepageDeals = unstable_cache(
+  async () => {
+    const supabase = createPublicClient()
+    const { data: variantRows, error: variantError } = await supabase
+      .from('storefront_variants')
+      .select('product_id,price,compare_at_price')
+      .not('compare_at_price', 'is', null)
+      .limit(96)
+    if (variantError) return []
+
+    const discountedIds = Array.from(new Set(
+      (variantRows ?? [])
+        .filter((row) => Number(row.compare_at_price) > Number(row.price))
+        .map((row) => row.product_id),
+    )).slice(0, 12)
+
+    if (!discountedIds.length) return []
+
+    const { data, error } = await supabase
+      .from('products')
+      .select(PRODUCT_CARD_SELECT)
+      .eq('is_published', true)
+      .in('id', discountedIds)
+      .order('created_at', { ascending: false })
+      .limit(4)
+    if (error) return []
+
+    const rows = (data ?? []) as unknown as RawProduct[]
+    const variantsByProduct = await getVariantsByProductId(supabase, rows.map((row) => row.id))
+    return rows
+      .map((row) => normalizeProduct(row, variantsByProduct.get(row.id) ?? []))
+      .filter((product) => product.variants.some((variant) => variant.compare_at_price && variant.compare_at_price > variant.price))
+      .slice(0, 4)
+  },
+  ['homepage-deals'],
+  { revalidate: 30, tags: ['homepage:products'] },
+)
+
 export const getHomepageData = unstable_cache(async () => {
   const supabase = createPublicClient()
   const [latestResult, featuredResult, brandsResult, categoriesResult, bannersResult] = await Promise.all([

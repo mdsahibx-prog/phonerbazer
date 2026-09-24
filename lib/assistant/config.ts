@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { unstable_cache } from 'next/cache'
 import { z } from 'zod'
 
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -226,6 +227,12 @@ export async function loadAssistantControlConfig(): Promise<AssistantControlConf
     return DEFAULT_ASSISTANT_CONFIG
   }
 }
+
+export const loadCachedAssistantControlConfig = unstable_cache(
+  async () => loadAssistantControlConfig(),
+  ['assistant-control-config-public'],
+  { revalidate: 60, tags: ['assistant:config'] },
+)
 
 export async function getAssistantConfigurationStatus(config: AssistantControlConfig) {
   const provider = await getStoredAssistantProviderStatus()
