@@ -38,3 +38,11 @@ if (canonicalCommerceEventSchema.safeParse(unknown).success) {
 }
 
 console.log('analytics contract tests passed')
+
+import { normalizeServerGtmEndpoint, isValidServerGtmEndpoint, buildServerGtmEnvelope } from '../lib/analytics/server-gtm'
+
+if (normalizeServerGtmEndpoint('https://gtm.example.com/') !== 'https://gtm.example.com') throw new Error('Server GTM endpoint normalization failed.')
+if (isValidServerGtmEndpoint('http://gtm.example.com')) throw new Error('Non-HTTPS Server GTM endpoint was accepted.')
+if (isValidServerGtmEndpoint('https://gtm.example.com/path?bad=1')) throw new Error('Non-canonical Server GTM endpoint was accepted.')
+const envelope = buildServerGtmEnvelope(base)
+if (envelope.schema !== 'phonerbazar.analytics.event' || envelope.event.id !== base.eventId) throw new Error('Server GTM envelope contract failed.')
