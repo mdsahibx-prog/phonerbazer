@@ -7,7 +7,7 @@
     "build": "node --max-old-space-size=4096 node_modules/next/dist/bin/next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "pnpm exec tsx scripts/direct-order-payment-test.ts && pnpm exec tsx scripts/risk-category-test.ts",
+    "test": "pnpm exec tsx scripts/analytics-contract-test.ts && pnpm exec tsx scripts/direct-order-payment-test.ts && pnpm exec tsx scripts/risk-category-test.ts",
     "performance:audit": "tsx scripts/performance/audit.ts"
   },
   "dependencies": {
