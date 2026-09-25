@@ -1,6 +1,12 @@
 import 'server-only'
 
-import { z } from 'zod'\nimport { createAdminClient } from '@/lib/supabase/admin'\nimport { COMMERCE_EVENT_NAMES, type CanonicalCommerceEvent, type CommerceEventName } from './types'\n\nexport { COMMERCE_EVENT_NAMES as COMMERCE_EVENTS } from './types'\nexport type { CanonicalCommerceEvent, CommerceEventName } from './types'\n
+import { z } from 'zod'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { COMMERCE_EVENT_NAMES as COMMERCE_EVENTS, type CanonicalCommerceEvent, type CommerceEventName } from './types'
+
+export { COMMERCE_EVENT_NAMES as COMMERCE_EVENTS } from './types'
+export type { CanonicalCommerceEvent, CommerceEventName } from './types'
+
 function scrubMetadata(input: Record<string, unknown> = {}) {
   const denied = /phone|email|address|password|token|secret|authorization|payment|notes?|message|cookie|ip|user.?agent/i
   return Object.fromEntries(Object.entries(input).filter(([key]) => !denied.test(key)).map(([key, value]) => [key, typeof value === 'string' ? value.slice(0, 500) : value]).filter(([, value]) => value === null || ['string', 'number', 'boolean'].includes(typeof value))) as Record<string, string | number | boolean | null>
