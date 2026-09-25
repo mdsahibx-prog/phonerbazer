@@ -76,4 +76,24 @@ export async function markCheckoutSession(input: { checkoutRequestId: string; so
   return { ok: !error }
 }
 
-export const canonicalCommerceEventSchema = z.object({ eventId: z.string().uuid(), eventName: z.enum(COMMERCE_EVENTS), eventVersion: z.literal('1.0'), occurredAt: z.string(), sessionId: z.string().nullable(), anonymousId: z.string().nullable(), pageUrl: z.string().nullable(), pagePath: z.string().nullable(), referrer: z.string().nullable(), source: z.string().nullable(), medium: z.string().nullable(), campaign: z.string().nullable(), consent: z.object({ necessary: z.literal(true), analytics: z.boolean(), marketing: z.boolean() }), testMode: z.boolean().optional() }).passthrough()
+const analyticsRecordSchema = z.record(z.string(), z.unknown())
+
+export const canonicalCommerceEventSchema = z.object({
+  eventId: z.string().uuid(),
+  eventName: z.enum(COMMERCE_EVENTS),
+  eventVersion: z.literal('1.0'),
+  occurredAt: z.string().refine((value) => Number.isFinite(Date.parse(value)), 'Invalid event timestamp.'),
+  sessionId: z.string().uuid().nullable(),
+  anonymousId: z.string().uuid().nullable(),
+  pageUrl: z.string().max(1000).nullable(),
+  pagePath: z.string().max(500).nullable(),
+  referrer: z.string().max(1000).nullable(),
+  source: z.string().max(100).nullable(),
+  medium: z.string().max(100).nullable(),
+  campaign: z.string().max(200).nullable(),
+  device: z.object({ type: z.string().max(32).optional(), language: z.string().max(32).optional() }).nullable(),
+  consent: z.object({ necessary: z.literal(true), analytics: z.boolean(), marketing: z.boolean() }),
+  commerce: analyticsRecordSchema.optional(),
+  metadata: z.record(z.string(), z.union([z.string().max(500), z.number().finite(), z.boolean(), z.null()])).optional(),
+  testMode: z.boolean().optional(),
+}).strict()
