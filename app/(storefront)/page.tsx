@@ -17,7 +17,6 @@ import {
 } from '@/lib/services/storefront'
 import { HeroSection } from '@/components/storefront/hero-section'
 
-export const dynamic = 'force-dynamic'
 
 export const metadata = {
   title: 'PhonerBazar — Authentic Mobile Phones & Gadgets in Bangladesh',
