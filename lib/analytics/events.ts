@@ -59,7 +59,9 @@ export async function recordCanonicalEvent(input: CanonicalCommerceEvent & { ord
 
 export async function recordPurchaseOnce(input: { orderId: string; orderNumber: string; value: number; items: Array<{ item_id: string; item_name: string; item_brand?: string; item_category?: string; price: number; quantity: number }>; sessionId?: string | null; cartId?: string | null; attribution?: Record<string, unknown>; consent?: { analytics: boolean; marketing: boolean } }) {
   try {
-    const event: CanonicalCommerceEvent & { orderId: string; cartId?: string | null } = { eventId: `purchase:${input.orderId}`, eventName: 'purchase', eventVersion: '1.0', occurredAt: new Date().toISOString(), sessionId: input.sessionId ?? null, anonymousId: null, pageUrl: null, pagePath: null, referrer: null, source: null, medium: null, campaign: null, device: null, consent: { necessary: true, analytics: input.consent?.analytics ?? false, marketing: input.consent?.marketing ?? false }, commerce: { transaction_id: input.orderNumber, value: input.value, currency: 'BDT', items: input.items, ...input.attribution }, orderId: input.orderId, cartId: input.cartId }
+    const itemValue = input.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    const shipping = Math.max(input.value - itemValue, 0)
+    const event: CanonicalCommerceEvent & { orderId: string; cartId?: string | null } = { eventId: `purchase:${input.orderId}`, eventName: 'purchase', eventVersion: '1.0', occurredAt: new Date().toISOString(), sessionId: input.sessionId ?? null, anonymousId: null, pageUrl: null, pagePath: null, referrer: null, source: null, medium: null, campaign: null, device: null, consent: { necessary: true, analytics: input.consent?.analytics ?? false, marketing: input.consent?.marketing ?? false }, commerce: { transaction_id: input.orderNumber, value: itemValue, shipping, currency: 'BDT', items: input.items, ...input.attribution }, orderId: input.orderId, cartId: input.cartId }
     const persisted = await recordCanonicalEvent(event)
     if (!persisted.ok || persisted.duplicate) return persisted
     const { dispatchAnalyticsEvent } = await import('./server')
