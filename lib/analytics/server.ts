@@ -4,9 +4,10 @@ import { unstable_cache } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { recordCanonicalEvent, type CanonicalCommerceEvent } from './events'
 import { ANALYTICS_EVENT_MAP } from './registry'
+import { buildServerGtmEnvelope } from './server-gtm'
 
-export type AnalyticsConfig = { enabled: boolean; marketingEnabled: boolean; consentMode: 'basic' | 'advanced'; debugMode: boolean; ga4MeasurementId: string; gtmContainerId: string; metaPixelId: string; metaCapiEnabled: boolean; serverGtmEndpoint: string; environment: 'development' | 'preview' | 'production'; eventControls: Record<string, boolean> }
-export const DEFAULT_ANALYTICS_CONFIG: AnalyticsConfig = { enabled: false, marketingEnabled: false, consentMode: 'advanced', debugMode: false, ga4MeasurementId: '', gtmContainerId: '', metaPixelId: '', metaCapiEnabled: false, serverGtmEndpoint: '', environment: process.env.VERCEL_ENV === 'production' ? 'production' : process.env.VERCEL_ENV === 'preview' ? 'preview' : 'development', eventControls: {} }
+export type AnalyticsConfig = { enabled: boolean; marketingEnabled: boolean; consentMode: 'basic' | 'advanced'; debugMode: boolean; ga4MeasurementId: string; gtmContainerId: string; metaPixelId: string; metaCapiEnabled: boolean; serverGtmEnabled: boolean; serverGtmEndpoint: string; environment: 'development' | 'preview' | 'production'; eventControls: Record<string, boolean> }
+export const DEFAULT_ANALYTICS_CONFIG: AnalyticsConfig = { enabled: false, marketingEnabled: false, consentMode: 'advanced', debugMode: false, ga4MeasurementId: '', gtmContainerId: '', metaPixelId: '', metaCapiEnabled: false, serverGtmEnabled: false, serverGtmEndpoint: '', environment: process.env.VERCEL_ENV === 'production' ? 'production' : process.env.VERCEL_ENV === 'preview' ? 'preview' : 'development', eventControls: {} }
 
 const readConfig = unstable_cache(async (): Promise<AnalyticsConfig> => { try { const db = createAdminClient(); const { data } = await db.from('settings').select('value').eq('key', 'analytics_config').maybeSingle(); const stored = (data?.value as Partial<AnalyticsConfig> | null) || {}; return { ...DEFAULT_ANALYTICS_CONFIG, ...stored, eventControls: { ...DEFAULT_ANALYTICS_CONFIG.eventControls, ...(stored.eventControls || {}) }, environment: DEFAULT_ANALYTICS_CONFIG.environment } } catch { return DEFAULT_ANALYTICS_CONFIG } }, ['analytics-config-v2'], { revalidate: 60, tags: ['analytics-config'] });
 export async function getAnalyticsConfig() { return readConfig() }
@@ -21,7 +22,7 @@ export async function dispatchAnalyticsEvent(event: CanonicalCommerceEvent) { co
   const ga4Secret = process.env.GA4_API_SECRET
   if (config.ga4MeasurementId && ga4Secret) destinations.push(postJson(`https://www.google-analytics.com/mp/collect?measurement_id=${encodeURIComponent(config.ga4MeasurementId)}&api_secret=${encodeURIComponent(ga4Secret)}`, ga4Payload(event)).then((result) => { deliveries.push({ destination: 'GA4', ...result }) }))
   if (config.marketingEnabled && event.consent.marketing && config.metaCapiEnabled && process.env.META_CAPI_ACCESS_TOKEN && config.metaPixelId) destinations.push(postJson(`https://graph.facebook.com/v20.0/${encodeURIComponent(config.metaPixelId)}/events?access_token=${encodeURIComponent(process.env.META_CAPI_ACCESS_TOKEN)}`, metaPayload(event)).then((result) => { deliveries.push({ destination: 'META_CAPI', ...result }) }))
-  if (config.serverGtmEndpoint) destinations.push(postJson(config.serverGtmEndpoint, { ...event, destination: 'SERVER_GTM' }).then((result) => { deliveries.push({ destination: 'SERVER_GTM', ...result }) }))
+  if (config.serverGtmEnabled && config.serverGtmEndpoint && event.testMode !== true) destinations.push(postJson(config.serverGtmEndpoint, buildServerGtmEnvelope(event)).then((result) => { deliveries.push({ destination: 'SERVER_GTM', ...result }) }))
   await Promise.allSettled(destinations); return { ok: deliveries.every((item) => item.ok), skipped: false, deliveries }
 }
 
