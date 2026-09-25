@@ -20,7 +20,7 @@ function getWindow() {
   return window as typeof window & { dataLayer?: unknown[]; __PHONERBAZAR_GTM__?: GtmRuntime; gtag?: (...args: unknown[]) => void }
 }
 
-export function configureAnalyticsRuntime(config: { enabled: boolean; marketingEnabled: boolean; ga4MeasurementId: string; gtmContainerId: string; metaPixelId: string }) {
+export function configureAnalyticsRuntime(config: { enabled: boolean; marketingEnabled: boolean; ga4MeasurementId: string; gtmContainerId: string; metaPixelId: string; tiktokPixelId: string }) {
   runtimeConfig = { enabled: config.enabled, marketingEnabled: config.marketingEnabled, ga4MeasurementId: config.ga4MeasurementId.trim(), gtmContainerId: config.gtmContainerId.trim().toUpperCase(), metaPixelId: config.metaPixelId.trim(), tiktokPixelId: config.tiktokPixelId.trim() }
   if (typeof window !== 'undefined') initializeGtm()
 }
