@@ -1,4 +1,5 @@
 import { canonicalCommerceEventSchema } from '../lib/analytics/events'
+import { normalizeServerGtmEndpoint, isValidServerGtmEndpoint, buildServerGtmEnvelope } from '../lib/analytics/server-gtm'
 
 const base = {
   eventId: '11111111-1111-4111-8111-111111111111',
@@ -39,7 +40,6 @@ if (canonicalCommerceEventSchema.safeParse(unknown).success) {
 
 console.log('analytics contract tests passed')
 
-import { normalizeServerGtmEndpoint, isValidServerGtmEndpoint, buildServerGtmEnvelope } from '../lib/analytics/server-gtm'
 
 if (normalizeServerGtmEndpoint('https://gtm.example.com/') !== 'https://gtm.example.com') throw new Error('Server GTM endpoint normalization failed.')
 if (isValidServerGtmEndpoint('http://gtm.example.com')) throw new Error('Non-HTTPS Server GTM endpoint was accepted.')
