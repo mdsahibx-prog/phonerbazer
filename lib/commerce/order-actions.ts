@@ -38,7 +38,11 @@ export async function saveCartCheckoutDraft(input: unknown) {
 export async function quoteCartOrder(input: unknown) {
   const parsed = cartOrderSchema.pick({ checkoutRequestId: true, phone: true, division: true }).safeParse(input)
   if (!parsed.success) return { ok: false as const, message: 'Please enter a valid mobile number and division to calculate your secure quote.' }
-  return quoteCartCheckout({ checkoutRequestId: parsed.data.checkoutRequestId, phone: normalizePhone(parsed.data.phone), division: parsed.data.division, source: 'CART' })
+  const result = await quoteCartCheckout({ checkoutRequestId: parsed.data.checkoutRequestId, phone: normalizePhone(parsed.data.phone), division: parsed.data.division, source: 'CART' })
+  if (result.ok) {
+    void recordCommerceEvent({ eventId: `${parsed.data.checkoutRequestId}:quoted`, eventName: 'CHECKOUT_QUOTED', sessionId: parsed.data.checkoutRequestId, metadata: { source: 'CART', item_count: result.data.items.length, value: result.data.grandTotal, delivery_charge: result.data.deliveryCharge } }).catch(() => undefined)
+  }
+  return result
 }
 
 export async function createCartOrder(input: unknown) {

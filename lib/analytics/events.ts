@@ -59,7 +59,9 @@ export async function recordCanonicalEvent(input: CanonicalCommerceEvent & { ord
 
 export async function recordPurchaseOnce(input: { orderId: string; orderNumber: string; value: number; items: Array<{ item_id: string; item_name: string; item_brand?: string; item_category?: string; price: number; quantity: number }>; sessionId?: string | null; cartId?: string | null; attribution?: Record<string, unknown>; consent?: { analytics: boolean; marketing: boolean } }) {
   try {
-    const event: CanonicalCommerceEvent & { orderId: string; cartId?: string | null } = { eventId: `purchase:${input.orderId}`, eventName: 'purchase', eventVersion: '1.0', occurredAt: new Date().toISOString(), sessionId: input.sessionId ?? null, anonymousId: null, pageUrl: null, pagePath: null, referrer: null, source: null, medium: null, campaign: null, device: null, consent: { necessary: true, analytics: input.consent?.analytics ?? false, marketing: input.consent?.marketing ?? false }, commerce: { transaction_id: input.orderNumber, value: input.value, currency: 'BDT', items: input.items, ...input.attribution }, orderId: input.orderId, cartId: input.cartId }
+    const itemValue = input.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    const shipping = Math.max(input.value - itemValue, 0)
+    const event: CanonicalCommerceEvent & { orderId: string; cartId?: string | null } = { eventId: `purchase:${input.orderId}`, eventName: 'purchase', eventVersion: '1.0', occurredAt: new Date().toISOString(), sessionId: input.sessionId ?? null, anonymousId: null, pageUrl: null, pagePath: null, referrer: null, source: null, medium: null, campaign: null, device: null, consent: { necessary: true, analytics: input.consent?.analytics ?? false, marketing: input.consent?.marketing ?? false }, commerce: { transaction_id: input.orderNumber, value: itemValue, shipping, currency: 'BDT', items: input.items, ...input.attribution }, orderId: input.orderId, cartId: input.cartId }
     const persisted = await recordCanonicalEvent(event)
     if (!persisted.ok || persisted.duplicate) return persisted
     const { dispatchAnalyticsEvent } = await import('./server')
@@ -76,4 +78,24 @@ export async function markCheckoutSession(input: { checkoutRequestId: string; so
   return { ok: !error }
 }
 
-export const canonicalCommerceEventSchema = z.object({ eventId: z.string().uuid(), eventName: z.enum(COMMERCE_EVENTS), eventVersion: z.literal('1.0'), occurredAt: z.string(), sessionId: z.string().nullable(), anonymousId: z.string().nullable(), pageUrl: z.string().nullable(), pagePath: z.string().nullable(), referrer: z.string().nullable(), source: z.string().nullable(), medium: z.string().nullable(), campaign: z.string().nullable(), consent: z.object({ necessary: z.literal(true), analytics: z.boolean(), marketing: z.boolean() }), testMode: z.boolean().optional() }).passthrough()
+const analyticsRecordSchema = z.record(z.string(), z.unknown())
+
+export const canonicalCommerceEventSchema = z.object({
+  eventId: z.string().uuid(),
+  eventName: z.enum(COMMERCE_EVENTS),
+  eventVersion: z.literal('1.0'),
+  occurredAt: z.string().refine((value) => Number.isFinite(Date.parse(value)), 'Invalid event timestamp.'),
+  sessionId: z.string().uuid().nullable(),
+  anonymousId: z.string().uuid().nullable(),
+  pageUrl: z.string().max(1000).nullable(),
+  pagePath: z.string().max(500).nullable(),
+  referrer: z.string().max(1000).nullable(),
+  source: z.string().max(100).nullable(),
+  medium: z.string().max(100).nullable(),
+  campaign: z.string().max(200).nullable(),
+  device: z.object({ type: z.string().max(32).optional(), language: z.string().max(32).optional() }).nullable(),
+  consent: z.object({ necessary: z.literal(true), analytics: z.boolean(), marketing: z.boolean() }),
+  commerce: analyticsRecordSchema.optional(),
+  metadata: z.record(z.string(), z.union([z.string().max(500), z.number().finite(), z.boolean(), z.null()])).optional(),
+  testMode: z.boolean().optional(),
+}).strict()

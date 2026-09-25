@@ -199,12 +199,10 @@ export async function prepareGuestCheckout(input: unknown): Promise<ActionResult
     // Do not make the customer wait for analytics/session persistence.
     // The checkout page and final order creation remain authoritative.
     after(() =>
-      markCheckoutSession({
-        checkoutRequestId,
-        source: 'QUICK_ORDER',
-        status: 'STARTED',
-        quoteSnapshot,
-      }).catch((error) => console.error('[checkout] session tracking failed', error)),
+      Promise.all([
+        markCheckoutSession({ checkoutRequestId, source: 'QUICK_ORDER', status: 'STARTED', quoteSnapshot }),
+        recordCommerceEvent({ eventId: `${checkoutRequestId}:started`, eventName: 'CHECKOUT_STARTED', sessionId: checkoutRequestId, metadata: { source: 'QUICK_ORDER', product_id: variant.product_id, variant_id: variant.id, quantity: parsed.data.quantity } }),
+      ]).catch((error) => console.error('[checkout] session tracking failed', error)),
     )
 
     return {
@@ -226,6 +224,7 @@ export async function quoteGuestCodOrder(input: unknown): Promise<ActionResult<Q
   try {
     const quote = await loadVariantQuote(parsed.data, parsed.data.division)
     if (!quote.available) return { ok: false, message: 'The selected quantity is no longer available. Please adjust your order and try again.' }
+    void recordCommerceEvent({ eventId: `quote:${crypto.randomUUID()}`, eventName: 'CHECKOUT_QUOTED', metadata: { source: 'QUICK_ORDER', product_id: parsed.data.productId, variant_id: parsed.data.variantId, quantity: parsed.data.quantity, value: quote.grandTotal, delivery_charge: quote.deliveryCharge } }).catch(() => undefined)
     return { ok: true, data: quote }
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : 'Unable to calculate your order total right now.' }
@@ -321,6 +320,8 @@ export async function createGuestCodOrder(input: unknown): Promise<ActionResult<
     const summary = await loadOrderSuccessById(String(data[0].order_id))
     after(async () => {
       await Promise.allSettled([
+        markCheckoutSession({ checkoutRequestId: payload.checkoutRequestId, source: 'QUICK_ORDER', status: 'COMPLETED', customerPhone: payload.phone, customerEmail: payload.email || null, completedOrderId: summary.orderId }),
+        recordCommerceEvent({ eventId: `${payload.checkoutRequestId}:completed`, eventName: 'ORDER_COMPLETED', sessionId: payload.checkoutRequestId, orderId: summary.orderId, metadata: { source: 'QUICK_ORDER', order_number: summary.orderNumber } }),
         recordPurchaseOnce({ orderId: summary.orderId, orderNumber: summary.orderNumber, value: summary.grandTotal, sessionId: payload.checkoutRequestId, consent: { analytics: payload.analyticsConsent, marketing: payload.marketingConsent }, items: summary.items.map((item) => ({ item_id: item.sku, item_name: item.productName, price: item.unitPrice, quantity: item.quantity })) }),
         queueOrderConfirmationEmails(summary),
       ])
@@ -373,6 +374,8 @@ export async function createGuestOrderWithRisk(input: unknown): Promise<ActionRe
       const summary = await loadOrderSuccessById(String(data[0].order_id))
       after(async () => {
         await Promise.allSettled([
+          markCheckoutSession({ checkoutRequestId: payload.checkoutRequestId, source: 'QUICK_ORDER', status: 'COMPLETED', customerPhone: payload.phone, customerEmail: payload.email || null, completedOrderId: summary.orderId }),
+          recordCommerceEvent({ eventId: `${payload.checkoutRequestId}:completed`, eventName: 'ORDER_COMPLETED', sessionId: payload.checkoutRequestId, orderId: summary.orderId, metadata: { source: 'QUICK_ORDER', order_number: summary.orderNumber } }),
           recordPurchaseOnce({ orderId: summary.orderId, orderNumber: summary.orderNumber, value: summary.grandTotal, sessionId: payload.checkoutRequestId, consent: { analytics: payload.analyticsConsent, marketing: payload.marketingConsent }, items: summary.items.map((item) => ({ item_id: item.sku, item_name: item.productName, price: item.unitPrice, quantity: item.quantity })) }),
           queueOrderConfirmationEmails(summary),
         ])

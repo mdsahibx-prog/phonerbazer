@@ -79,6 +79,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <script src="/api/analytics/gtm-bootstrap" async />
       </head>
       <body className="min-h-full bg-slate-50 text-slate-950">
+        <noscript><iframe src="/api/analytics/gtm-noscript" height="0" width="0" style={{ display: 'none', visibility: 'hidden' }} title="Google Tag Manager" /></noscript>
         <Toaster position="top-right" richColors />
         <script
           type="application/ld+json"

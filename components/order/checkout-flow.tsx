@@ -7,7 +7,7 @@ import Image from 'next/image'
 
 import { createGuestOrderWithRisk, quoteGuestCodOrder } from '@/lib/orders/actions'
 import { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
-import { getAnalyticsConsent } from '@/lib/analytics/client'
+import { getAnalyticsConsent, trackClientEvent } from '@/lib/analytics/client'
 import type { OrderSuccessSummary, Quote } from '@/lib/orders/schema'
 import { formatPrice } from '@/lib/services/storefront-utils'
 
@@ -134,6 +134,8 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
     setBusy(false)
     if (!result.ok) { setFieldErrors(result.fieldErrors ?? {}); setMessage(result.message); return }
     setQuote(result.data)
+    trackClientEvent({ eventName: 'begin_checkout', commerce: { currency: 'BDT', value: result.data.unitPrice * result.data.quantity, items: [{ item_id: result.data.sku, item_name: result.data.productName, price: result.data.unitPrice, quantity: result.data.quantity }] } })
+    trackClientEvent({ eventName: 'add_shipping_info', commerce: { currency: 'BDT', shipping_tier: result.data.deliveryZone, value: result.data.unitPrice * result.data.quantity, items: [{ item_id: result.data.sku, item_name: result.data.productName, price: result.data.unitPrice, quantity: result.data.quantity }] } })
     setStep('review')
   }
 
