@@ -9,18 +9,19 @@ const CONSENT_KEY = 'sahigadget-analytics-consent'
 const ATTRIBUTION_KEY = 'sahigadget-attribution'
 const ANON_KEY = 'sahigadget-anonymous-id'
 const SESSION_KEY = 'sahigadget-session-id'
-let runtimeConfig = { enabled: false, marketingEnabled: false, ga4MeasurementId: '', gtmContainerId: '', metaPixelId: '' }
+let runtimeConfig = { enabled: false, marketingEnabled: false, ga4MeasurementId: '', gtmContainerId: '', metaPixelId: '', tiktokPixelId: '' }
 const initializedMetaPixelIds = new Set<string>()
+const initializedTikTokPixelIds = new Set<string>()
 let initializedGa4MeasurementId = ''
 
 type GtmRuntime = { id: string; status: 'loading' | 'ready' | 'error'; startedAt?: number; readyAt?: number; errorAt?: number }
 
 function getWindow() {
-  return window as typeof window & { dataLayer?: unknown[]; __PHONERBAZAR_GTM__?: GtmRuntime; gtag?: (...args: unknown[]) => void }
+  return window as typeof window & { dataLayer?: unknown[]; __PHONERBAZAR_GTM__?: GtmRuntime; gtag?: (...args: unknown[]) => void; ttq?: { load?: (id: string) => void; page?: () => void; track?: (name: string, properties?: Record<string, unknown>) => void; _i?: Record<string, unknown> } }
 }
 
-export function configureAnalyticsRuntime(config: { enabled: boolean; marketingEnabled: boolean; ga4MeasurementId: string; gtmContainerId: string; metaPixelId: string }) {
-  runtimeConfig = { enabled: config.enabled, marketingEnabled: config.marketingEnabled, ga4MeasurementId: config.ga4MeasurementId.trim(), gtmContainerId: config.gtmContainerId.trim().toUpperCase(), metaPixelId: config.metaPixelId.trim() }
+export function configureAnalyticsRuntime(config: { enabled: boolean; marketingEnabled: boolean; ga4MeasurementId: string; gtmContainerId: string; metaPixelId: string; tiktokPixelId?: string }) {
+  runtimeConfig = { enabled: config.enabled, marketingEnabled: config.marketingEnabled, ga4MeasurementId: config.ga4MeasurementId.trim(), gtmContainerId: config.gtmContainerId.trim().toUpperCase(), metaPixelId: config.metaPixelId.trim(), tiktokPixelId: config.tiktokPixelId?.trim() || '' }
   if (typeof window !== 'undefined') initializeGtm()
 }
 
@@ -94,6 +95,14 @@ export function trackClientEvent(input: ClientEventInput) {
   if (runtimeConfig.enabled && (currentConsent.analytics || input.testMode)) { const idValue = runtimeConfig.ga4MeasurementId; if (idValue) { const w = window as typeof window & { gtag?: (...args: unknown[]) => void }; w.gtag = w.gtag || function (...args: unknown[]) { (w as typeof w & { dataLayer?: unknown[] }).dataLayer = (w as typeof w & { dataLayer?: unknown[] }).dataLayer || []; (w as typeof w & { dataLayer?: unknown[] }).dataLayer?.push(args) }; loadScript(`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(idValue)}`, 'sahigadget-ga4'); if (initializedGa4MeasurementId !== idValue) { w.gtag('js', new Date()); w.gtag('config', idValue, { send_page_view: false }); initializedGa4MeasurementId = idValue } w.gtag('event', event.eventName, { ...event.commerce, event_id: event.eventId }) } }
   const pixelIds = runtimeConfig.metaPixelId.split(/[\\s,]+/).map((value) => value.trim()).filter(Boolean)
   if (runtimeConfig.enabled && runtimeConfig.marketingEnabled && (currentConsent.marketing || input.testMode) && pixelIds.length) { const w = window as typeof window & { fbq?: ((...args: unknown[]) => void) & { callMethod?: (...args: unknown[]) => void; queue?: unknown[]; push?: (...args: unknown[]) => void; loaded?: boolean; version?: string }; _fbq?: unknown }; if (!w.fbq) { const fbq = function (this: unknown, ...args: unknown[]) { if (fbq.callMethod) fbq.callMethod.apply(this, args); else fbq.queue?.push(args) } as ((...args: unknown[]) => void) & { callMethod?: (...args: unknown[]) => void; queue?: unknown[]; push?: (...args: unknown[]) => void; loaded?: boolean; version?: string }; fbq.push = fbq; fbq.loaded = true; fbq.version = '2.0'; fbq.queue = []; w.fbq = fbq; w._fbq = fbq }; loadScript('https://connect.facebook.net/en_US/fbevents.js', 'sahigadget-meta-pixel'); const metaEvent = input.eventName === 'view_item' ? 'ViewContent' : input.eventName === 'add_to_cart' ? 'AddToCart' : input.eventName === 'begin_checkout' ? 'InitiateCheckout' : input.eventName === 'purchase' ? 'Purchase' : input.eventName === 'search' ? 'Search' : input.eventName === 'contact' ? 'Contact' : 'PageView'; for (const pixelId of pixelIds) { if (!initializedMetaPixelIds.has(pixelId)) { w.fbq('init', pixelId); initializedMetaPixelIds.add(pixelId) } w.fbq('track', metaEvent, { ...event.commerce, eventID: event.eventId }) } }
+  if (runtimeConfig.enabled && runtimeConfig.marketingEnabled && (currentConsent.marketing || input.testMode) && runtimeConfig.tiktokPixelId) {
+    const w = getWindow()
+    if (!w.ttq) { const queue: unknown[] = []; w.ttq = { load: (id: string) => queue.push(['load', id]), page: () => queue.push(['page']), track: (name: string, properties?: Record<string, unknown>) => queue.push(['track', name, properties || {}]), _i: {} } }
+    loadScript('https://analytics.tiktok.com/i18n/pixel/events.js?sdkid=' + encodeURIComponent(runtimeConfig.tiktokPixelId), 'sahigadget-tiktok-pixel')
+    if (!initializedTikTokPixelIds.has(runtimeConfig.tiktokPixelId)) { w.ttq?.load?.(runtimeConfig.tiktokPixelId); w.ttq?.page?.(); initializedTikTokPixelIds.add(runtimeConfig.tiktokPixelId) }
+    const tiktokEvent = ({ page_view: 'PageView', view_item: 'ViewContent', search: 'Search', add_to_cart: 'AddToCart', begin_checkout: 'InitiateCheckout', purchase: 'CompletePayment', generate_lead: 'SubmitForm', contact: 'Contact', sign_up: 'CompleteRegistration' } as Record<string, string>)[input.eventName]
+    if (tiktokEvent) w.ttq?.track?.(tiktokEvent, { ...event.commerce, event_id: event.eventId })
+  }
   return event
 }
 
