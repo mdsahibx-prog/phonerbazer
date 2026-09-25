@@ -2,7 +2,7 @@
 
 import { randomUUID } from 'crypto'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 import { writeAdminAuditLog } from '@/lib/admin/audit'
@@ -449,6 +449,7 @@ export async function saveOperationalSettings(input: unknown): Promise<AdminActi
     if (error) throw new Error(error.message)
     await writeAdminAuditLog({ actorUserId: session.userId, action: 'OPERATIONAL_SETTINGS_UPDATED', entityType: 'settings', details: { keys: 'delivery_charges,business_policy' } })
     refreshAdminRoutes()
+    revalidateTag('storefront:settings', 'max')
     return { ok: true, message: 'Delivery and warranty settings saved.' }
   } catch (error) {
     return actionFailure(error)
@@ -499,6 +500,7 @@ export async function saveFooterSettings(input: unknown): Promise<AdminActionRes
     refreshAdminRoutes()
     revalidatePath('/')
     revalidatePath('/contact')
+    revalidateTag('storefront:settings', 'max')
     return { ok: true, message: 'Footer settings saved.' }
   } catch (error) {
     return actionFailure(error)
