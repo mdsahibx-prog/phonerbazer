@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getAnalyticsConfig } from '@/lib/analytics/server'
 
-export const revalidate = 60
+export const revalidate = 0
 
 export async function GET() {
   const config = await getAnalyticsConfig()
@@ -12,5 +12,5 @@ export async function GET() {
     gtmContainerId: config.gtmContainerId,
     metaPixelId: config.metaPixelId,
     tiktokPixelId: config.tiktokPixelId,
-  }, { headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' } })
+  }, { headers: { 'Cache-Control': 'no-store' } })
 }
