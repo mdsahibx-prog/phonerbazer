@@ -8,6 +8,7 @@ import { Menu, Search, X, Sparkles, ArrowRight, Loader2, ShieldCheck, ShoppingBa
 import { useState, useEffect, useRef } from 'react'
 
 import { siteConfig } from '@/config/site'
+import { trackClientEvent } from '@/lib/analytics/client'
 import { Button } from '@/components/ui/button'
 import { getProductPrimaryImage, getProductPriceRange, getProductAvailability } from '@/lib/services/storefront-utils'
 import type { StorefrontProduct } from '@/lib/services/storefront'
@@ -148,6 +149,7 @@ export function SiteHeader() {
   }, [query])
 
   function selectPopularSearch(term: string) {
+    trackClientEvent({ eventName: 'search', commerce: { search_term: term, source: 'popular_search' } })
     setQuery(term)
     router.push(`/search?q=${encodeURIComponent(term)}`)
     setShowDropdown(false)
@@ -155,6 +157,8 @@ export function SiteHeader() {
   }
 
   function submitViewAll() {
+    const term = query.trim()
+    if (term.length >= 2) trackClientEvent({ eventName: 'search', commerce: { search_term: term, source: 'header_search' } })
     router.push(`/search?q=${encodeURIComponent(query)}`)
     setShowDropdown(false)
     setMenuOpen(false)
