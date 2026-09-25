@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { recordCommerceEvent } from '@/lib/analytics/events'
 
 import type { NormalizedWebhookEvent, ShipmentStatus } from './contracts'
 
@@ -115,6 +116,15 @@ export async function processNormalizedWebhook(event: NormalizedWebhookEvent) {
     provider: event.provider,
     details: { providerEventId: event.providerEventId, status: event.status, trackingNumber: event.trackingNumber },
   })
+
+  if (applyStatus) {
+    void recordCommerceEvent({
+      eventId: `shipment:${shipment.id}:${event.providerEventId}`,
+      eventName: 'SHIPMENT_TRACKED',
+      orderId: shipment.order_id,
+      metadata: { source: 'DELIVERY_WEBHOOK', provider: event.provider, status: event.status, tracking_number: event.trackingNumber ?? null },
+    }).catch(() => undefined)
+  }
 
   const { error: processedError } = await db.from('delivery_webhook_events').update({ processed_at: new Date().toISOString(), processing_error: null }).eq('provider', event.provider).eq('provider_event_id', event.providerEventId)
   if (processedError) throw new Error('Unable to mark webhook as processed.')
