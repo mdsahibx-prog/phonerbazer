@@ -25,7 +25,7 @@ export function normalizeServerGtmEndpoint(value: string | null | undefined) {
   try {
     const url = new URL(endpoint)
     if (url.protocol !== 'https:') return ''
-    if (url.username || url.password) return ''
+    if (url.username || url.password || url.search || url.hash) return ''
     return url.toString().replace(/\/$/, '')
   } catch {
     return ''
