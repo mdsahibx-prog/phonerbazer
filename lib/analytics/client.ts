@@ -30,7 +30,12 @@ export function initializeGtm() {
   const existing = w.__PHONERBAZAR_GTM__
   if (existing?.id === runtimeConfig.gtmContainerId && (existing.status === 'loading' || existing.status === 'ready')) return true
   const scriptId = 'phonerbazar-gtm'
-  if (!document.getElementById(scriptId)) {
+  const existingScript = document.getElementById(scriptId)
+  if (existingScript) {
+    if (!w.__PHONERBAZAR_GTM__) w.__PHONERBAZAR_GTM__ = { id: runtimeConfig.gtmContainerId, status: 'loading', startedAt: Date.now() }
+    return true
+  }
+  {
     const script = document.createElement('script')
     script.id = scriptId
     script.async = true
@@ -68,15 +73,23 @@ export function setAnalyticsConsent(value: Consent | 'granted' | 'denied') {
     : { necessary: true, analytics: Boolean(value.analytics), marketing: Boolean(value.marketing) }
   window.localStorage.setItem(CONSENT_KEY, JSON.stringify(next))
   pushGtmConsent(next)
-  window.dispatchEvent(new CustomEvent('sahigadget-consent-change'))
+  window.dispatchEvent(new CustomEvent('phonerbazar-consent-change'))
 }
 
 export function trackClientEvent(input: ClientEventInput) {
   if (typeof window === 'undefined') return
   const currentConsent = consent()
-  const event: CanonicalCommerceEvent = { eventId: input.eventId || crypto.randomUUID(), eventName: input.eventName, eventVersion: '1.0', occurredAt: new Date().toISOString(), sessionId: sessionId(), anonymousId: id(ANON_KEY), pageUrl: window.location.href, pagePath: window.location.pathname, referrer: document.referrer || null, source: attribution().utm_source || null, medium: attribution().utm_medium || null, campaign: attribution().utm_campaign || null, device: { type: /Mobi/i.test(navigator.userAgent) ? 'mobile' : 'desktop', language: navigator.language }, consent: currentConsent, commerce: { ...input.commerce, ...attribution() }, metadata: input.metadata as Record<string, string | number | boolean | null> | undefined, testMode: input.testMode }
+  const attributionData = attribution()
+  const event: CanonicalCommerceEvent = { eventId: input.eventId || crypto.randomUUID(), eventName: input.eventName, eventVersion: '1.0', occurredAt: new Date().toISOString(), sessionId: sessionId(), anonymousId: id(ANON_KEY), pageUrl: window.location.href, pagePath: window.location.pathname, referrer: document.referrer || null, source: attributionData.utm_source || null, medium: attributionData.utm_medium || null, campaign: attributionData.utm_campaign || null, device: { type: /Mobi/i.test(navigator.userAgent) ? 'mobile' : 'desktop', language: navigator.language }, consent: currentConsent, commerce: { ...input.commerce, ...attributionData }, metadata: input.metadata as Record<string, string | number | boolean | null> | undefined, testMode: input.testMode }
   if (currentConsent.analytics || input.testMode) { window.dispatchEvent(new CustomEvent('sahigadget-analytics-event', { detail: event })); void fetch('/api/analytics', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(event), keepalive: true }).catch(() => undefined) }
-  if (runtimeConfig.enabled && (currentConsent.analytics || input.testMode)) { initializeGtm(); const w = getWindow(); w.dataLayer = w.dataLayer || []; w.dataLayer.push({ ecommerce: null }); w.dataLayer.push({ event: input.eventName, event_id: event.eventId, event_version: event.eventVersion, ecommerce: event.commerce, attribution: attribution(), test_mode: Boolean(input.testMode) }) }
+  const w = getWindow()
+  const gtmRuntimeActive = Boolean(w.__PHONERBAZAR_GTM__ || document.getElementById('phonerbazar-gtm') || w.dataLayer)
+  if (gtmRuntimeActive && (currentConsent.analytics || input.testMode)) {
+    initializeGtm()
+    w.dataLayer = w.dataLayer || []
+    w.dataLayer.push({ ecommerce: null })
+    w.dataLayer.push({ event: input.eventName, event_id: event.eventId, event_version: event.eventVersion, ecommerce: event.commerce, attribution: attributionData, test_mode: Boolean(input.testMode) })
+  }
   if (runtimeConfig.enabled && (currentConsent.analytics || input.testMode)) { const idValue = runtimeConfig.ga4MeasurementId; if (idValue) { const w = window as typeof window & { gtag?: (...args: unknown[]) => void }; w.gtag = w.gtag || function (...args: unknown[]) { (w as typeof w & { dataLayer?: unknown[] }).dataLayer = (w as typeof w & { dataLayer?: unknown[] }).dataLayer || []; (w as typeof w & { dataLayer?: unknown[] }).dataLayer?.push(args) }; loadScript(`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(idValue)}`, 'sahigadget-ga4'); w.gtag('config', idValue, { send_page_view: false }); w.gtag(event.eventName, { ...event.commerce, event_id: event.eventId }) } }
   const pixelIds = runtimeConfig.metaPixelId.split(/[\\s,]+/).map((value) => value.trim()).filter(Boolean)
   if (runtimeConfig.enabled && runtimeConfig.marketingEnabled && (currentConsent.marketing || input.testMode) && pixelIds.length) { const w = window as typeof window & { fbq?: ((...args: unknown[]) => void) & { callMethod?: (...args: unknown[]) => void; queue?: unknown[]; push?: (...args: unknown[]) => void; loaded?: boolean; version?: string }; _fbq?: unknown }; if (!w.fbq) { const fbq = function (this: unknown, ...args: unknown[]) { if (fbq.callMethod) fbq.callMethod.apply(this, args); else fbq.queue?.push(args) } as ((...args: unknown[]) => void) & { callMethod?: (...args: unknown[]) => void; queue?: unknown[]; push?: (...args: unknown[]) => void; loaded?: boolean; version?: string }; fbq.push = fbq; fbq.loaded = true; fbq.version = '2.0'; fbq.queue = []; w.fbq = fbq; w._fbq = fbq }; loadScript('https://connect.facebook.net/en_US/fbevents.js', 'sahigadget-meta-pixel'); const metaEvent = input.eventName === 'view_item' ? 'ViewContent' : input.eventName === 'add_to_cart' ? 'AddToCart' : input.eventName === 'begin_checkout' ? 'InitiateCheckout' : input.eventName === 'purchase' ? 'Purchase' : input.eventName === 'search' ? 'Search' : input.eventName === 'contact' ? 'Contact' : 'PageView'; for (const pixelId of pixelIds) { if (!initializedMetaPixelIds.has(pixelId)) { w.fbq('init', pixelId); initializedMetaPixelIds.add(pixelId) } w.fbq('track', metaEvent, { ...event.commerce, eventID: event.eventId }) } }

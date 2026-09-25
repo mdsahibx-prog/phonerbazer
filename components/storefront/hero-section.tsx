@@ -179,7 +179,7 @@ export function HeroSection({ banners, productCount, brandCount, categoryCount }
                 fill
                 sizes="100vw"
                 priority={false}
-                loading="lazy"
+                loading={idx === 0 ? 'eager' : 'lazy'}
                 quality={82}
                 onLoad={() => markLoaded(banner.id)}
                   className={`hidden object-cover transition-opacity duration-500 motion-reduce:transition-none sm:block ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
