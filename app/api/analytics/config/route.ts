@@ -11,5 +11,6 @@ export async function GET() {
     ga4MeasurementId: config.ga4MeasurementId,
     gtmContainerId: config.gtmContainerId,
     metaPixelId: config.metaPixelId,
+    tiktokPixelId: config.tiktokPixelId,
   }, { headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' } })
 }
