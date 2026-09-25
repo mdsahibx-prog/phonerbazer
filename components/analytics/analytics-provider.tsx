@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react'
 import { configureAnalyticsRuntime, getAnalyticsConsent, hasAnalyticsConsent, initializeGtm, setAnalyticsConsent, trackPageView } from '@/lib/analytics/client'
 
 type Consent = { necessary: true; analytics: boolean; marketing: boolean }
-type RuntimeConfig = { enabled: boolean; marketingEnabled: boolean; ga4MeasurementId: string; gtmContainerId: string; metaPixelId: string }
-const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = { enabled: false, marketingEnabled: false, ga4MeasurementId: '', gtmContainerId: '', metaPixelId: '' }
+type RuntimeConfig = { enabled: boolean; marketingEnabled: boolean; ga4MeasurementId: string; gtmContainerId: string; metaPixelId: string; tiktokPixelId: string }
+const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = { enabled: false, marketingEnabled: false, ga4MeasurementId: '', gtmContainerId: '', metaPixelId: '', tiktokPixelId: '' }
 
 function runWhenIdle(callback: () => void, timeout = 1500) {
   if (typeof window === 'undefined') return () => undefined
