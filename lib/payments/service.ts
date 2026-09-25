@@ -2,6 +2,7 @@ import 'server-only'
 
 import { PAYMENT_CAPABILITIES, type PaymentAdapter, type PaymentCapability, type PaymentFailureCategory, type PaymentIntent, type PaymentProvider, type PaymentRequirement, type PaymentStatus, type PaymentStatusResult } from './contracts'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { recordCommerceEvent } from '@/lib/analytics/events'
 import { createBdGateAdapter } from './bdgate'
 
 export class PaymentError extends Error {
@@ -160,5 +161,11 @@ export async function refreshPaymentStatus(input: { paymentId: string; orderId: 
     const { error: orderError } = await db.from('orders').update({ payment_status: 'paid', updated_at: new Date().toISOString() }).eq('id', input.orderId).eq('payment_status', 'pending')
     if (orderError) throw new PaymentError('Payment was verified but order confirmation is pending review.', 'PROVIDER_ERROR')
   }
+  void recordCommerceEvent({
+    eventId: `payment:${input.paymentId}:${next}:${String(data.updated_at ?? Date.now())}`,
+    eventName: next === 'PAID' ? 'PAYMENT_VERIFIED' : next === 'FAILED' ? 'PAYMENT_FAILED' : 'PAYMENT_INITIATED',
+    orderId: input.orderId,
+    metadata: { source: 'PAYMENT_PROVIDER', provider: String(payment.provider), status: next, failure_category: result.failureCategory ?? null },
+  }).catch(() => undefined)
   return asPaymentIntent(data as Record<string, unknown>)
 }
