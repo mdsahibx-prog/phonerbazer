@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, ChevronDown, LoaderCircle, PackageCheck, Search, ShieldCheck, UserRound } from 'lucide-react'
 import { quoteCartOrder, createCartOrder } from '@/lib/commerce/order-actions'
-import { getAnalyticsConsent } from '@/lib/analytics/client'
+import { getAnalyticsConsent, trackClientEvent } from '@/lib/analytics/client'
 import type { OrderSuccessSummary } from '@/lib/orders/schema'
 import { formatPrice } from '@/lib/services/storefront-utils'
 import { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
@@ -89,7 +89,10 @@ export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
     const result = await quoteCartOrder({ checkoutRequestId, phone: form.phone, division: form.division })
     setBusy(false)
     if (!result.ok) { setMessage(result.message); return }
-    setQuote(result.data); setStep('review')
+    setQuote(result.data)
+    trackClientEvent({ eventName: 'begin_checkout', commerce: { currency: 'BDT', value: result.data.subtotal, item_count: result.data.items.length, items: result.data.items.map((item) => ({ item_id: item.sku, item_name: item.name, price: item.unitPrice, quantity: item.quantity })) } })
+    trackClientEvent({ eventName: 'add_shipping_info', commerce: { currency: 'BDT', shipping_tier: form.division, value: result.data.subtotal, item_count: result.data.items.length, items: result.data.items.map((item) => ({ item_id: item.sku, item_name: item.name, price: item.unitPrice, quantity: item.quantity })) } })
+    setStep('review')
   }
 
   async function submitOrder(event: React.FormEvent) {
