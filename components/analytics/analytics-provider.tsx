@@ -23,11 +23,29 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
 
   useEffect(() => {
     let cancelled = false
+    let configLoaded = false
+
+    const loadRuntimeConfig = () => {
+      if (configLoaded || cancelled) return
+      configLoaded = true
+      void fetch('/api/analytics/config', { cache: 'force-cache' })
+        .then((response) => response.ok ? response.json() : null)
+        .then((config: RuntimeConfig | null) => {
+          if (cancelled || !config) return
+          configureAnalyticsRuntime(config)
+          initializeGtm()
+        })
+        .catch(() => { configLoaded = false })
+    }
 
     const sync = (emitPageView = false) => {
       const next = hasAnalyticsConsent() ? getAnalyticsConsent() : null
       setConsent(next)
-      if (emitPageView && next && (next.analytics || next.marketing)) trackPageView()
+      if (next && (next.analytics || next.marketing)) {
+        if (emitPageView) trackPageView()
+        const cancelIdle = runWhenIdle(loadRuntimeConfig, 1200)
+        if (cancelled) cancelIdle()
+      }
     }
 
     configureAnalyticsRuntime(runtimeConfig)
@@ -37,23 +55,8 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
     const onConsentChange = () => sync(true)
     window.addEventListener('phonerbazar-consent-change', onConsentChange)
 
-    const cancelIdle = runWhenIdle(() => {
-      void fetch('/api/analytics/config', { cache: 'no-store' })
-        .then((response) => response.ok ? response.json() : null)
-        .then((config: RuntimeConfig | null) => {
-          if (cancelled || !config) return
-          configureAnalyticsRuntime(config)
-          initializeGtm()
-          const next = hasAnalyticsConsent() ? getAnalyticsConsent() : null
-          setConsent(next)
-          if (next && (next.analytics || next.marketing)) trackPageView()
-        })
-        .catch(() => undefined)
-    })
-
     return () => {
       cancelled = true
-      cancelIdle()
       window.removeEventListener('phonerbazar-consent-change', onConsentChange)
     }
   }, [runtimeConfig])
