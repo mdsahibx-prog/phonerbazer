@@ -76,7 +76,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <head>
-        <script src="/api/analytics/google-tag-bootstrap" async />
         <script src="/api/analytics/gtm-bootstrap" async />
       </head>
       <body className="min-h-full bg-slate-50 text-slate-950">
