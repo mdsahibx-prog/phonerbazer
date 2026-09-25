@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { configureAnalyticsRuntime, getAnalyticsConsent, hasAnalyticsConsent, setAnalyticsConsent, trackPageView } from '@/lib/analytics/client'
+import { configureAnalyticsRuntime, getAnalyticsConsent, hasAnalyticsConsent, initializeGtm, setAnalyticsConsent, trackPageView } from '@/lib/analytics/client'
 
 type Consent = { necessary: true; analytics: boolean; marketing: boolean }
 type RuntimeConfig = { enabled: boolean; marketingEnabled: boolean; ga4MeasurementId: string; gtmContainerId: string; metaPixelId: string }
@@ -20,6 +20,7 @@ export function AnalyticsProvider({ children, runtimeConfig }: { children: React
     }
 
     configureAnalyticsRuntime(runtimeConfig ?? DEFAULT_RUNTIME_CONFIG)
+    initializeGtm()
     sync()
 
     const onConsentChange = () => sync(true)
@@ -30,6 +31,7 @@ export function AnalyticsProvider({ children, runtimeConfig }: { children: React
       .then((config: RuntimeConfig | null) => {
         if (cancelled || !config) return
         configureAnalyticsRuntime(config)
+        initializeGtm()
         const next = hasAnalyticsConsent() ? getAnalyticsConsent() : null
         setConsent(next)
         if (next && (next.analytics || next.marketing)) trackPageView()
