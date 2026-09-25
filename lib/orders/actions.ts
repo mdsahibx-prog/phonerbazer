@@ -321,6 +321,8 @@ export async function createGuestCodOrder(input: unknown): Promise<ActionResult<
     const summary = await loadOrderSuccessById(String(data[0].order_id))
     after(async () => {
       await Promise.allSettled([
+        markCheckoutSession({ checkoutRequestId: payload.checkoutRequestId, source: 'QUICK_ORDER', status: 'COMPLETED', customerPhone: payload.phone, customerEmail: payload.email || null, completedOrderId: summary.orderId }),
+        recordCommerceEvent({ eventId: `${payload.checkoutRequestId}:completed`, eventName: 'ORDER_COMPLETED', sessionId: payload.checkoutRequestId, orderId: summary.orderId, metadata: { source: 'QUICK_ORDER', order_number: summary.orderNumber } }),
         recordPurchaseOnce({ orderId: summary.orderId, orderNumber: summary.orderNumber, value: summary.grandTotal, sessionId: payload.checkoutRequestId, consent: { analytics: payload.analyticsConsent, marketing: payload.marketingConsent }, items: summary.items.map((item) => ({ item_id: item.sku, item_name: item.productName, price: item.unitPrice, quantity: item.quantity })) }),
         queueOrderConfirmationEmails(summary),
       ])
@@ -373,6 +375,8 @@ export async function createGuestOrderWithRisk(input: unknown): Promise<ActionRe
       const summary = await loadOrderSuccessById(String(data[0].order_id))
       after(async () => {
         await Promise.allSettled([
+          markCheckoutSession({ checkoutRequestId: payload.checkoutRequestId, source: 'QUICK_ORDER', status: 'COMPLETED', customerPhone: payload.phone, customerEmail: payload.email || null, completedOrderId: summary.orderId }),
+          recordCommerceEvent({ eventId: `${payload.checkoutRequestId}:completed`, eventName: 'ORDER_COMPLETED', sessionId: payload.checkoutRequestId, orderId: summary.orderId, metadata: { source: 'QUICK_ORDER', order_number: summary.orderNumber } }),
           recordPurchaseOnce({ orderId: summary.orderId, orderNumber: summary.orderNumber, value: summary.grandTotal, sessionId: payload.checkoutRequestId, consent: { analytics: payload.analyticsConsent, marketing: payload.marketingConsent }, items: summary.items.map((item) => ({ item_id: item.sku, item_name: item.productName, price: item.unitPrice, quantity: item.quantity })) }),
           queueOrderConfirmationEmails(summary),
         ])
