@@ -3,7 +3,7 @@ import type { CommerceEventName } from './events'
 export type AnalyticsEventDefinition = { name: CommerceEventName; category: 'page' | 'catalogue' | 'search' | 'cart' | 'checkout' | 'purchase' | 'lead' | 'support' | 'order' | 'recovery' | 'diagnostic'; required: boolean; marketing: boolean; description: string; providers: string[] }
 
 export const ANALYTICS_EVENT_REGISTRY: AnalyticsEventDefinition[] = [
-  { name: 'page_view', category: 'page', required: false, marketing: false, description: 'A public page was viewed.', providers: ['GA4', 'GTM', 'META_PIXEL', 'TIKTOK_PIXEL', 'TIKTOK_EVENTS_API'] },
+  { name: 'page_view', category: 'page', required: false, marketing: false, description: 'A public page was viewed.', providers: ['GA4', 'GTM', 'META_PIXEL', 'TIKTOK_PIXEL'] },
   { name: 'view_item', category: 'catalogue', required: false, marketing: false, description: 'A product detail was viewed.', providers: ['GA4', 'GTM', 'META_PIXEL', 'TIKTOK_PIXEL', 'TIKTOK_EVENTS_API'] },
   { name: 'view_item_list', category: 'catalogue', required: false, marketing: false, description: 'A product list was viewed.', providers: ['GA4', 'GTM'] },
   { name: 'search', category: 'search', required: false, marketing: false, description: 'A catalogue search was submitted.', providers: ['GA4', 'GTM', 'META_PIXEL', 'TIKTOK_PIXEL', 'TIKTOK_EVENTS_API'] },
