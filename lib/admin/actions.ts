@@ -28,6 +28,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { latestStatusTransitionId, loadOrderForEmail, queueOrderStatusEmail } from '@/lib/email/service'
 import { createClient } from '@/lib/supabase/server'
 import { receiveStock as receiveInventoryStock, initializeInventoryCost } from '@/lib/inventory/receiving'
+import { recordCommerceEvent } from '@/lib/analytics/events'
 
 export type AdminActionResult = { ok: boolean; message: string; data?: { id?: string; logoUrl?: string } }
 
@@ -408,6 +409,10 @@ export async function updateOrderStatus(input: unknown): Promise<AdminActionResu
       p_actor_id: session.userId,
     })
     if (error) throw new Error(error.message)
+    const { data: updatedOrder } = await db.from('orders').select('id,order_number,order_status').eq('id', parsed.orderId).maybeSingle()
+    if (updatedOrder) {
+      await recordCommerceEvent({ eventId: `${parsed.orderId}:status:${parsed.status}:${Date.now()}`, eventName: 'order_status_changed', orderId: parsed.orderId, metadata: { source: 'ADMIN', status: String(updatedOrder.order_status), order_number: String(updatedOrder.order_number) } })
+    }
     let notificationMessage = 'Customer notification was not required for this status.'
     try {
       const order = await loadOrderForEmail(parsed.orderId)
