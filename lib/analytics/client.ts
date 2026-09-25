@@ -1,6 +1,6 @@
 'use client'
 
-import type { CanonicalCommerceEvent, CommerceEventName } from './events'
+import type { CanonicalCommerceEvent, CommerceEventName } from './types'
 
 type Consent = { necessary: true; analytics: boolean; marketing: boolean }
 type ClientEventInput = { eventName: CommerceEventName; commerce?: Record<string, unknown>; metadata?: Record<string, unknown>; eventId?: string; testMode?: boolean }
