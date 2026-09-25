@@ -28,7 +28,7 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
     const loadRuntimeConfig = () => {
       if (configLoaded || cancelled) return
       configLoaded = true
-      void fetch('/api/analytics/config', { cache: 'force-cache' })
+      void fetch('/api/analytics/config', { cache: 'no-store' })
         .then((response) => response.ok ? response.json() : null)
         .then((config: RuntimeConfig | null) => {
           if (cancelled || !config) return
@@ -49,7 +49,6 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
     }
 
     configureAnalyticsRuntime(runtimeConfig)
-    initializeGtm()
     sync()
 
     const onConsentChange = () => sync(true)
