@@ -18,7 +18,7 @@ function runWhenIdle(callback: () => void, timeout = 1500) {
   return () => window.clearTimeout(id)
 }
 
-export function AnalyticsRuntime({ runtimeConfig }: { runtimeConfig?: RuntimeConfig } = {}) {
+export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { runtimeConfig?: RuntimeConfig }) {
   const [consent, setConsent] = useState<Consent | null>(null)
 
   useEffect(() => {
@@ -30,7 +30,7 @@ export function AnalyticsRuntime({ runtimeConfig }: { runtimeConfig?: RuntimeCon
       if (emitPageView && next && (next.analytics || next.marketing)) trackPageView()
     }
 
-    configureAnalyticsRuntime(runtimeConfig ?? DEFAULT_RUNTIME_CONFIG)
+    configureAnalyticsRuntime(runtimeConfig)
     initializeGtm()
     sync()
 
