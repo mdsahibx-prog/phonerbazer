@@ -51,7 +51,25 @@ function loadScript(src: string, idValue: string) { if (document.getElementById(
 
 export function hasAnalyticsConsent() { return window.localStorage.getItem(CONSENT_KEY) !== null }
 export function getAnalyticsConsent() { return consent() }
-export function setAnalyticsConsent(value: Consent | 'granted' | 'denied') { const next: Consent = typeof value === 'string' ? { necessary: true, analytics: value === 'granted', marketing: false } : { necessary: true, analytics: Boolean(value.analytics), marketing: Boolean(value.marketing) }; window.localStorage.setItem(CONSENT_KEY, JSON.stringify(next)); window.dispatchEvent(new CustomEvent('sahigadget-consent-change')) }
+function pushGtmConsent(next: Consent) {
+  if (typeof window === 'undefined') return
+  const w = getWindow()
+  w.dataLayer = w.dataLayer || []
+  w.dataLayer.push(['consent', 'update', {
+    analytics_storage: next.analytics ? 'granted' : 'denied',
+    ad_storage: next.marketing ? 'granted' : 'denied',
+    ad_user_data: next.marketing ? 'granted' : 'denied',
+    ad_personalization: next.marketing ? 'granted' : 'denied',
+  }])
+}
+export function setAnalyticsConsent(value: Consent | 'granted' | 'denied') {
+  const next: Consent = typeof value === 'string'
+    ? { necessary: true, analytics: value === 'granted', marketing: false }
+    : { necessary: true, analytics: Boolean(value.analytics), marketing: Boolean(value.marketing) }
+  window.localStorage.setItem(CONSENT_KEY, JSON.stringify(next))
+  pushGtmConsent(next)
+  window.dispatchEvent(new CustomEvent('sahigadget-consent-change'))
+}
 
 export function trackClientEvent(input: ClientEventInput) {
   if (typeof window === 'undefined') return
