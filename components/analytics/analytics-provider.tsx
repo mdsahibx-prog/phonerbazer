@@ -7,6 +7,17 @@ type Consent = { necessary: true; analytics: boolean; marketing: boolean }
 type RuntimeConfig = { enabled: boolean; marketingEnabled: boolean; ga4MeasurementId: string; gtmContainerId: string; metaPixelId: string }
 const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = { enabled: false, marketingEnabled: false, ga4MeasurementId: '', gtmContainerId: '', metaPixelId: '' }
 
+function runWhenIdle(callback: () => void, timeout = 1500) {
+  if (typeof window === 'undefined') return () => undefined
+  const idleWindow = window as Window & { requestIdleCallback?: (cb: () => void, options?: { timeout: number }) => number; cancelIdleCallback?: (id: number) => void }
+  if (idleWindow.requestIdleCallback) {
+    const id = idleWindow.requestIdleCallback(callback, { timeout })
+    return () => idleWindow.cancelIdleCallback?.(id)
+  }
+  const id = window.setTimeout(callback, Math.min(timeout, 1200))
+  return () => window.clearTimeout(id)
+}
+
 export function AnalyticsProvider({ children, runtimeConfig }: { children: React.ReactNode; runtimeConfig?: RuntimeConfig }) {
   const [consent, setConsent] = useState<Consent | null>(null)
 
@@ -26,20 +37,23 @@ export function AnalyticsProvider({ children, runtimeConfig }: { children: React
     const onConsentChange = () => sync(true)
     window.addEventListener('phonerbazar-consent-change', onConsentChange)
 
-    void fetch('/api/analytics/config', { cache: 'no-store' })
-      .then((response) => response.ok ? response.json() : null)
-      .then((config: RuntimeConfig | null) => {
-        if (cancelled || !config) return
-        configureAnalyticsRuntime(config)
-        initializeGtm()
-        const next = hasAnalyticsConsent() ? getAnalyticsConsent() : null
-        setConsent(next)
-        if (next && (next.analytics || next.marketing)) trackPageView()
-      })
-      .catch(() => undefined)
+    const cancelIdle = runWhenIdle(() => {
+      void fetch('/api/analytics/config', { cache: 'no-store' })
+        .then((response) => response.ok ? response.json() : null)
+        .then((config: RuntimeConfig | null) => {
+          if (cancelled || !config) return
+          configureAnalyticsRuntime(config)
+          initializeGtm()
+          const next = hasAnalyticsConsent() ? getAnalyticsConsent() : null
+          setConsent(next)
+          if (next && (next.analytics || next.marketing)) trackPageView()
+        })
+        .catch(() => undefined)
+    })
 
     return () => {
       cancelled = true
+      cancelIdle()
       window.removeEventListener('phonerbazar-consent-change', onConsentChange)
     }
   }, [runtimeConfig])
