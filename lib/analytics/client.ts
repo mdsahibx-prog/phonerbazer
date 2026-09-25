@@ -11,6 +11,7 @@ const ANON_KEY = 'sahigadget-anonymous-id'
 const SESSION_KEY = 'sahigadget-session-id'
 let runtimeConfig = { enabled: false, marketingEnabled: false, ga4MeasurementId: '', gtmContainerId: '', metaPixelId: '' }
 const initializedMetaPixelIds = new Set<string>()
+let initializedGa4MeasurementId = ''
 
 type GtmRuntime = { id: string; status: 'loading' | 'ready' | 'error'; startedAt?: number; readyAt?: number; errorAt?: number }
 
