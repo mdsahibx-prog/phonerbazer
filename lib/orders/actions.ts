@@ -199,12 +199,10 @@ export async function prepareGuestCheckout(input: unknown): Promise<ActionResult
     // Do not make the customer wait for analytics/session persistence.
     // The checkout page and final order creation remain authoritative.
     after(() =>
-      markCheckoutSession({
-        checkoutRequestId,
-        source: 'QUICK_ORDER',
-        status: 'STARTED',
-        quoteSnapshot,
-      }).catch((error) => console.error('[checkout] session tracking failed', error)),
+      Promise.all([
+        markCheckoutSession({ checkoutRequestId, source: 'QUICK_ORDER', status: 'STARTED', quoteSnapshot }),
+        recordCommerceEvent({ eventId: `${checkoutRequestId}:started`, eventName: 'CHECKOUT_STARTED', sessionId: checkoutRequestId, metadata: { source: 'QUICK_ORDER', product_id: variant.product_id, variant_id: variant.id, quantity: parsed.data.quantity } }),
+      ]).catch((error) => console.error('[checkout] session tracking failed', error)),
     )
 
     return {
@@ -226,6 +224,7 @@ export async function quoteGuestCodOrder(input: unknown): Promise<ActionResult<Q
   try {
     const quote = await loadVariantQuote(parsed.data, parsed.data.division)
     if (!quote.available) return { ok: false, message: 'The selected quantity is no longer available. Please adjust your order and try again.' }
+    void recordCommerceEvent({ eventId: `${parsed.data.productId}:${parsed.data.variantId}:${parsed.data.quantity}:${quote.grandTotal}:quoted`, eventName: 'CHECKOUT_QUOTED', metadata: { source: 'QUICK_ORDER', product_id: parsed.data.productId, variant_id: parsed.data.variantId, quantity: parsed.data.quantity, value: quote.grandTotal, delivery_charge: quote.deliveryCharge } }).catch(() => undefined)
     return { ok: true, data: quote }
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : 'Unable to calculate your order total right now.' }
