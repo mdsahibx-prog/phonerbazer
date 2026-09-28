@@ -327,7 +327,7 @@ export async function createGuestCodOrder(input: unknown): Promise<ActionResult<
       ])
       const purchaseResult = results[2]
       if (purchaseResult.status === 'rejected') console.error('[analytics] purchase dispatch failed', purchaseResult.reason instanceof Error ? purchaseResult.reason.message : String(purchaseResult.reason))
-      else console.log(JSON.stringify({ level: 'info', msg: 'purchase_analytics_result', orderId: summary.orderId, ok: purchaseResult.value?.ok, skipped: purchaseResult.value?.skipped, duplicate: purchaseResult.value?.duplicate, deliveries: purchaseResult.value?.deliveries }))
+      else { const value = purchaseResult.value; console.log(JSON.stringify({ level: 'info', msg: 'purchase_analytics_result', orderId: summary.orderId, ok: value.ok, skipped: 'skipped' in value ? value.skipped : undefined, duplicate: 'duplicate' in value ? value.duplicate : undefined, deliveries: 'deliveries' in value ? value.deliveries : undefined })) }
     })
     return { ok: true, data: summary }
   } catch (error) {
