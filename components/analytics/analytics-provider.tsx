@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react'
 import { configureAnalyticsRuntime, getAnalyticsConsent, hasAnalyticsConsent, initializeGtm, setAnalyticsConsent, trackPageView } from '@/lib/analytics/client'
 
 type Consent = { necessary: true; analytics: boolean; marketing: boolean }
-type RuntimeConfig = { enabled: boolean; marketingEnabled: boolean; ga4MeasurementId: string; gtmContainerId: string; metaPixelId: string; tiktokPixelId: string }
-const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = { enabled: false, marketingEnabled: false, ga4MeasurementId: '', gtmContainerId: '', metaPixelId: '', tiktokPixelId: '' }
+type RuntimeConfig = { enabled: boolean; marketingEnabled: boolean; ga4MeasurementId: string; gtmContainerId: string; metaPixelId: string; tiktokPixelId: string; ga4ServerDeliveryEnabled?: boolean }
+const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = { enabled: false, marketingEnabled: false, ga4MeasurementId: '', gtmContainerId: '', metaPixelId: '', tiktokPixelId: '', ga4ServerDeliveryEnabled: false }
 
 function runWhenIdle(callback: () => void, timeout = 1500) {
   if (typeof window === 'undefined') return () => undefined
@@ -42,7 +42,7 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
       const next = hasAnalyticsConsent() ? getAnalyticsConsent() : null
       setConsent(next)
       if (next && (next.analytics || next.marketing)) {
-        if (emitPageView) trackPageView()
+        if (emitPageView || next) trackPageView()
         const cancelIdle = runWhenIdle(loadRuntimeConfig, 1200)
         if (cancelled) cancelIdle()
       }
