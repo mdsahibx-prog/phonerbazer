@@ -1,6 +1,6 @@
 import { after } from 'next/server'
 import { NextResponse } from 'next/server'
-import { canonicalCommerceEventSchema } from '@/lib/analytics/events'
+import { canonicalCommerceEventSchema, recordCanonicalEvent } from '@/lib/analytics/events'
 import { dispatchAnalyticsEvent } from '@/lib/analytics/server'
 
 export const runtime = 'nodejs'
@@ -26,12 +26,15 @@ export async function POST(request: Request) {
     }
 
     const event = parsed.data
+    const persisted = await recordCanonicalEvent(event)
+    if (!persisted.ok) return NextResponse.json({ ok: true, accepted: false }, { headers: { 'Cache-Control': 'no-store' } })
+
     after(() => dispatchAnalyticsEvent(event).catch((error) => {
       console.error(JSON.stringify({ level: 'error', msg: 'analytics_dispatch_failed', eventName: event.eventName, error: error instanceof Error ? error.message : String(error) }))
     }))
 
     return NextResponse.json(
-      { ok: true, accepted: true, delivery: 'queued' },
+      { ok: true, accepted: true, duplicate: persisted.duplicate, delivery: 'queued' },
       { headers: { 'Cache-Control': 'no-store' } },
     )
   } catch {
