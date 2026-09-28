@@ -28,6 +28,7 @@ export async function POST(request: Request) {
     const event = parsed.data
     const persisted = await recordCanonicalEvent(event)
     if (!persisted.ok) return NextResponse.json({ ok: true, accepted: false }, { headers: { 'Cache-Control': 'no-store' } })
+    if (persisted.duplicate) return NextResponse.json({ ok: true, accepted: true, duplicate: true, delivery: 'already-recorded' }, { headers: { 'Cache-Control': 'no-store' } })
 
     after(() => dispatchAnalyticsEvent(event).catch((error) => {
       console.error(JSON.stringify({ level: 'error', msg: 'analytics_dispatch_failed', eventName: event.eventName, error: error instanceof Error ? error.message : String(error) }))
