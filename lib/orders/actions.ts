@@ -319,12 +319,15 @@ export async function createGuestCodOrder(input: unknown): Promise<ActionResult<
 
     const summary = await loadOrderSuccessById(String(data[0].order_id))
     after(async () => {
-      await Promise.allSettled([
+      const results = await Promise.allSettled([
         markCheckoutSession({ checkoutRequestId: payload.checkoutRequestId, source: 'QUICK_ORDER', status: 'COMPLETED', customerPhone: payload.phone, customerEmail: payload.email || null, completedOrderId: summary.orderId }),
         recordCommerceEvent({ eventId: `${payload.checkoutRequestId}:completed`, eventName: 'ORDER_COMPLETED', sessionId: payload.checkoutRequestId, orderId: summary.orderId, metadata: { source: 'QUICK_ORDER', order_number: summary.orderNumber } }),
         recordPurchaseOnce({ orderId: summary.orderId, orderNumber: summary.orderNumber, value: summary.grandTotal, sessionId: payload.checkoutRequestId, consent: { analytics: payload.analyticsConsent, marketing: payload.marketingConsent }, items: summary.items.map((item) => ({ item_id: item.sku, item_name: item.productName, price: item.unitPrice, quantity: item.quantity })) }),
         queueOrderConfirmationEmails(summary),
       ])
+      const purchaseResult = results[2]
+      if (purchaseResult.status === 'rejected') console.error('[analytics] purchase dispatch failed', purchaseResult.reason instanceof Error ? purchaseResult.reason.message : String(purchaseResult.reason))
+      else console.log(JSON.stringify({ level: 'info', msg: 'purchase_analytics_result', orderId: summary.orderId, ok: purchaseResult.value?.ok, skipped: purchaseResult.value?.skipped, duplicate: purchaseResult.value?.duplicate, deliveries: purchaseResult.value?.deliveries }))
     })
     return { ok: true, data: summary }
   } catch (error) {
