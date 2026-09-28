@@ -1,129 +1,184 @@
 # Portable Analytics Architecture
 
-PhonerBazar's analytics layer is intentionally provider-neutral so the same architecture can be moved into another Next.js/Supabase project without coupling commerce logic to a vendor.
+PhonerBazar's analytics layer is a provider-neutral adapter system. The canonical commerce event contract is the only interface storefront code should depend on; GA4, GTM, Meta, TikTok, and server-side GTM are replaceable destinations.
+
+## Non-negotiable boundary
+
+Commerce/order/payment/stock/courier systems are authoritative. Analytics is best-effort and must never decide price, stock, payment, order state, fulfillment, or customer access.
+
+If every analytics provider is disabled, unreachable, blocked by consent, or misconfigured, checkout and ordering must still work.
 
 ## Architecture
 
 ```
-Storefront / Admin / Checkout
-            |
-            v
-     Canonical Event Contract
-            |
-      +-----+-------------------+
-      |                         |
-      v                         v
-  Durable event log        Client dataLayer
-  (Supabase)                    |
-      |                         v
-      |                        GTM
-      |                  /      |       \
-      |                GA4     Meta    Future tags
-      |
-      +--> server dispatch
-             |       |       |
-            GA4     Meta    Server GTM
+Storefront / Checkout / Server actions
+                |
+                v
+       Canonical Event Contract
+          /              \
+         v                v
+ Durable event log     Browser adapters
+    (Supabase)        GTM / GA4 / Meta / TikTok
+         |
+         v
+   Server dispatcher
+     /    |      \
+   GA4   Meta   TikTok   Server GTM
 ```
 
-Commerce/order/payment/stock/courier systems remain authoritative. Analytics is best-effort and must never decide price, stock, payment, order state, or fulfillment.
+## Canonical contract
 
-## Provider-neutral contract
+Each event carries:
 
-Every browser event uses:
-
-- `eventId`
-- `eventName`
+- `eventId` — stable deduplication key
+- `eventName` — from `lib/analytics/types.ts`
 - `eventVersion`
-- `occurredAt`
-- `sessionId`
-- `anonymousId`
-- page/referrer/attribution context
+- timestamp
+- session/anonymous identifiers
+- page/referrer/UTM attribution
 - device context
 - consent state
 - optional ecommerce payload
-- optional safe metadata
+- safe metadata
 - optional test mode
 
-The contract is validated at `/api/analytics`, size-limited, sanitized before persistence, and de-duplicated by `event_id`.
+`/api/analytics` validates the contract, enforces a 48 KB payload limit, sanitizes persisted fields, deduplicates by event ID, and only then queues provider delivery.
 
 ## Event governance
 
-The registry in `lib/analytics/registry.ts` is the source of truth for supported events.
+`lib/analytics/registry.ts` is the source of truth for admin event controls and destination declarations.
 
-Admin can disable optional events without changing storefront code. Required lifecycle events remain protected by the server.
+`lib/analytics/provider-maps.ts` is the source of truth for provider-specific event names. Do not put vendor event names into storefront components.
 
-Recommended ecommerce events follow Google's ecommerce model: `view_item`, `select_item`, `add_to_cart`, `begin_checkout`, `add_shipping_info`, `add_payment_info`, and `purchase`.
+Current mappings include:
+
+| Canonical | Meta Pixel | TikTok Pixel | TikTok Events API |
+|---|---|---|---|
+| `view_item` | ViewContent | ViewContent | ViewContent |
+| `search` | Search | Search | Search |
+| `add_to_cart` | AddToCart | AddToCart | AddToCart |
+| `begin_checkout` | InitiateCheckout | InitiateCheckout | InitiateCheckout |
+| `purchase` | Purchase | CompletePayment | CompletePayment |
+| `generate_lead` | Lead | SubmitForm | SubmitForm |
+| `contact` | Contact | Contact | Contact |
+| `sign_up` | CompleteRegistration | CompleteRegistration | CompleteRegistration |
+
+TikTok `page_view` is intentionally browser-only and uses the SDK page call. It is not sent through TikTok Events API.
+
+## Deduplication
+
+Browser events use a generated UUID. The API stores that event ID once. Retries with the same event ID are acknowledged as already recorded and are **not dispatched again**.
+
+Authoritative purchases use `purchase:<orderId>` and are emitted from server order completion logic. Client purchase events must never be treated as proof that an order exists.
 
 ## Consent
 
-GTM is bootstrapped from the document head and starts with denied optional storage. User choices are synchronized into the GTM data layer.
+Necessary commerce functionality is independent from analytics/marketing consent.
 
-The browser container can be detected independently of optional analytics consent, while analytics/marketing dispatch remains consent-aware.
+- `analytics=true` permits analytics destinations such as GA4.
+- `marketing=true` permits marketing destinations such as Meta/TikTok.
+- both false means no optional provider delivery.
+- synthetic admin tests are stored as test events and do not send live provider traffic.
 
-## GTM portability
+## Client delivery
 
-The runtime configuration is stored as data rather than hardcoded:
+The browser uses `navigator.sendBeacon` when available, with a `fetch(..., keepalive)` fallback. This makes navigation-away delivery more reliable without blocking checkout UI.
 
-- GTM container ID
-- GA4 measurement ID
-- Meta Pixel IDs
-- server-side GTM endpoint
-- environment
-- debug mode
-- consent mode
-- per-event controls
+GTM dataLayer events are emitted from the same canonical event. Provider SDKs are initialized lazily and only when their consent/configuration requirements are satisfied.
 
-The GTM web bootstrap and no-JavaScript fallback are generated from the current Admin configuration.
+## Server delivery
 
-## Admin observability
+Server delivery is isolated in `lib/analytics/server.ts`:
 
-The Analytics Control Center exposes:
+- GA4 Measurement Protocol
+- Meta Conversions API
+- TikTok Events API
+- opaque server-side GTM ingress
 
-- provider configuration state
-- GTM external reachability
-- recent canonical events
-- full event registry
-- required/optional event state
-- provider destinations
-- synthetic server-side test events
-- consent configuration
-- debug mode
+External requests have bounded timeouts and a retry for transient failures. Delivery failures are never thrown into commerce actions.
 
-Provider credentials are environment-managed secrets and are never returned to the browser.
+Credentials remain environment secrets:
 
-## Reusing this system in another project
+- `GA4_API_SECRET`
+- `META_CAPI_ACCESS_TOKEN`
+- `TIKTOK_EVENTS_API_ACCESS_TOKEN`
 
-1. Copy `lib/analytics/`.
-2. Keep the canonical event contract and registry.
-3. Replace the Supabase adapter in `events.ts` if the next project uses another database.
-4. Keep `client.ts` as the browser data-layer adapter.
-5. Keep `server.ts` as the destination adapter layer.
-6. Move the Admin control UI and server actions into that project's admin area.
-7. Configure provider IDs through that project's settings store.
-8. Preserve the rule that transactional systems are authoritative and analytics is best-effort.
+Provider IDs and non-secret configuration are stored through the admin settings layer.
 
-No provider-specific ID, secret, order rule, product price, or customer credential is embedded in the portable layer.
+## Server-side GTM portability
 
-## Security and privacy rules
+`lib/analytics/server-gtm.ts` treats the server container URL as an opaque ingress. Provider-specific routing belongs inside the server-side GTM container, not inside commerce code.
 
-Do not send phone, email, address, payment credentials, authorization headers, cookies, IP addresses, user-agent strings, or internal secrets as analytics metadata.
+The application does not claim server-side GTM is active merely because an endpoint is entered. The endpoint must be deployed, reachable, and configured to route the canonical envelope.
 
-Purchase events use authoritative order data and stable transaction IDs. Client-side purchase events must not be trusted as proof of an order.
+## Reusing this in another project
 
-## Future extension points
+1. Copy `lib/analytics/types.ts`, `registry.ts`, `provider-maps.ts`, `events.ts`, `client.ts`, `server.ts`, and `server-gtm.ts`.
+2. Copy `app/api/analytics/route.ts` or adapt it to the next framework's request handler.
+3. Replace only the persistence adapter in `events.ts` if the next project does not use Supabase.
+4. Keep the canonical event contract stable.
+5. Keep vendor mappings in `provider-maps.ts`.
+6. Keep provider secrets server-only.
+7. Connect the next project's admin settings to the same configuration shape.
+8. Add provider-specific SDKs only inside the adapter layer.
+9. Add the event calls at business milestones, not inside provider code.
+10. Run the migration checklist below before enabling production delivery.
 
-The architecture intentionally leaves room for:
+No product price, stock rule, checkout rule, customer credential, provider secret, or project-specific database ID belongs in the portable analytics layer.
 
-- server-side GTM
-- additional ad/analytics providers
+## Production completion checklist
+
+### Code
+- [x] Canonical event schema and sanitization
+- [x] Provider-neutral mapping module
+- [x] Admin registry and event controls
+- [x] Browser + server adapters
+- [x] API payload limits and validation
+- [x] Event-ID deduplication before provider dispatch
+- [x] Non-blocking browser delivery
+- [x] Synthetic test mode
+- [x] Purchase emitted from authoritative server order completion
+
+### Project wiring
+- [x] Product view
+- [x] Product variant selection
+- [x] Add to cart after successful server action
+- [x] Cart view/update/remove
+- [x] Begin checkout from cart and Buy Now
+- [x] Purchase from authoritative order completion
+
+### Still required per deployment
+- [ ] Verify Vercel production environment secrets exist (values must never be committed)
+- [ ] Verify GA4 Measurement Protocol is receiving events
+- [ ] Verify Meta Pixel/CAPI event delivery and event IDs
+- [ ] Verify TikTok Pixel and Events API delivery
+- [ ] If Server GTM is enabled, verify the actual server container and routing
+- [ ] Run a browser end-to-end smoke test without creating a real customer order
+- [ ] Confirm consent-denied mode produces no optional provider delivery
+- [ ] Confirm analytics failures never alter checkout/order results
+
+## Safe smoke-test sequence
+
+1. Open a product page.
+2. Confirm one canonical `view_item`.
+3. Select a variant and confirm `select_item`.
+4. Add to cart and confirm `add_to_cart` only after the server action succeeds.
+5. Open cart and confirm `view_cart`.
+6. Start Buy Now or cart checkout and confirm `begin_checkout`.
+7. Do not create a real customer order for diagnostics; use Admin synthetic tests for provider-independent persistence checks.
+8. For production purchase verification, use the project's approved internal test-order procedure and verify the authoritative server event ID.
+
+## Future extensions
+
+Keep future features as adapters around the canonical contract:
+
+- retry queue / dead-letter replay
+- event retention policy
+- warehouse export
+- attribution reporting
 - event sampling
-- consent categories
-- event retention policies
+- additional providers
 - schema version 2
-- event delivery retries
-- dead-letter/replay tooling
-- warehouse exports
-- attribution and campaign reporting
 - funnel dashboards
 
-These extensions should remain adapters around the canonical event contract rather than introducing vendor-specific calls into commerce code.
+The portable boundary should not change when a new provider is added.
