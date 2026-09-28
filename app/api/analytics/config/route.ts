@@ -12,5 +12,6 @@ export async function GET() {
     gtmContainerId: config.gtmContainerId,
     metaPixelId: config.metaPixelId,
     tiktokPixelId: config.tiktokPixelId,
+    ga4ServerDeliveryEnabled: Boolean(config.ga4MeasurementId && process.env.GA4_API_SECRET),
   }, { headers: { 'Cache-Control': 'no-store' } })
 }
