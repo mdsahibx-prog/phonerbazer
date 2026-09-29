@@ -13,13 +13,72 @@ function scrubMetadata(input: Record<string, unknown> = {}) {
   return Object.fromEntries(Object.entries(input).filter(([key]) => !denied.test(key)).map(([key, value]) => [key, typeof value === 'string' ? value.slice(0, 500) : value]).filter(([, value]) => value === null || ['string', 'number', 'boolean'].includes(typeof value))) as Record<string, string | number | boolean | null>
 }
 
+function sanitizeUrl(value: string | null | undefined, maxLength: number) {
+  if (!value) return null
+  try {
+    const url = new URL(value)
+    url.search = ''
+    url.hash = ''
+    return url.toString().slice(0, maxLength)
+  } catch {
+    return value.split(/[?#]/, 1)[0].slice(0, maxLength)
+  }
+}
+
+const COMMERCE_ALLOWED_KEYS = new Set([
+  'transaction_id', 'value', 'currency', 'tax', 'shipping', 'items',
+  'item_id', 'item_name', 'item_brand', 'item_category', 'price', 'quantity',
+  'content_ids', 'contents', 'content_type', 'search_term', 'list_name',
+  'item_count', 'source', 'status', 'error_category', 'test_mode',
+])
+
+const ITEM_ALLOWED_KEYS = new Set([
+  'item_id', 'item_name', 'item_brand', 'item_category', 'price', 'quantity',
+  'item_list_name', 'item_variant', 'item_category2', 'item_category3',
+  'item_category4', 'item_category5', 'index', 'discount', 'coupon',
+])
+
+const CONTENT_ALLOWED_KEYS = new Set(['id', 'quantity', 'item_price', 'price'])
+
+function scalar(value: unknown) {
+  return value === null || typeof value === 'string' || (typeof value === 'number' && Number.isFinite(value)) || typeof value === 'boolean'
+}
+
+function scrubRecordArray(value: unknown, allowed: Set<string>) {
+  if (!Array.isArray(value)) return []
+  return value
+    .slice(0, 50)
+    .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null && !Array.isArray(item))
+    .map((item) => Object.fromEntries(Object.entries(item).filter(([key]) => allowed.has(key) && scalar(item[key])).map(([key, itemValue]) => [key, typeof itemValue === 'string' ? itemValue.slice(0, 200) : itemValue])))
+}
+
 export function sanitizeCommerceEvent(input: CanonicalCommerceEvent): CanonicalCommerceEvent {
-  return { ...input, pageUrl: input.pageUrl?.slice(0, 1000) ?? null, pagePath: input.pagePath?.slice(0, 500) ?? null, referrer: input.referrer?.slice(0, 1000) ?? null, source: input.source?.slice(0, 100) ?? null, medium: input.medium?.slice(0, 100) ?? null, campaign: input.campaign?.slice(0, 200) ?? null, metadata: scrubMetadata(input.metadata), commerce: input.commerce ? scrubCommerce(input.commerce) : undefined }
+  return {
+    ...input,
+    pageUrl: sanitizeUrl(input.pageUrl, 1000),
+    pagePath: input.pagePath?.split(/[?#]/, 1)[0].slice(0, 500) ?? null,
+    referrer: sanitizeUrl(input.referrer, 1000),
+    source: input.source?.slice(0, 100) ?? null,
+    medium: input.medium?.slice(0, 100) ?? null,
+    campaign: input.campaign?.slice(0, 200) ?? null,
+    metadata: scrubMetadata(input.metadata),
+    commerce: input.commerce ? scrubCommerce(input.commerce) : undefined,
+  }
 }
 
 function scrubCommerce(input: Record<string, unknown>) {
-  const allowed = ['transaction_id', 'value', 'currency', 'tax', 'shipping', 'items', 'item_id', 'item_name', 'item_brand', 'item_category', 'price', 'quantity', 'content_ids', 'contents', 'content_type', 'search_term', 'list_name', 'item_count', 'source', 'status', 'error_category', 'test_mode']
-  return Object.fromEntries(Object.entries(input).filter(([key]) => allowed.includes(key)).map(([key, value]) => [key, Array.isArray(value) ? value.slice(0, 50) : value]))
+  return Object.fromEntries(
+    Object.entries(input)
+      .filter(([key]) => COMMERCE_ALLOWED_KEYS.has(key))
+      .map(([key, value]) => {
+        if (key === 'items') return [key, scrubRecordArray(value, ITEM_ALLOWED_KEYS)]
+        if (key === 'contents') return [key, scrubRecordArray(value, CONTENT_ALLOWED_KEYS)]
+        if (key === 'content_ids' && Array.isArray(value)) return [key, value.slice(0, 50).filter((item) => typeof item === 'string').map((item) => item.slice(0, 200))]
+        if (scalar(value)) return [key, typeof value === 'string' ? value.slice(0, 500) : value]
+        return [key, undefined]
+      })
+      .filter(([, value]) => value !== undefined),
+  )
 }
 
 export async function recordCommerceEvent(input: { eventId?: string; eventName: CommerceEventName; sessionId?: string | null; orderId?: string | null; cartId?: string | null; metadata?: Record<string, unknown> }) {
