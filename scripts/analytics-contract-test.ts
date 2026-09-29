@@ -1,4 +1,5 @@
 import { canonicalCommerceEventSchema } from '../lib/analytics/events'
+import { isLiveProviderDispatchAllowed } from '../lib/analytics/server'
 import { normalizeServerGtmEndpoint, isValidServerGtmEndpoint, buildServerGtmEnvelope } from '../lib/analytics/server-gtm'
 
 const base = {
@@ -46,3 +47,8 @@ if (isValidServerGtmEndpoint('http://gtm.example.com')) throw new Error('Non-HTT
 if (isValidServerGtmEndpoint('https://gtm.example.com/path?bad=1')) throw new Error('Non-canonical Server GTM endpoint was accepted.')
 const envelope = buildServerGtmEnvelope(base)
 if (envelope.schema !== 'phonerbazar.analytics.event' || envelope.event.id !== base.eventId) throw new Error('Server GTM envelope contract failed.')
+
+if (isLiveProviderDispatchAllowed({ testMode: true })) throw new Error('Synthetic test events must never be sent to live providers.')
+if (!isLiveProviderDispatchAllowed({ testMode: false })) throw new Error('Live events must remain eligible for provider delivery.')
+
+console.log('live provider dispatch policy tests passed')
