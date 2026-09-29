@@ -52,11 +52,11 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
     sync()
 
     const onConsentChange = () => sync(true)
-    window.addEventListener('phonerbazar-consent-change', onConsentChange)
+    window.addEventListener('analytics-consent-change', onConsentChange)
 
     return () => {
       cancelled = true
-      window.removeEventListener('phonerbazar-consent-change', onConsentChange)
+      window.removeEventListener('analytics-consent-change', onConsentChange)
     }
   }, [runtimeConfig])
 
