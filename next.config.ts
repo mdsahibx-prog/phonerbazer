@@ -3,15 +3,16 @@ import type { NextConfig } from "next";
 const cspHeader = `
     default-src 'self';
     script-src 'self' 'unsafe-eval' 'unsafe-inline' https://connect.facebook.net https://www.googletagmanager.com;
+    script-src-elem 'self' 'unsafe-inline' https://www.googletagmanager.com;
     style-src 'self' 'unsafe-inline';
-    img-src 'self' blob: data: https://yirbztzrgsvxuetqqiov.supabase.co https://www.facebook.com https://connect.facebook.net https://www.google-analytics.com;
+    img-src 'self' blob: data: https://yirbztzrgsvxuetqqiov.supabase.co https://www.facebook.com https://connect.facebook.net https://www.google-analytics.com https://www.googletagmanager.com;
     font-src 'self' data:;
     object-src 'none';
     base-uri 'self';
     form-action 'self';
     frame-ancestors 'none';
-    frame-src 'self' https://www.openstreetmap.org;
-    connect-src 'self' https://yirbztzrgsvxuetqqiov.supabase.co https://www.google-analytics.com https://graph.facebook.com;
+    frame-src 'self' https://www.openstreetmap.org https://www.googletagmanager.com;
+    connect-src 'self' https://yirbztzrgsvxuetqqiov.supabase.co https://www.google-analytics.com https://graph.facebook.com https://www.googletagmanager.com https://www.google.com;
     upgrade-insecure-requests;
 `.replace(/\s{2,}/g, ' ').trim();
 
