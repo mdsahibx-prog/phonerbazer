@@ -4,8 +4,8 @@ export type AnalyticsProjectConfig = {
 }
 
 export const DEFAULT_ANALYTICS_PROJECT_CONFIG: AnalyticsProjectConfig = {
-  projectKey: 'phonerbazar',
-  currency: 'BDT',
+  projectKey: 'commerce',
+  currency: 'USD',
 }
 
 const PROJECT_KEY_PATTERN = /^[a-z0-9][a-z0-9_-]{1,63}$/
