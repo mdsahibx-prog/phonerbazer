@@ -48,7 +48,7 @@ type BrowserProviderAdapter = {
 
 const gtmAdapter: BrowserProviderAdapter = {
   id: 'GTM',
-  canDispatch: (event, config) => Boolean(config.enabled && config.gtmContainerId && (event.consent.analytics || event.consent.marketing || event.testMode)),
+  canDispatch: (event, config) => Boolean(config.enabled && config.gtmContainerId && (event.consent.analytics || event.consent.marketing) && !event.testMode),
   initialize: (config) => {
     if (typeof window === 'undefined' || !config.enabled || !config.gtmContainerId) return
     const w = getWindow()
