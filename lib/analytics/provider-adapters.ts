@@ -14,6 +14,7 @@ export type AnalyticsProviderAdapter = {
   id: AnalyticsProviderId
   canDispatch: (event: CanonicalCommerceEvent, config: AnalyticsConfig) => boolean
   dispatch: (event: CanonicalCommerceEvent, config: AnalyticsConfig) => Promise<HttpDeliveryResult>
+  validate?: (event: CanonicalCommerceEvent, config: AnalyticsConfig) => Promise<HttpDeliveryResult>
 }
 
 function ga4NumericId(input: string) {
@@ -25,7 +26,7 @@ function ga4NumericId(input: string) {
   return String(first) + '.' + String(second)
 }
 
-function ga4Payload(event: CanonicalCommerceEvent) {
+export function buildGa4MeasurementPayload(event: CanonicalCommerceEvent) {
   const stableSource = event.anonymousId || event.sessionId || event.eventId
   const clientId = /^\d+\.\d+$/.test(stableSource) ? stableSource : ga4NumericId(stableSource)
   const sessionId = /^\d+$/.test(event.sessionId || '') ? event.sessionId : ga4NumericId(event.sessionId || event.occurredAt)
@@ -82,7 +83,11 @@ export const ANALYTICS_PROVIDER_ADAPTERS: Record<AnalyticsProviderId, AnalyticsP
     canDispatch: (event, config) => Boolean(liveEligible(event) && event.consent.analytics && config.ga4MeasurementId && process.env.GA4_API_SECRET),
     dispatch: (event, config) => postJson(
       'https://www.google-analytics.com/mp/collect?measurement_id=' + encodeURIComponent(config.ga4MeasurementId) + '&api_secret=' + encodeURIComponent(process.env.GA4_API_SECRET || ''),
-      ga4Payload(event),
+      buildGa4MeasurementPayload(event),
+    ),
+    validate: (event, config) => postJson(
+      'https://www.google-analytics.com/debug/mp/collect?measurement_id=' + encodeURIComponent(config.ga4MeasurementId) + '&api_secret=' + encodeURIComponent(process.env.GA4_API_SECRET || ''),
+      { ...buildGa4MeasurementPayload(event), validation_behavior: 'ENFORCE_RECOMMENDATIONS' },
     ),
   },
   META_CAPI: {
