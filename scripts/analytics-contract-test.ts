@@ -1,4 +1,4 @@
-import { canonicalCommerceEventSchema } from '../lib/analytics/events'
+import { canonicalCommerceEventSchema, sanitizeCommerceEvent } from '../lib/analytics/events'
 import { analyticsEventSchema, normalizeAnalyticsCurrency, normalizeAnalyticsProjectKey } from '../lib/analytics/project-config'
 import { isLiveProviderDispatchAllowed } from '../lib/analytics/provider-policy'
 import { normalizeServerGtmEndpoint, isValidServerGtmEndpoint, buildServerGtmEnvelope } from '../lib/analytics/server-gtm'
@@ -46,11 +46,10 @@ if (canonicalCommerceEventSchema.safeParse(unknown).success) {
 }
 
 function requireSanitizedUrlCheck(event: typeof base) {
-  const { sanitizeCommerceEvent } = require('../lib/analytics/events') as typeof import('../lib/analytics/events')
   return sanitizeCommerceEvent(event).pageUrl
 }
 
-const sanitizedCommerce = require('../lib/analytics/events').sanitizeCommerceEvent({
+const sanitizedCommerce = sanitizeCommerceEvent({
   ...base,
   commerce: {
     transaction_id: 'ORDER-1',
