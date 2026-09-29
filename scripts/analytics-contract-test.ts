@@ -57,7 +57,8 @@ const sanitizedCommerce = sanitizeCommerceEvent({
     unexpected_nested: { secret: 'must-not-survive' },
   },
 })
-const sanitizedItem = sanitizedCommerce.commerce?.items?.[0] as Record<string, unknown>
+const sanitizedItems = sanitizedCommerce.commerce?.['items']
+const sanitizedItem = Array.isArray(sanitizedItems) ? sanitizedItems[0] as Record<string, unknown> : {}
 if ('phone' in sanitizedItem) throw new Error('Nested commerce PII was not removed.')
 if ('unexpected_nested' in (sanitizedCommerce.commerce || {})) throw new Error('Unexpected nested commerce data was retained.')
 
