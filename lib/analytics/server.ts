@@ -4,7 +4,7 @@ import { unstable_cache } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { recordCanonicalEvent, type CanonicalCommerceEvent } from './events'
 import { ANALYTICS_EVENT_MAP } from './registry'
-import { ANALYTICS_PROVIDER_ADAPTERS, type AnalyticsProviderId } from './provider-adapters'
+import { ANALYTICS_PROVIDER_ADAPTERS } from './provider-adapters'
 import { ensureDeliveryLedgerEntry, recordDeliveryResult } from './delivery-ledger'
 import { DEFAULT_ANALYTICS_PROJECT_CONFIG, normalizeAnalyticsCurrency, normalizeAnalyticsProjectKey } from './project-config'
 
@@ -25,26 +25,26 @@ export async function dispatchAnalyticsEvent(event: CanonicalCommerceEvent) {
 
   if (!masterAllowed) return { ok: true, skipped: true, destinations: [] as string[] }
 
-  const adapters = ANALYTICS_PROVIDER_ADAPTERS[Symbol.iterator]
-    ? Object.values(ANALYTICS_PROVIDER_ADAPTERS).filter((adapter) => allows(adapter.id) && adapter.canDispatch(event, config))
-    : []
+  const adapters = Object.values(ANALYTICS_PROVIDER_ADAPTERS).filter((adapter) => allows(adapter.id) && adapter.canDispatch(event, config))
   await Promise.all(adapters.map((adapter) => ensureDeliveryLedgerEntry(event, adapter.id)))
 
-  const deliveryResults = await Promise.allSettled(adapters.map(async (adapter) => {
-    const result = await adapter.dispatch(event, config)
-    await recordDeliveryResult(event, adapter.id, result)
-    return { destination: adapter.id, ...result }
+  const deliveries = await Promise.all(adapters.map(async (adapter) => {
+    try {
+      const result = await adapter.dispatch(event, config)
+      await recordDeliveryResult(event, adapter.id, result)
+      return { destination: adapter.id, ...result }
+    } catch (error) {
+      const result = {
+        ok: false,
+        latency: 0,
+        category: 'NETWORK_ERROR' as const,
+        attempts: 0,
+        responseBody: error instanceof Error ? error.message.slice(0, 500) : String(error).slice(0, 500),
+      }
+      await recordDeliveryResult(event, adapter.id, result)
+      return { destination: adapter.id, ...result }
+    }
   }))
-
-  const deliveries = deliveryResults
-    .filter((item): item is PromiseFulfilledResult<{ destination: AnalyticsProviderId; ok: boolean; latency: number; status?: number; category?: string; responseBody?: string; attempts: number }> => item.status === 'fulfilled')
-    .map((item) => ({
-      destination: item.value.destination,
-      ok: item.value.ok,
-      latency: item.value.latency,
-      status: item.value.status,
-      category: item.value.category,
-    }))
 
   return {
     ok: deliveries.every((item) => item.ok),
