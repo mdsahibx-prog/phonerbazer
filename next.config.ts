@@ -9,10 +9,10 @@ const cspHeader = `
     font-src 'self' data:;
     object-src 'none';
     base-uri 'self';
-    form-action 'self';
+    form-action 'self' https://www.facebook.com;
     frame-ancestors 'none';
-    frame-src 'self' https://www.openstreetmap.org https://www.googletagmanager.com;
-    connect-src 'self' https://yirbztzrgsvxuetqqiov.supabase.co https://www.google-analytics.com https://graph.facebook.com https://www.googletagmanager.com https://www.google.com;
+    frame-src 'self' https://www.openstreetmap.org https://www.googletagmanager.com https://www.facebook.com;
+    connect-src 'self' https://yirbztzrgsvxuetqqiov.supabase.co https://www.google-analytics.com https://graph.facebook.com https://www.googletagmanager.com https://www.google.com https://mpc2-prod-26-is5qnl632q-uc.a.run.app https://5z-2b6b7616f94640c2840d1841e1ac24c3.ecs.us-east-1.on.aws;
     upgrade-insecure-requests;
 `.replace(/\s{2,}/g, ' ').trim();
 
