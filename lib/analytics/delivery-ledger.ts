@@ -31,34 +31,31 @@ export type AnalyticsDeliveryRecord = {
 export async function ensureDeliveryLedgerEntry(event: CanonicalCommerceEvent, provider: AnalyticsProviderId) {
   try {
     const db = createAdminClient()
-    const now = new Date()
-    const leaseToken = crypto.randomUUID()
-    const leaseUntil = new Date(now.getTime() + ANALYTICS_DELIVERY_LEASE_SECONDS * 1000).toISOString()
+    const now = new Date().toISOString()
 
     await db.from('analytics_delivery_ledger').upsert({
       event_id: event.eventId,
       provider,
       status: 'PENDING',
       event_payload: event,
-      next_attempt_at: now.toISOString(),
-      lease_token: leaseToken,
-      lease_until: leaseUntil,
-      updated_at: now.toISOString(),
+      next_attempt_at: now,
+      updated_at: now,
     }, { onConflict: 'event_id,provider', ignoreDuplicates: true })
 
-    const { data } = await db
-      .from('analytics_delivery_ledger')
-      .select('attempt_count,status,lease_token,lease_until')
-      .eq('event_id', event.eventId)
-      .eq('provider', provider)
-      .maybeSingle()
+    const { data, error } = await db.rpc('claim_analytics_delivery', {
+      p_event_id: event.eventId,
+      p_provider: provider,
+      p_lease_seconds: ANALYTICS_DELIVERY_LEASE_SECONDS,
+      p_max_attempts: ANALYTICS_MAX_DELIVERY_ATTEMPTS,
+    })
 
-    if (!data) return null
+    if (error || !Array.isArray(data) || !data[0]) return null
+    const row = data[0] as Record<string, unknown>
     return {
-      attemptCount: Number(data.attempt_count || 0),
-      status: data.status as AnalyticsDeliveryStatus,
-      leaseToken: typeof data.lease_token === 'string' ? data.lease_token : null,
-      leaseUntil: typeof data.lease_until === 'string' ? data.lease_until : null,
+      attemptCount: Number(row.attempt_count || 0),
+      status: row.status as AnalyticsDeliveryStatus,
+      leaseToken: typeof row.lease_token === 'string' ? row.lease_token : null,
+      leaseUntil: typeof row.lease_until === 'string' ? row.lease_until : null,
     }
   } catch {
     // Analytics observability must never affect commerce.
