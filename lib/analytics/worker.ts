@@ -3,14 +3,16 @@ import 'server-only'
 import { getAnalyticsConfig } from './server'
 import { ANALYTICS_PROVIDER_ADAPTERS, type AnalyticsProviderId } from './provider-adapters'
 import { ANALYTICS_EVENT_MAP } from './registry'
+import type { CanonicalCommerceEvent } from './types'
+import type { HttpDeliveryResult } from './transport'
 import {
+  ANALYTICS_DELIVERY_LEASE_SECONDS,
   ANALYTICS_MAX_DELIVERY_ATTEMPTS,
   claimAnalyticsDeliveryBatch,
   finalizeAnalyticsDelivery,
   releaseDeliveryForProviderRecheck,
+  recordDeliveryResult,
 } from './delivery-ledger'
-import type { HttpDeliveryResult } from './transport'
-import type { CanonicalCommerceEvent } from './types'
 
 const DEFAULT_BATCH_SIZE = 25
 const DELIVERY_CONCURRENCY = 6
@@ -45,114 +47,85 @@ async function processEntry(
   const provider = entry.provider
   const event = entry.event_payload
   const adapter = ANALYTICS_PROVIDER_ADAPTERS[provider]
+  const leaseToken = entry.lease_token || null
 
   if (!adapter || shouldPermanentlySkip(event, provider, config)) {
-    const result = await finalizeAnalyticsDelivery(
+    const finalized = await finalizeAnalyticsDelivery(
       event,
       provider,
-      { ok: false, latency: 0, attempts: 0, category: 'HTTP_ERROR', responseBody: 'Delivery is not eligible for live replay.' },
-      entry.lease_token || null,
+      {
+        ok: false,
+        latency: 0,
+        attempts: 0,
+        category: 'HTTP_ERROR',
+        responseBody: 'Delivery is not eligible for live replay.',
+      },
+      leaseToken,
       true,
     )
-    return { eventId: entry.event_id, provider, ok: result, skipped: true, dead: true, reason: 'NOT_ELIGIBLE' as const }
+    return {
+      eventId: entry.event_id,
+      provider,
+      ok: finalized,
+      skipped: true,
+      dead: finalized,
+      reason: 'NOT_ELIGIBLE' as const,
+    }
   }
 
   if (!config.enabled || (config.environment === 'development' && !config.debugMode)) {
-    const released = await releaseDeliveryForProviderRecheck(entry.event_id, provider, entry.lease_token || '')
-    return { eventId: entry.event_id, provider, ok: released, skipped: true, dead: false, reason: 'ANALYTICS_DISABLED' as const }
+    const released = leaseToken
+      ? await releaseDeliveryForProviderRecheck(entry.event_id, provider, leaseToken, 'ANALYTICS_DISABLED')
+      : false
+    return {
+      eventId: entry.event_id,
+      provider,
+      ok: released,
+      skipped: true,
+      dead: false,
+      reason: 'ANALYTICS_DISABLED' as const,
+    }
   }
 
   if (!adapter.canDispatch(event, config)) {
-    const released = await releaseDeliveryForProviderRecheck(entry.event_id, provider, entry.lease_token || '')
-    return { eventId: entry.event_id, provider, ok: released, skipped: true, dead: false, reason: 'PROVIDER_NOT_READY' as const }
+    const released = leaseToken
+      ? await releaseDeliveryForProviderRecheck(entry.event_id, provider, leaseToken)
+      : false
+    return {
+      eventId: entry.event_id,
+      provider,
+      ok: released,
+      skipped: true,
+      dead: false,
+      reason: 'PROVIDER_NOT_READY' as const,
+    }
   }
 
   try {
     const delivery = await adapter.dispatch(event, config)
-    const finalized = await finalizeAnalyticsDelivery(event, provider, delivery, entry.lease_token || null)
+    const finalized = await recordDeliveryResult(event, provider, delivery, leaseToken)
     return {
       eventId: entry.event_id,
       provider,
       ok: delivery.ok && finalized,
       skipped: false,
-      dead: false,
+      dead: !delivery.ok && entry.attempt_count + 1 >= ANALYTICS_MAX_DELIVERY_ATTEMPTS,
       category: delivery.category,
       attemptNumber: entry.attempt_count + 1,
     }
   } catch (error) {
     const delivery = failureFromError(error)
-    const finalized = await finalizeAnalyticsDelivery(event, provider, delivery, entry.lease_token || null)
+    const finalized = await recordDeliveryResult(event, provider, delivery, leaseToken)
     return {
       eventId: entry.event_id,
       provider,
       ok: finalized && delivery.ok,
       skipped: false,
-      dead: false,
+      dead: entry.attempt_count + 1 >= ANALYTICS_MAX_DELIVERY_ATTEMPTS,
       category: delivery.category,
       attemptNumber: entry.attempt_count + 1,
     }
   }
-}
-
-async function finalizeAnalyticsDelivery(
-  event: CanonicalCommerceEvent,
-  provider: AnalyticsProviderId,
-  result: HttpDeliveryResult,
-  leaseToken: string | null,
-  permanentFailure = false,
-) {
-  return (await finalizeAnalyticsDeliveryRaw(event, provider, result, leaseToken, permanentFailure)) === true
-}
-
-async function finalizeAnalyticsDeliveryRaw(
-  event: CanonicalCommerceEvent,
-  provider: AnalyticsProviderId,
-  result: HttpDeliveryResult,
-  leaseToken: string | null,
-  permanentFailure = false,
-) {
-  return finalizeAnalyticsDeliveryImported(event, provider, result, leaseToken, permanentFailure)
-}
-
-async function finalizeAnalyticsDeliveryImported(
-  event: CanonicalCommerceEvent,
-  provider: AnalyticsProviderId,
-  result: HttpDeliveryResult,
-  leaseToken: string | null,
-  permanentFailure = false,
-) {
-  return finalizeAnalyticsDeliveryFn(event, provider, result, leaseToken, permanentFailure)
-}
-
-async function finalizeAnalyticsDeliveryFn(
-  event: CanonicalCommerceEvent,
-  provider: AnalyticsProviderId,
-  result: HttpDeliveryResult,
-  leaseToken: string | null,
-  permanentFailure = false,
-) {
-  return finalizeDelivery(event, provider, result, leaseToken, permanentFailure)
-}
-
-async function finalizeDelivery(
-  event: CanonicalCommerceEvent,
-  provider: AnalyticsProviderId,
-  result: HttpDeliveryResult,
-  leaseToken: string | null,
-  permanentFailure = false,
-) {
-  return recordDeliveryResult(event, provider, result, leaseToken, permanentFailure)
-}
-
-async function recordDeliveryResult(
-  event: CanonicalCommerceEvent,
-  provider: AnalyticsProviderId,
-  result: HttpDeliveryResult,
-  leaseToken: string | null,
-  permanentFailure = false,
-) {
-  const module = await import('./delivery-ledger')
-  return module.recordDeliveryResult(event, provider, result, leaseToken, permanentFailure)
 }
 
 export async function processAnalyticsDeliveryWorker(limit = DEFAULT_BATCH_SIZE) {
@@ -184,6 +157,7 @@ export async function processAnalyticsDeliveryWorker(limit = DEFAULT_BATCH_SIZE)
     skipped: results.filter((result) => result.skipped).length,
     dead: results.filter((result) => result.dead).length,
     maxAttempts: ANALYTICS_MAX_DELIVERY_ATTEMPTS,
+    leaseSeconds: ANALYTICS_DELIVERY_LEASE_SECONDS,
     results,
   }
 }
