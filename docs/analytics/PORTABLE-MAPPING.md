@@ -59,21 +59,21 @@ This keeps the analytics core reusable while allowing a different persistence im
 
 The Web GTM container must contain the Google tag and the project's GA4 destination configuration. For server-side routing, configure the web Google tag with the deployed server-container URL where the selected architecture requires it. Keep provider routing inside GTM rather than in checkout or commerce code.
 
-Google's GA4 Measurement Protocol requires HTTPS POSTs, a web-stream `measurement_id`, a server-only `api_secret`, and a `client_id` for web streams. It also documents `session_id` and `engagement_time_msec` for relevant reporting use cases. Validate payload structure against the Measurement Protocol validation endpoint before production. citeturn125315search0turn125315search4turn125315search5
+Google's GA4 Measurement Protocol requires HTTPS POSTs, a web-stream `measurement_id`, a server-only `api_secret`, and a `client_id` for web streams. It also documents `session_id` and `engagement_time_msec` for relevant reporting use cases. Validate payload structure against the Measurement Protocol validation endpoint before production.
 
 ## Provider deduplication
 
 The canonical `eventId` is the cross-destination deduplication identifier.
 
-For TikTok, when the same event is sent through Pixel and Events API, the identical `event_id` must be passed through both paths so TikTok can deduplicate the conversion. citeturn422697search1turn422697search9
+For TikTok, when the same event is sent through Pixel and Events API, the identical `event_id` must be passed through both paths so TikTok can deduplicate the conversion.
 
 For Meta CAPI and other providers, preserve the canonical event ID and map it to the provider's documented event identifier when both browser and server copies overlap.
 
 ## Secrets and backend security
 
-Provider secrets stay in server-only environment variables. Supabase secret/service-role access is server-side only and must not be exposed to browser code; RLS still remains the database authorization boundary. citeturn422697search0turn422697search10
+Provider secrets stay in server-only environment variables. Supabase secret/service-role access is server-side only and must not be exposed to browser code; RLS still remains the database authorization boundary.
 
-Vercel supports separate environment-variable scopes for Production, Preview, and Development; use those scopes to prevent preview configuration from inheriting production secrets accidentally. citeturn422697search2
+Vercel supports separate environment-variable scopes for Production, Preview, and Development; use those scopes to prevent preview configuration from inheriting production secrets accidentally.
 
 ## Future-project onboarding
 
