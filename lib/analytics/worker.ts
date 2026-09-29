@@ -49,7 +49,7 @@ async function processEntry(
   const leaseToken = entry.lease_token || null
 
   if (!adapter || shouldPermanentlySkip(event, provider, config)) {
-    const finalized = await finalizeAnalyticsDelivery(
+    const finalized = await recordDeliveryResult(
       event,
       provider,
       {
