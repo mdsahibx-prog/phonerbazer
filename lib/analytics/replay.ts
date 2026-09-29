@@ -2,6 +2,7 @@ import 'server-only'
 
 import { getAnalyticsConfig } from './server'
 import { ANALYTICS_PROVIDER_ADAPTERS } from './provider-adapters'
+import { ANALYTICS_EVENT_MAP } from './registry'
 import { listRetryableDeliveries, recordDeliveryResult } from './delivery-ledger'
 
 export async function replayFailedAnalyticsDeliveries(limit = 20) {
@@ -9,7 +10,9 @@ export async function replayFailedAnalyticsDeliveries(limit = 20) {
   const entries = await listRetryableDeliveries(limit)
   const results = await Promise.all(entries.map(async (entry) => {
     const adapter = ANALYTICS_PROVIDER_ADAPTERS[entry.provider]
-    if (!adapter || !adapter.canDispatch(entry.event_payload, config)) {
+    const definition = ANALYTICS_EVENT_MAP[entry.event_payload.eventName]
+    const globallyEligible = config.enabled && (definition?.required || config.eventControls[entry.event_payload.eventName] !== false) && !(config.environment === 'development' && !config.debugMode)
+    if (!adapter || !globallyEligible || !adapter.canDispatch(entry.event_payload, config)) {
       return { eventId: entry.event_id, provider: entry.provider, ok: false, skipped: true, reason: 'PROVIDER_NOT_ELIGIBLE' as const }
     }
 
