@@ -49,9 +49,9 @@ if (isValidServerGtmEndpoint('https://gtm.example.com/path?bad=1')) throw new Er
 const envelope = buildServerGtmEnvelope(base, 'demo-store')
 if (envelope.schema !== 'demo-store.analytics.event' || envelope.event.id !== base.eventId) throw new Error('Server GTM envelope contract failed.')
 if (normalizeAnalyticsProjectKey(' Demo_Store ') !== 'demo_store') throw new Error('Project key normalization failed.')
-if (normalizeAnalyticsProjectKey('bad project!') !== 'phonerbazar') throw new Error('Invalid project key was accepted.')
+if (normalizeAnalyticsProjectKey('bad project!') !== 'commerce') throw new Error('Invalid project key was accepted.')
 if (normalizeAnalyticsCurrency('bdt') !== 'BDT') throw new Error('Currency normalization failed.')
-if (normalizeAnalyticsCurrency('BD') !== 'BDT') throw new Error('Invalid currency was accepted.')
+if (normalizeAnalyticsCurrency('BD') !== 'USD') throw new Error('Invalid currency was accepted.')
 if (analyticsEventSchema('demo-store') !== 'demo-store.analytics.event') throw new Error('Analytics event namespace failed.')
 
 if (isLiveProviderDispatchAllowed(true)) throw new Error('Synthetic test events must never be sent to live providers.')
