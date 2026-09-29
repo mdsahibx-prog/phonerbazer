@@ -1,6 +1,6 @@
 # Portable Analytics Architecture
 
-PhonerBazar's analytics layer is a provider-neutral adapter system. The canonical commerce event contract is the only interface storefront code should depend on; GA4, GTM, Meta, TikTok, and server-side GTM are replaceable destinations.
+PhonerBazar's analytics layer is a provider-neutral adapter system. The canonical commerce event contract is the only interface storefront code should depend on; GA4, GTM, Meta, TikTok, and server-side GTM are replaceable destinations. Project identity and commerce currency are Admin-managed values rather than provider hard-codes.
 
 ## Non-negotiable boundary
 
