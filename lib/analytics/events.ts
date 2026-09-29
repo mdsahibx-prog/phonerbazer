@@ -2,6 +2,7 @@ import 'server-only'
 
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getAnalyticsPersistenceAdapter } from './persistence'
 import { COMMERCE_EVENT_NAMES as COMMERCE_EVENTS, type CanonicalCommerceEvent, type CommerceEventName } from './types'
 
 export { COMMERCE_EVENT_NAMES as COMMERCE_EVENTS } from './types'
@@ -22,12 +23,16 @@ function scrubCommerce(input: Record<string, unknown>) {
 }
 
 export async function recordCommerceEvent(input: { eventId?: string; eventName: CommerceEventName; sessionId?: string | null; orderId?: string | null; cartId?: string | null; metadata?: Record<string, unknown> }) {
-  const db = createAdminClient()
+  const eventId = input.eventId ?? crypto.randomUUID()
   const metadata = scrubMetadata(input.metadata)
-  const { error } = await db.from('commerce_events').insert({ event_id: input.eventId ?? crypto.randomUUID(), event_name: input.eventName, session_id: input.sessionId ?? null, order_id: input.orderId ?? null, cart_id: input.cartId ?? null, metadata })
-  if (error?.code === '23505') return { ok: true, duplicate: true }
-  if (error) return { ok: false, duplicate: false }
-  return { ok: true, duplicate: false }
+  return getAnalyticsPersistenceAdapter().recordEvent({
+    eventId,
+    eventName: input.eventName,
+    sessionId: input.sessionId,
+    orderId: input.orderId,
+    cartId: input.cartId,
+    metadata,
+  })
 }
 
 export async function recordCanonicalEvent(input: CanonicalCommerceEvent & { orderId?: string | null; cartId?: string | null }) {
