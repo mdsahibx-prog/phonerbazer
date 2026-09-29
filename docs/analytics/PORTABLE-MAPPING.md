@@ -46,8 +46,11 @@ The following are intentionally project-neutral:
 - Generic browser event/consent signals.
 - Consent and provider safety rules.
 - Stable event-ID deduplication.
+- Provider adapter registry and transport retry behavior.
+- Durable delivery ledger records with safe admin replay.
 
 The following are integration boundaries rather than provider configuration:
+- Analytics persistence adapter (Supabase is the current concrete implementation).
 
 - Supabase persistence adapter and the `commerce_events` table.
 - Existing commerce milestone call sites that decide when `view_item`, `add_to_cart`, `begin_checkout`, and authoritative `purchase` occur.
@@ -59,7 +62,7 @@ This keeps the analytics core reusable while allowing a different persistence im
 
 The Web GTM container must contain the Google tag and the project's GA4 destination configuration. For server-side routing, configure the web Google tag with the deployed server-container URL where the selected architecture requires it. Keep provider routing inside GTM rather than in checkout or commerce code.
 
-Google's GA4 Measurement Protocol requires HTTPS POSTs, a web-stream `measurement_id`, a server-only `api_secret`, and a `client_id` for web streams. It also documents `session_id` and `engagement_time_msec` for relevant reporting use cases. Validate payload structure against the Measurement Protocol validation endpoint before production.
+Google's GA4 Measurement Protocol requires HTTPS POSTs, a web-stream `measurement_id`, a server-only `api_secret`, and a `client_id` for web streams. It also documents `session_id` and `engagement_time_msec` for relevant reporting use cases. Validate payload structure against the Measurement Protocol validation endpoint before production. The current server adapter keeps the API secret server-only and uses the web-stream measurement ID/client ID contract documented by Google.
 
 ## Provider deduplication
 
@@ -86,7 +89,8 @@ Vercel supports separate environment-variable scopes for Production, Preview, an
 7. Verify provider reachability.
 8. Run synthetic tests.
 9. Run browser ecommerce smoke tests.
-10. Publish only after consent, deduplication, and provider-receipt verification.
+10. Review the delivery ledger and replay any failed provider delivery only after the provider is eligible again.
+11. Publish only after consent, deduplication, and provider-receipt verification.
 
 The target operating model is **configuration-first reuse**: values change in Admin; commerce code does not.
 

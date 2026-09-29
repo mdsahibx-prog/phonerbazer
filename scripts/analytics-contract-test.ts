@@ -1,7 +1,8 @@
-import { canonicalCommerceEventSchema } from '../lib/analytics/events'
+import { canonicalCommerceEventSchema, sanitizeCommerceEvent } from '../lib/analytics/events'
 import { analyticsEventSchema, normalizeAnalyticsCurrency, normalizeAnalyticsProjectKey } from '../lib/analytics/project-config'
 import { isLiveProviderDispatchAllowed } from '../lib/analytics/provider-policy'
 import { normalizeServerGtmEndpoint, isValidServerGtmEndpoint, buildServerGtmEnvelope } from '../lib/analytics/server-gtm'
+import { ANALYTICS_PROVIDER_ADAPTERS } from '../lib/analytics/provider-adapters'
 
 const base = {
   eventId: '11111111-1111-4111-8111-111111111111',
@@ -35,10 +36,31 @@ if (canonicalCommerceEventSchema.safeParse(oversized).success) {
   throw new Error('Oversized analytics field was accepted.')
 }
 
+const privateQueryUrl = { ...base, pageUrl: 'https://example.test/product?email=private@example.com&token=secret#fragment' }
+const sanitizedPrivateQueryUrl = requireSanitizedUrlCheck(privateQueryUrl)
+if (sanitizedPrivateQueryUrl !== 'https://example.test/product') throw new Error('Analytics URL query/hash sanitization failed.')
+
 const unknown = { ...base, unexpected: 'should be rejected' }
 if (canonicalCommerceEventSchema.safeParse(unknown).success) {
   throw new Error('Unknown analytics fields were accepted.')
 }
+
+function requireSanitizedUrlCheck(event: typeof base) {
+  return sanitizeCommerceEvent(event).pageUrl
+}
+
+const sanitizedCommerce = sanitizeCommerceEvent({
+  ...base,
+  commerce: {
+    transaction_id: 'ORDER-1',
+    items: [{ item_id: 'SKU-1', item_name: 'Demo phone', price: 1200, quantity: 1, phone: 'must-not-survive' }],
+    unexpected_nested: { secret: 'must-not-survive' },
+  },
+})
+const sanitizedItems = sanitizedCommerce.commerce?.['items']
+const sanitizedItem = Array.isArray(sanitizedItems) ? sanitizedItems[0] as Record<string, unknown> : {}
+if ('phone' in sanitizedItem) throw new Error('Nested commerce PII was not removed.')
+if ('unexpected_nested' in (sanitizedCommerce.commerce || {})) throw new Error('Unexpected nested commerce data was retained.')
 
 console.log('analytics contract tests passed')
 
@@ -58,3 +80,26 @@ if (isLiveProviderDispatchAllowed(true)) throw new Error('Synthetic test events 
 if (!isLiveProviderDispatchAllowed(false)) throw new Error('Live events must remain eligible for provider delivery.')
 
 console.log('live provider dispatch policy tests passed')
+
+for (const provider of ['GA4', 'META_CAPI', 'TIKTOK_EVENTS_API', 'SERVER_GTM'] as const) {
+  if (!ANALYTICS_PROVIDER_ADAPTERS[provider]) throw new Error('Missing analytics provider adapter: ' + provider)
+  if (ANALYTICS_PROVIDER_ADAPTERS[provider].canDispatch({ ...base, testMode: true }, {
+    projectKey: 'demo-store',
+    currency: 'USD',
+    enabled: true,
+    marketingEnabled: true,
+    consentMode: 'advanced',
+    debugMode: true,
+    ga4MeasurementId: 'G-DEMO',
+    gtmContainerId: 'GTM-DEMO',
+    metaPixelId: '123',
+    metaCapiEnabled: true,
+    tiktokPixelId: 'TT-DEMO',
+    tiktokEventsApiEnabled: true,
+    serverGtmEnabled: true,
+    serverGtmEndpoint: 'https://gtm.example.com',
+    environment: 'production',
+    eventControls: {},
+  })) throw new Error('Provider adapter canDispatch bypassed safe test mode: ' + provider)
+}
+console.log('provider adapter registry tests passed')

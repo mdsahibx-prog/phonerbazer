@@ -46,6 +46,25 @@ export async function getAnalyticsDiagnostics() {
   }
 
   const gtmStatus = config.gtmContainerId ? await probeGtm(config.gtmContainerId) : 'DISABLED'
+  let delivery = { pending: 0, succeeded: 0, failed: 0, retryable: 0 }
+  try {
+    const db = createAdminClient()
+    const now = new Date().toISOString()
+    const [pending, succeeded, failed, retryable] = await Promise.all([
+      db.from('analytics_delivery_ledger').select('id', { count: 'exact', head: true }).eq('status', 'PENDING'),
+      db.from('analytics_delivery_ledger').select('id', { count: 'exact', head: true }).eq('status', 'SUCCEEDED'),
+      db.from('analytics_delivery_ledger').select('id', { count: 'exact', head: true }).eq('status', 'FAILED'),
+      db.from('analytics_delivery_ledger').select('id', { count: 'exact', head: true }).eq('status', 'FAILED').lte('next_attempt_at', now),
+    ])
+    delivery = {
+      pending: pending.count || 0,
+      succeeded: succeeded.count || 0,
+      failed: failed.count || 0,
+      retryable: retryable.count || 0,
+    }
+  } catch {
+    delivery = { pending: 0, succeeded: 0, failed: 0, retryable: 0 }
+  }
 
   return {
     providers: {
@@ -65,5 +84,6 @@ export async function getAnalyticsDiagnostics() {
     },
     events,
     registry: ANALYTICS_EVENT_REGISTRY,
+    delivery,
   }
 }
