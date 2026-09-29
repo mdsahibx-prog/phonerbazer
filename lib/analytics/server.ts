@@ -26,12 +26,17 @@ export async function dispatchAnalyticsEvent(event: CanonicalCommerceEvent) {
   if (!masterAllowed) return { ok: true, skipped: true, destinations: [] as string[] }
 
   const adapters = Object.values(ANALYTICS_PROVIDER_ADAPTERS).filter((adapter) => allows(adapter.id) && adapter.canDispatch(event, config))
-  await Promise.all(adapters.map((adapter) => ensureDeliveryLedgerEntry(event, adapter.id)))
+  const reservations = await Promise.all(adapters.map(async (adapter) => ({
+    adapter,
+    reservation: await ensureDeliveryLedgerEntry(event, adapter.id),
+  })))
+  const leased = reservations.filter(({ reservation }) => Boolean(reservation?.leaseToken))
 
-  const deliveries = await Promise.all(adapters.map(async (adapter) => {
+  const deliveries = await Promise.all(leased.map(async ({ adapter, reservation }) => {
+    const leaseToken = reservation?.leaseToken || null
     try {
       const result = await adapter.dispatch(event, config)
-      await recordDeliveryResult(event, adapter.id, result)
+      await recordDeliveryResult(event, adapter.id, result, leaseToken)
       return { destination: adapter.id, ...result }
     } catch (error) {
       const result = {
@@ -41,7 +46,7 @@ export async function dispatchAnalyticsEvent(event: CanonicalCommerceEvent) {
         attempts: 0,
         responseBody: error instanceof Error ? error.message.slice(0, 500) : String(error).slice(0, 500),
       }
-      await recordDeliveryResult(event, adapter.id, result)
+      await recordDeliveryResult(event, adapter.id, result, leaseToken)
       return { destination: adapter.id, ...result }
     }
   }))
@@ -50,7 +55,7 @@ export async function dispatchAnalyticsEvent(event: CanonicalCommerceEvent) {
     ok: deliveries.every((item) => item.ok),
     skipped: false,
     deliveries,
-    destinations: adapters.map((adapter) => adapter.id),
+    destinations: leased.map(({ adapter }) => adapter.id),
   }
 }
 
