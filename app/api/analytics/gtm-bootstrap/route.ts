@@ -11,7 +11,7 @@ export async function GET() {
   const config = await getAnalyticsConfig()
   const containerId = config.gtmContainerId.trim().toUpperCase()
   if (!config.enabled || !validContainerId(containerId)) {
-    return new NextResponse('/* PhonerBazar GTM disabled */', {
+    return new NextResponse('/* Analytics GTM disabled */', {
       headers: { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' },
     })
   }
