@@ -1,6 +1,6 @@
 import { canonicalCommerceEventSchema } from '../lib/analytics/events'
 import { analyticsEventSchema, normalizeAnalyticsCurrency, normalizeAnalyticsProjectKey } from '../lib/analytics/project-config'
-import { isLiveProviderDispatchAllowed } from '../lib/analytics/server'
+import { isLiveProviderDispatchAllowed } from '../lib/analytics/provider-policy'
 import { normalizeServerGtmEndpoint, isValidServerGtmEndpoint, buildServerGtmEnvelope } from '../lib/analytics/server-gtm'
 
 const base = {
@@ -54,7 +54,7 @@ if (normalizeAnalyticsCurrency('bdt') !== 'BDT') throw new Error('Currency norma
 if (normalizeAnalyticsCurrency('BD') !== 'BDT') throw new Error('Invalid currency was accepted.')
 if (analyticsEventSchema('demo-store') !== 'demo-store.analytics.event') throw new Error('Analytics event namespace failed.')
 
-if (isLiveProviderDispatchAllowed({ testMode: true })) throw new Error('Synthetic test events must never be sent to live providers.')
-if (!isLiveProviderDispatchAllowed({ testMode: false })) throw new Error('Live events must remain eligible for provider delivery.')
+if (isLiveProviderDispatchAllowed(true)) throw new Error('Synthetic test events must never be sent to live providers.')
+if (!isLiveProviderDispatchAllowed(false)) throw new Error('Live events must remain eligible for provider delivery.')
 
 console.log('live provider dispatch policy tests passed')
