@@ -104,12 +104,14 @@ const ga4Adapter: BrowserProviderAdapter = {
       w.dataLayer.push(args)
     }
     loadScript('https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(idValue), 'commerce-analytics-ga4')
+    const gtag = w.gtag
+    if (!gtag) return
     if (initializedGa4MeasurementId !== idValue) {
-      w.gtag('js', new Date())
-      w.gtag('config', idValue, { send_page_view: false })
+      gtag('js', new Date())
+      gtag('config', idValue, { send_page_view: false })
       initializedGa4MeasurementId = idValue
     }
-    w.gtag('event', event.eventName, { ...event.commerce, event_id: event.eventId })
+    gtag('event', event.eventName, { ...event.commerce, event_id: event.eventId })
   },
 }
 
