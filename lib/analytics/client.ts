@@ -7,10 +7,14 @@ import { DEFAULT_ANALYTICS_PROJECT_CONFIG, normalizeAnalyticsCurrency, normalize
 type Consent = { necessary: true; analytics: boolean; marketing: boolean }
 type ClientEventInput = { eventName: CommerceEventName; commerce?: Record<string, unknown>; metadata?: Record<string, unknown>; eventId?: string; testMode?: boolean }
 
-const CONSENT_KEY = 'sahigadget-analytics-consent'
-const ATTRIBUTION_KEY = 'sahigadget-attribution'
-const ANON_KEY = 'sahigadget-anonymous-id'
-const SESSION_KEY = 'sahigadget-session-id'
+const CONSENT_KEY = 'commerce-analytics-consent-v1'
+const ATTRIBUTION_KEY = 'commerce-analytics-attribution-v1'
+const ANON_KEY = 'commerce-analytics-anonymous-id-v1'
+const SESSION_KEY = 'commerce-analytics-session-id-v1'
+const LEGACY_CONSENT_KEY = 'sahigadget-analytics-consent'
+const LEGACY_ATTRIBUTION_KEY = 'sahigadget-attribution'
+const LEGACY_ANON_KEY = 'sahigadget-anonymous-id'
+const LEGACY_SESSION_KEY = 'sahigadget-session-id'
 let runtimeConfig = { ...DEFAULT_ANALYTICS_PROJECT_CONFIG, enabled: false, marketingEnabled: false, ga4MeasurementId: '', gtmContainerId: '', metaPixelId: '', tiktokPixelId: '', ga4ServerDeliveryEnabled: false }
 const initializedMetaPixelIds = new Set<string>()
 const initializedTikTokPixelIds = new Set<string>()
@@ -52,13 +56,15 @@ export function initializeGtm() {
   return true
 }
 
-function id(key: string) { const existing = window.localStorage.getItem(key); if (existing) return existing; const value = crypto.randomUUID(); window.localStorage.setItem(key, value); return value }
-function sessionId() { const existing = window.sessionStorage.getItem(SESSION_KEY); if (existing) return existing; const value = crypto.randomUUID(); window.sessionStorage.setItem(SESSION_KEY, value); return value }
-function consent(): Consent { try { const value = JSON.parse(window.localStorage.getItem(CONSENT_KEY) || 'null') as Partial<Consent> | string | null; if (value && typeof value === 'object') return { necessary: true, analytics: Boolean(value.analytics), marketing: Boolean(value.marketing) }; return { necessary: true, analytics: value === 'granted', marketing: false } } catch { return { necessary: true, analytics: false, marketing: false } } }
-function attribution() { const url = new URL(window.location.href); const keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'ttclid']; const current = Object.fromEntries(keys.map((key) => [key, url.searchParams.get(key)]).filter(([, value]) => value)); const prior = JSON.parse(window.sessionStorage.getItem(ATTRIBUTION_KEY) || '{}') as Record<string, string>; const merged = { ...current, ...prior }; if (Object.keys(current).length) window.sessionStorage.setItem(ATTRIBUTION_KEY, JSON.stringify({ ...merged, landing_page: prior.landing_page || window.location.pathname })); return merged }
+function migratedLocalStorage(key: string, legacyKey: string) { const existing = window.localStorage.getItem(key); if (existing !== null) return existing; const legacy = window.localStorage.getItem(legacyKey); if (legacy !== null) { window.localStorage.setItem(key, legacy); return legacy }; return null }
+function migratedSessionStorage(key: string, legacyKey: string) { const existing = window.sessionStorage.getItem(key); if (existing !== null) return existing; const legacy = window.sessionStorage.getItem(legacyKey); if (legacy !== null) { window.sessionStorage.setItem(key, legacy); return legacy }; return null }
+function id(key: string, legacyKey?: string) { const existing = legacyKey ? migratedLocalStorage(key, legacyKey) : window.localStorage.getItem(key); if (existing) return existing; const value = crypto.randomUUID(); window.localStorage.setItem(key, value); return value }
+function sessionId() { const existing = migratedSessionStorage(SESSION_KEY, LEGACY_SESSION_KEY); if (existing) return existing; const value = crypto.randomUUID(); window.sessionStorage.setItem(SESSION_KEY, value); return value }
+function consent(): Consent { try { const value = JSON.parse(migratedLocalStorage(CONSENT_KEY, LEGACY_CONSENT_KEY) || 'null') as Partial<Consent> | string | null; if (value && typeof value === 'object') return { necessary: true, analytics: Boolean(value.analytics), marketing: Boolean(value.marketing) }; return { necessary: true, analytics: value === 'granted', marketing: false } } catch { return { necessary: true, analytics: false, marketing: false } } }
+function attribution() { const url = new URL(window.location.href); const keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'ttclid']; const current = Object.fromEntries(keys.map((key) => [key, url.searchParams.get(key)]).filter(([, value]) => value)); const prior = JSON.parse(migratedSessionStorage(ATTRIBUTION_KEY, LEGACY_ATTRIBUTION_KEY) || '{}') as Record<string, string>; const merged = { ...current, ...prior }; if (Object.keys(current).length) window.sessionStorage.setItem(ATTRIBUTION_KEY, JSON.stringify({ ...merged, landing_page: prior.landing_page || window.location.pathname })); return merged }
 function loadScript(src: string, idValue: string) { if (document.getElementById(idValue)) return; const script = document.createElement('script'); script.id = idValue; script.async = true; script.src = src; document.head.appendChild(script) }
 
-export function hasAnalyticsConsent() { return window.localStorage.getItem(CONSENT_KEY) !== null }
+export function hasAnalyticsConsent() { return migratedLocalStorage(CONSENT_KEY, LEGACY_CONSENT_KEY) !== null }
 export function getAnalyticsConsent() { return consent() }
 function pushGtmConsent(next: Consent) {
   if (typeof window === 'undefined') return
@@ -85,7 +91,7 @@ export function trackClientEvent(input: ClientEventInput) {
   const currentConsent = consent()
   const attributionData = attribution()
   const commerce = input.commerce ? { currency: runtimeConfig.currency, ...input.commerce } : input.commerce
-  const event: CanonicalCommerceEvent = { eventId: input.eventId || crypto.randomUUID(), eventName: input.eventName, eventVersion: '1.0', occurredAt: new Date().toISOString(), sessionId: sessionId(), anonymousId: id(ANON_KEY), pageUrl: window.location.href, pagePath: window.location.pathname, referrer: document.referrer || null, source: attributionData.utm_source || null, medium: attributionData.utm_medium || null, campaign: attributionData.utm_campaign || null, device: { type: /Mobi/i.test(navigator.userAgent) ? 'mobile' : 'desktop', language: navigator.language }, consent: currentConsent, commerce: commerce ? { ...commerce, ...attributionData } : attributionData, metadata: input.metadata as Record<string, string | number | boolean | null> | undefined, testMode: input.testMode }
+  const event: CanonicalCommerceEvent = { eventId: input.eventId || crypto.randomUUID(), eventName: input.eventName, eventVersion: '1.0', occurredAt: new Date().toISOString(), sessionId: sessionId(), anonymousId: id(ANON_KEY, LEGACY_ANON_KEY), pageUrl: window.location.href, pagePath: window.location.pathname, referrer: document.referrer || null, source: attributionData.utm_source || null, medium: attributionData.utm_medium || null, campaign: attributionData.utm_campaign || null, device: { type: /Mobi/i.test(navigator.userAgent) ? 'mobile' : 'desktop', language: navigator.language }, consent: currentConsent, commerce: commerce ? { ...commerce, ...attributionData } : attributionData, metadata: input.metadata as Record<string, string | number | boolean | null> | undefined, testMode: input.testMode }
   if (currentConsent.analytics || currentConsent.marketing || input.testMode) {
     window.dispatchEvent(new CustomEvent('commerce-analytics-event', { detail: event }))
     const body = JSON.stringify(event)
