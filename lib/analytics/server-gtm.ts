@@ -1,6 +1,7 @@
 import 'server-only'
 
 import type { CanonicalCommerceEvent } from './events'
+import { DEFAULT_ANALYTICS_PROJECT_CONFIG, normalizeAnalyticsProjectKey } from './project-config'
 
 export type ServerGtmConfig = {
   enabled: boolean
@@ -52,9 +53,9 @@ export function serverGtmHealthFromConfig(config: ServerGtmConfig): ServerGtmHea
  * Activation is deliberately opt-in. Until a real server container is deployed,
  * this module cannot turn an arbitrary URL into a working GTM server.
  */
-export function buildServerGtmEnvelope(event: CanonicalCommerceEvent) {
+export function buildServerGtmEnvelope(event: CanonicalCommerceEvent, projectKey = DEFAULT_ANALYTICS_PROJECT_CONFIG.projectKey) {
   return {
-    schema: 'phonerbazar.analytics.event',
+    schema: `${normalizeAnalyticsProjectKey(projectKey)}.analytics.event`,
     version: '1.0',
     event: {
       id: event.eventId,
