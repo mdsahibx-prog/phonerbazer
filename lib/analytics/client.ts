@@ -1,7 +1,7 @@
 'use client'
 
 import type { CanonicalCommerceEvent, CommerceEventName } from './types'
-import { providerEventName } from './provider-maps'
+import { dispatchBrowserAnalyticsEvent, initializeBrowserAnalyticsProviders } from './browser-registry'
 import { DEFAULT_ANALYTICS_PROJECT_CONFIG, normalizeAnalyticsCurrency, normalizeAnalyticsProjectKey } from './project-config'
 
 type Consent = { necessary: true; analytics: boolean; marketing: boolean }
@@ -16,74 +16,21 @@ const LEGACY_ATTRIBUTION_KEY = 'sahigadget-attribution'
 const LEGACY_ANON_KEY = 'sahigadget-anonymous-id'
 const LEGACY_SESSION_KEY = 'sahigadget-session-id'
 let runtimeConfig = { ...DEFAULT_ANALYTICS_PROJECT_CONFIG, enabled: false, marketingEnabled: false, ga4MeasurementId: '', gtmContainerId: '', metaPixelId: '', tiktokPixelId: '', ga4ServerDeliveryEnabled: false }
-const initializedMetaPixelIds = new Set<string>()
-const initializedTikTokPixelIds = new Set<string>()
-let initializedGa4MeasurementId = ''
-
 type GtmRuntime = { id: string; status: 'loading' | 'ready' | 'error'; startedAt?: number; readyAt?: number; errorAt?: number }
 
-function getWindow() {
-  return window as typeof window & { dataLayer?: unknown[]; __COMMERCE_ANALYTICS_GTM__?: GtmRuntime; gtag?: (...args: unknown[]) => void; ttq?: { load?: (id: string) => void; page?: () => void; track?: (name: string, properties?: Record<string, unknown>) => void; _i?: Record<string, unknown> } }
-}
-
 export function configureAnalyticsRuntime(config: { projectKey?: string; currency?: string; enabled: boolean; marketingEnabled: boolean; ga4MeasurementId: string; gtmContainerId: string; metaPixelId: string; tiktokPixelId?: string; ga4ServerDeliveryEnabled?: boolean }) {
-  runtimeConfig = { projectKey: normalizeAnalyticsProjectKey(config.projectKey), currency: normalizeAnalyticsCurrency(config.currency), enabled: config.enabled, marketingEnabled: config.marketingEnabled, ga4MeasurementId: config.ga4MeasurementId.trim(), gtmContainerId: config.gtmContainerId.trim().toUpperCase(), metaPixelId: config.metaPixelId.trim(), tiktokPixelId: config.tiktokPixelId?.trim() || '', ga4ServerDeliveryEnabled: Boolean(config.ga4ServerDeliveryEnabled) }
-  if (typeof window !== 'undefined') initializeGtm()
-}
-
-export function initializeGtm() {
-  if (typeof window === 'undefined' || !runtimeConfig.enabled || !runtimeConfig.gtmContainerId) return false
-  const w = getWindow()
-  w.dataLayer = w.dataLayer || []
-  const existing = w.__COMMERCE_ANALYTICS_GTM__
-  if (existing?.id === runtimeConfig.gtmContainerId && (existing.status === 'loading' || existing.status === 'ready')) return true
-  const scriptId = 'commerce-analytics-gtm'
-  const existingScript = document.getElementById(scriptId)
-  if (existingScript) {
-    if (!w.__COMMERCE_ANALYTICS_GTM__) w.__COMMERCE_ANALYTICS_GTM__ = { id: runtimeConfig.gtmContainerId, status: 'loading', startedAt: Date.now() }
-    return true
+  runtimeConfig = {
+    projectKey: normalizeAnalyticsProjectKey(config.projectKey),
+    currency: normalizeAnalyticsCurrency(config.currency),
+    enabled: config.enabled,
+    marketingEnabled: config.marketingEnabled,
+    ga4MeasurementId: config.ga4MeasurementId.trim(),
+    gtmContainerId: config.gtmContainerId.trim().toUpperCase(),
+    metaPixelId: config.metaPixelId.trim(),
+    tiktokPixelId: config.tiktokPixelId?.trim() || '',
+    ga4ServerDeliveryEnabled: Boolean(config.ga4ServerDeliveryEnabled),
   }
-  {
-    const script = document.createElement('script')
-    script.id = scriptId
-    script.async = true
-    script.src = 'https://www.googletagmanager.com/gtm.js?id=' + encodeURIComponent(runtimeConfig.gtmContainerId)
-    w.__COMMERCE_ANALYTICS_GTM__ = { id: runtimeConfig.gtmContainerId, status: 'loading', startedAt: Date.now() }
-    script.onload = () => { if (w.__COMMERCE_ANALYTICS_GTM__) { w.__COMMERCE_ANALYTICS_GTM__.status = 'ready'; w.__COMMERCE_ANALYTICS_GTM__.readyAt = Date.now() }; window.dispatchEvent(new CustomEvent('commerce-analytics-gtm-ready')) }
-    script.onerror = () => { if (w.__COMMERCE_ANALYTICS_GTM__) { w.__COMMERCE_ANALYTICS_GTM__.status = 'error'; w.__COMMERCE_ANALYTICS_GTM__.errorAt = Date.now() }; window.dispatchEvent(new CustomEvent('commerce-analytics-gtm-error')) }
-    document.head.appendChild(script)
-  }
-  return true
-}
-
-function migratedLocalStorage(key: string, legacyKey: string) { const existing = window.localStorage.getItem(key); if (existing !== null) return existing; const legacy = window.localStorage.getItem(legacyKey); if (legacy !== null) { window.localStorage.setItem(key, legacy); return legacy }; return null }
-function migratedSessionStorage(key: string, legacyKey: string) { const existing = window.sessionStorage.getItem(key); if (existing !== null) return existing; const legacy = window.sessionStorage.getItem(legacyKey); if (legacy !== null) { window.sessionStorage.setItem(key, legacy); return legacy }; return null }
-function id(key: string, legacyKey?: string) { const existing = legacyKey ? migratedLocalStorage(key, legacyKey) : window.localStorage.getItem(key); if (existing) return existing; const value = crypto.randomUUID(); window.localStorage.setItem(key, value); return value }
-function sessionId() { const existing = migratedSessionStorage(SESSION_KEY, LEGACY_SESSION_KEY); if (existing) return existing; const value = crypto.randomUUID(); window.sessionStorage.setItem(SESSION_KEY, value); return value }
-function consent(): Consent { try { const value = JSON.parse(migratedLocalStorage(CONSENT_KEY, LEGACY_CONSENT_KEY) || 'null') as Partial<Consent> | string | null; if (value && typeof value === 'object') return { necessary: true, analytics: Boolean(value.analytics), marketing: Boolean(value.marketing) }; return { necessary: true, analytics: value === 'granted', marketing: false } } catch { return { necessary: true, analytics: false, marketing: false } } }
-function attribution() { const url = new URL(window.location.href); const keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'ttclid']; const current = Object.fromEntries(keys.map((key) => [key, url.searchParams.get(key)]).filter(([, value]) => value)); const prior = JSON.parse(migratedSessionStorage(ATTRIBUTION_KEY, LEGACY_ATTRIBUTION_KEY) || '{}') as Record<string, string>; const merged = { ...current, ...prior }; if (Object.keys(current).length) window.sessionStorage.setItem(ATTRIBUTION_KEY, JSON.stringify({ ...merged, landing_page: prior.landing_page || window.location.pathname })); return merged }
-function loadScript(src: string, idValue: string) { if (document.getElementById(idValue)) return; const script = document.createElement('script'); script.id = idValue; script.async = true; script.src = src; document.head.appendChild(script) }
-
-export function hasAnalyticsConsent() { return migratedLocalStorage(CONSENT_KEY, LEGACY_CONSENT_KEY) !== null }
-export function getAnalyticsConsent() { return consent() }
-function pushGtmConsent(next: Consent) {
-  if (typeof window === 'undefined') return
-  const w = getWindow()
-  w.dataLayer = w.dataLayer || []
-  w.dataLayer.push(['consent', 'update', {
-    analytics_storage: next.analytics ? 'granted' : 'denied',
-    ad_storage: next.marketing ? 'granted' : 'denied',
-    ad_user_data: next.marketing ? 'granted' : 'denied',
-    ad_personalization: next.marketing ? 'granted' : 'denied',
-  }])
-}
-export function setAnalyticsConsent(value: Consent | 'granted' | 'denied') {
-  const next: Consent = typeof value === 'string'
-    ? { necessary: true, analytics: value === 'granted', marketing: false }
-    : { necessary: true, analytics: Boolean(value.analytics), marketing: Boolean(value.marketing) }
-  window.localStorage.setItem(CONSENT_KEY, JSON.stringify(next))
-  pushGtmConsent(next)
-  window.dispatchEvent(new CustomEvent('analytics-consent-change'))
+  if (typeof window !== 'undefined') initializeBrowserAnalyticsProviders(runtimeConfig)
 }
 
 export function trackClientEvent(input: ClientEventInput) {
@@ -102,25 +49,7 @@ export function trackClientEvent(input: ClientEventInput) {
       void fetch('/api/analytics', { method: 'POST', headers: { 'content-type': 'application/json' }, body, keepalive: true }).catch(() => undefined)
     }
   }
-  const w = getWindow()
-  const gtmRuntimeActive = Boolean(w.__COMMERCE_ANALYTICS_GTM__ || document.getElementById('commerce-analytics-gtm') || w.dataLayer)
-  if (gtmRuntimeActive && (currentConsent.analytics || currentConsent.marketing || input.testMode)) {
-    initializeGtm()
-    w.dataLayer = w.dataLayer || []
-    w.dataLayer.push({ ecommerce: null })
-    w.dataLayer.push({ event: input.eventName, event_id: event.eventId, event_version: event.eventVersion, ecommerce: event.commerce, attribution: attributionData, test_mode: Boolean(input.testMode) })
-  }
-  if (runtimeConfig.enabled && currentConsent.analytics && !input.testMode && !runtimeConfig.ga4ServerDeliveryEnabled && !runtimeConfig.gtmContainerId) { const idValue = runtimeConfig.ga4MeasurementId; if (idValue) { const w = window as typeof window & { gtag?: (...args: unknown[]) => void }; w.gtag = w.gtag || function (...args: unknown[]) { (w as typeof w & { dataLayer?: unknown[] }).dataLayer = (w as typeof w & { dataLayer?: unknown[] }).dataLayer || []; (w as typeof w & { dataLayer?: unknown[] }).dataLayer?.push(args) }; loadScript(`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(idValue)}`, 'commerce-analytics-ga4'); if (initializedGa4MeasurementId !== idValue) { w.gtag('js', new Date()); w.gtag('config', idValue, { send_page_view: false }); initializedGa4MeasurementId = idValue } w.gtag('event', event.eventName, { ...event.commerce, event_id: event.eventId }) } }
-  const pixelIds = runtimeConfig.metaPixelId.split(/[\\s,]+/).map((value) => value.trim()).filter(Boolean)
-  if (runtimeConfig.enabled && runtimeConfig.marketingEnabled && currentConsent.marketing && !input.testMode && pixelIds.length) { const w = window as typeof window & { fbq?: ((...args: unknown[]) => void) & { callMethod?: (...args: unknown[]) => void; queue?: unknown[]; push?: (...args: unknown[]) => void; loaded?: boolean; version?: string }; _fbq?: unknown }; if (!w.fbq) { const fbq = function (this: unknown, ...args: unknown[]) { if (fbq.callMethod) fbq.callMethod.apply(this, args); else fbq.queue?.push(args) } as ((...args: unknown[]) => void) & { callMethod?: (...args: unknown[]) => void; queue?: unknown[]; push?: (...args: unknown[]) => void; loaded?: boolean; version?: string }; fbq.push = fbq; fbq.loaded = true; fbq.version = '2.0'; fbq.queue = []; w.fbq = fbq; w._fbq = fbq }; loadScript('https://connect.facebook.net/en_US/fbevents.js', 'commerce-analytics-meta-pixel'); const metaEvent = providerEventName('META_PIXEL', input.eventName); for (const pixelId of pixelIds) { if (!initializedMetaPixelIds.has(pixelId)) { w.fbq('init', pixelId); initializedMetaPixelIds.add(pixelId) } if (metaEvent) w.fbq('track', metaEvent, { ...event.commerce, eventID: event.eventId }) } }
-  if (runtimeConfig.enabled && runtimeConfig.marketingEnabled && currentConsent.marketing && !input.testMode && runtimeConfig.tiktokPixelId) {
-    const w = getWindow()
-    if (!w.ttq) { const queue: unknown[] = []; w.ttq = { load: (id: string) => queue.push(['load', id]), page: () => queue.push(['page']), track: (name: string, properties?: Record<string, unknown>) => queue.push(['track', name, properties || {}]), _i: {} } }
-    loadScript('https://analytics.tiktok.com/i18n/pixel/events.js?sdkid=' + encodeURIComponent(runtimeConfig.tiktokPixelId), 'commerce-analytics-tiktok-pixel')
-    if (!initializedTikTokPixelIds.has(runtimeConfig.tiktokPixelId)) { w.ttq?.load?.(runtimeConfig.tiktokPixelId); initializedTikTokPixelIds.add(runtimeConfig.tiktokPixelId) }
-    if (input.eventName === 'page_view') w.ttq?.page?.()
-    else { const tiktokEvent = providerEventName('TIKTOK_PIXEL', input.eventName); if (tiktokEvent) w.ttq?.track?.(tiktokEvent, { ...event.commerce, event_id: event.eventId }) }
-  }
+  dispatchBrowserAnalyticsEvent(event, runtimeConfig)
   return event
 }
 
