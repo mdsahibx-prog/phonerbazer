@@ -36,10 +36,31 @@ if (canonicalCommerceEventSchema.safeParse(oversized).success) {
   throw new Error('Oversized analytics field was accepted.')
 }
 
+const privateQueryUrl = { ...base, pageUrl: 'https://example.test/product?email=private@example.com&token=secret#fragment' }
+const sanitizedPrivateQueryUrl = requireSanitizedUrlCheck(privateQueryUrl)
+if (sanitizedPrivateQueryUrl !== 'https://example.test/product') throw new Error('Analytics URL query/hash sanitization failed.')
+
 const unknown = { ...base, unexpected: 'should be rejected' }
 if (canonicalCommerceEventSchema.safeParse(unknown).success) {
   throw new Error('Unknown analytics fields were accepted.')
 }
+
+function requireSanitizedUrlCheck(event: typeof base) {
+  const { sanitizeCommerceEvent } = require('../lib/analytics/events') as typeof import('../lib/analytics/events')
+  return sanitizeCommerceEvent(event).pageUrl
+}
+
+const sanitizedCommerce = require('../lib/analytics/events').sanitizeCommerceEvent({
+  ...base,
+  commerce: {
+    transaction_id: 'ORDER-1',
+    items: [{ item_id: 'SKU-1', item_name: 'Demo phone', price: 1200, quantity: 1, phone: 'must-not-survive' }],
+    unexpected_nested: { secret: 'must-not-survive' },
+  },
+})
+const sanitizedItem = sanitizedCommerce.commerce?.items?.[0] as Record<string, unknown>
+if ('phone' in sanitizedItem) throw new Error('Nested commerce PII was not removed.')
+if ('unexpected_nested' in (sanitizedCommerce.commerce || {})) throw new Error('Unexpected nested commerce data was retained.')
 
 console.log('analytics contract tests passed')
 
