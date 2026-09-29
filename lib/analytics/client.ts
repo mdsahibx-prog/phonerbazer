@@ -2,6 +2,7 @@
 
 import type { CanonicalCommerceEvent, CommerceEventName } from './types'
 import { providerEventName } from './provider-maps'
+import { DEFAULT_ANALYTICS_PROJECT_CONFIG, normalizeAnalyticsCurrency, normalizeAnalyticsProjectKey } from './project-config'
 
 type Consent = { necessary: true; analytics: boolean; marketing: boolean }
 type ClientEventInput = { eventName: CommerceEventName; commerce?: Record<string, unknown>; metadata?: Record<string, unknown>; eventId?: string; testMode?: boolean }
@@ -10,7 +11,7 @@ const CONSENT_KEY = 'sahigadget-analytics-consent'
 const ATTRIBUTION_KEY = 'sahigadget-attribution'
 const ANON_KEY = 'sahigadget-anonymous-id'
 const SESSION_KEY = 'sahigadget-session-id'
-let runtimeConfig = { projectKey: 'phonerbazar', currency: 'BDT', enabled: false, marketingEnabled: false, ga4MeasurementId: '', gtmContainerId: '', metaPixelId: '', tiktokPixelId: '', ga4ServerDeliveryEnabled: false }
+let runtimeConfig = { ...DEFAULT_ANALYTICS_PROJECT_CONFIG, enabled: false, marketingEnabled: false, ga4MeasurementId: '', gtmContainerId: '', metaPixelId: '', tiktokPixelId: '', ga4ServerDeliveryEnabled: false }
 const initializedMetaPixelIds = new Set<string>()
 const initializedTikTokPixelIds = new Set<string>()
 let initializedGa4MeasurementId = ''
@@ -22,7 +23,7 @@ function getWindow() {
 }
 
 export function configureAnalyticsRuntime(config: { projectKey?: string; currency?: string; enabled: boolean; marketingEnabled: boolean; ga4MeasurementId: string; gtmContainerId: string; metaPixelId: string; tiktokPixelId?: string; ga4ServerDeliveryEnabled?: boolean }) {
-  runtimeConfig = { projectKey: config.projectKey?.trim().toLowerCase() || 'phonerbazar', currency: config.currency?.trim().toUpperCase() || 'BDT', enabled: config.enabled, marketingEnabled: config.marketingEnabled, ga4MeasurementId: config.ga4MeasurementId.trim(), gtmContainerId: config.gtmContainerId.trim().toUpperCase(), metaPixelId: config.metaPixelId.trim(), tiktokPixelId: config.tiktokPixelId?.trim() || '', ga4ServerDeliveryEnabled: Boolean(config.ga4ServerDeliveryEnabled) }
+  runtimeConfig = { projectKey: normalizeAnalyticsProjectKey(config.projectKey), currency: normalizeAnalyticsCurrency(config.currency), enabled: config.enabled, marketingEnabled: config.marketingEnabled, ga4MeasurementId: config.ga4MeasurementId.trim(), gtmContainerId: config.gtmContainerId.trim().toUpperCase(), metaPixelId: config.metaPixelId.trim(), tiktokPixelId: config.tiktokPixelId?.trim() || '', ga4ServerDeliveryEnabled: Boolean(config.ga4ServerDeliveryEnabled) }
   if (typeof window !== 'undefined') initializeGtm()
 }
 
