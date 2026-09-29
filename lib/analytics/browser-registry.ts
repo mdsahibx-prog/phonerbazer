@@ -133,13 +133,15 @@ const metaPixelAdapter: BrowserProviderAdapter = {
       w._fbq = fbq
     }
     loadScript('https://connect.facebook.net/en_US/fbevents.js', 'commerce-analytics-meta-pixel')
+    const fbq = w.fbq
+    if (!fbq) return
     const metaEvent = providerEventName('META_PIXEL', event.eventName)
     for (const pixelId of pixelIds) {
       if (!initializedMetaPixelIds.has(pixelId)) {
-        w.fbq('init', pixelId)
+        fbq('init', pixelId)
         initializedMetaPixelIds.add(pixelId)
       }
-      if (metaEvent) w.fbq('track', metaEvent, { ...event.commerce, eventID: event.eventId })
+      if (metaEvent) fbq('track', metaEvent, { ...event.commerce, eventID: event.eventId })
     }
   },
 }
@@ -161,14 +163,16 @@ const tiktokPixelAdapter: BrowserProviderAdapter = {
       }
     }
     loadScript('https://analytics.tiktok.com/i18n/pixel/events.js?sdkid=' + encodeURIComponent(pixelId), 'commerce-analytics-tiktok-pixel')
+    const ttq = w.ttq
+    if (!ttq) return
     if (!initializedTikTokPixelIds.has(pixelId)) {
-      w.ttq.load?.(pixelId)
+      ttq.load?.(pixelId)
       initializedTikTokPixelIds.add(pixelId)
     }
-    if (event.eventName === 'page_view') w.ttq.page?.()
+    if (event.eventName === 'page_view') ttq.page?.()
     else {
       const tiktokEvent = providerEventName('TIKTOK_PIXEL', event.eventName)
-      if (tiktokEvent) w.ttq.track?.(tiktokEvent, { ...event.commerce, event_id: event.eventId })
+      if (tiktokEvent) ttq.track?.(tiktokEvent, { ...event.commerce, event_id: event.eventId })
     }
   },
 }
