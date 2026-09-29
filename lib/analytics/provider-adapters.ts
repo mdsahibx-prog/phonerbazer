@@ -26,10 +26,16 @@ function ga4NumericId(input: string) {
   return String(first) + '.' + String(second)
 }
 
+function ga4SessionId(input: string) {
+  let hash = 0x811c9dc5
+  for (let index = 0; index < input.length; index += 1) hash = Math.imul(hash ^ input.charCodeAt(index), 16777619)
+  return String(Math.abs(hash >>> 0) % 9000000000000 + 1000000000000)
+}
+
 export function buildGa4MeasurementPayload(event: CanonicalCommerceEvent) {
   const stableSource = event.anonymousId || event.sessionId || event.eventId
   const clientId = /^\d+\.\d+$/.test(stableSource) ? stableSource : ga4NumericId(stableSource)
-  const sessionId = /^\d+$/.test(event.sessionId || '') ? event.sessionId : ga4NumericId(event.sessionId || event.occurredAt)
+  const sessionId = /^\d+$/.test(event.sessionId || '') ? event.sessionId : ga4SessionId(event.sessionId || event.occurredAt)
   return {
     client_id: clientId,
     events: [{
