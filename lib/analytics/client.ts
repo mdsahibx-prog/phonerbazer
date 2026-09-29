@@ -16,6 +16,34 @@ const LEGACY_ATTRIBUTION_KEY = 'sahigadget-attribution'
 const LEGACY_ANON_KEY = 'sahigadget-anonymous-id'
 const LEGACY_SESSION_KEY = 'sahigadget-session-id'
 let runtimeConfig = { ...DEFAULT_ANALYTICS_PROJECT_CONFIG, enabled: false, marketingEnabled: false, ga4MeasurementId: '', gtmContainerId: '', metaPixelId: '', tiktokPixelId: '', ga4ServerDeliveryEnabled: false }
+function migratedLocalStorage(key: string, legacyKey: string) { const existing = window.localStorage.getItem(key); if (existing !== null) return existing; const legacy = window.localStorage.getItem(legacyKey); if (legacy !== null) { window.localStorage.setItem(key, legacy); return legacy }; return null }
+function migratedSessionStorage(key: string, legacyKey: string) { const existing = window.sessionStorage.getItem(key); if (existing !== null) return existing; const legacy = window.sessionStorage.getItem(legacyKey); if (legacy !== null) { window.sessionStorage.setItem(key, legacy); return legacy }; return null }
+function id(key: string, legacyKey?: string) { const existing = legacyKey ? migratedLocalStorage(key, legacyKey) : window.localStorage.getItem(key); if (existing) return existing; const value = crypto.randomUUID(); window.localStorage.setItem(key, value); return value }
+function sessionId() { const existing = migratedSessionStorage(SESSION_KEY, LEGACY_SESSION_KEY); if (existing) return existing; const value = crypto.randomUUID(); window.sessionStorage.setItem(SESSION_KEY, value); return value }
+function consent(): Consent { try { const value = JSON.parse(migratedLocalStorage(CONSENT_KEY, LEGACY_CONSENT_KEY) || 'null') as Partial<Consent> | string | null; if (value && typeof value === 'object') return { necessary: true, analytics: Boolean(value.analytics), marketing: Boolean(value.marketing) }; return { necessary: true, analytics: value === 'granted', marketing: false } } catch { return { necessary: true, analytics: false, marketing: false } } }
+function attribution() { const url = new URL(window.location.href); const keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'ttclid']; const current = Object.fromEntries(keys.map((key) => [key, url.searchParams.get(key)]).filter(([, value]) => value)); const prior = JSON.parse(migratedSessionStorage(ATTRIBUTION_KEY, LEGACY_ATTRIBUTION_KEY) || '{}') as Record<string, string>; const merged = { ...current, ...prior }; if (Object.keys(current).length) window.sessionStorage.setItem(ATTRIBUTION_KEY, JSON.stringify({ ...merged, landing_page: prior.landing_page || window.location.pathname })); return merged }
+export function hasAnalyticsConsent() { return migratedLocalStorage(CONSENT_KEY, LEGACY_CONSENT_KEY) !== null }
+export function getAnalyticsConsent() { return consent() }
+function pushGtmConsent(next: Consent) {
+  if (typeof window === 'undefined') return
+  const w = window as typeof window & { dataLayer?: unknown[] }
+  w.dataLayer = w.dataLayer || []
+  w.dataLayer.push(['consent', 'update', {
+    analytics_storage: next.analytics ? 'granted' : 'denied',
+    ad_storage: next.marketing ? 'granted' : 'denied',
+    ad_user_data: next.marketing ? 'granted' : 'denied',
+    ad_personalization: next.marketing ? 'granted' : 'denied',
+  }])
+}
+export function setAnalyticsConsent(value: Consent | 'granted' | 'denied') {
+  const next: Consent = typeof value === 'string'
+    ? { necessary: true, analytics: value === 'granted', marketing: false }
+    : { necessary: true, analytics: Boolean(value.analytics), marketing: Boolean(value.marketing) }
+  window.localStorage.setItem(CONSENT_KEY, JSON.stringify(next))
+  pushGtmConsent(next)
+  window.dispatchEvent(new CustomEvent('analytics-consent-change'))
+}
+
 export function initializeGtm() {
   initializeBrowserAnalyticsProviders(runtimeConfig)
   return Boolean(runtimeConfig.enabled && runtimeConfig.gtmContainerId)
