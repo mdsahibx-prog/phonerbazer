@@ -6,6 +6,8 @@ export const revalidate = 0
 export async function GET() {
   const config = await getAnalyticsConfig()
   return NextResponse.json({
+    projectKey: config.projectKey,
+    currency: config.currency,
     enabled: config.enabled,
     marketingEnabled: config.marketingEnabled,
     ga4MeasurementId: config.ga4MeasurementId,
