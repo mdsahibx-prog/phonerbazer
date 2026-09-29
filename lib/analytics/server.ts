@@ -4,7 +4,7 @@ import { unstable_cache } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { recordCanonicalEvent, type CanonicalCommerceEvent } from './events'
 import { ANALYTICS_EVENT_MAP } from './registry'
-import { ANALYTICS_PROVIDER_ADAPTERS } from './provider-adapters'
+import { ANALYTICS_PROVIDER_ADAPTERS, type AnalyticsProviderId } from './provider-adapters'
 import { ensureDeliveryLedgerEntry, recordDeliveryResult } from './delivery-ledger'
 import { DEFAULT_ANALYTICS_PROJECT_CONFIG, normalizeAnalyticsCurrency, normalizeAnalyticsProjectKey } from './project-config'
 
