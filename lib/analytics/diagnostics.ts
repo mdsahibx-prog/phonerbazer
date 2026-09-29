@@ -46,24 +46,28 @@ export async function getAnalyticsDiagnostics() {
   }
 
   const gtmStatus = config.gtmContainerId ? await probeGtm(config.gtmContainerId) : 'DISABLED'
-  let delivery = { pending: 0, succeeded: 0, failed: 0, retryable: 0 }
+  let delivery = { pending: 0, succeeded: 0, failed: 0, dead: 0, retryable: 0, leased: 0 }
   try {
     const db = createAdminClient()
     const now = new Date().toISOString()
-    const [pending, succeeded, failed, retryable] = await Promise.all([
+    const [pending, succeeded, failed, dead, retryable, leased] = await Promise.all([
       db.from('analytics_delivery_ledger').select('id', { count: 'exact', head: true }).eq('status', 'PENDING'),
       db.from('analytics_delivery_ledger').select('id', { count: 'exact', head: true }).eq('status', 'SUCCEEDED'),
       db.from('analytics_delivery_ledger').select('id', { count: 'exact', head: true }).eq('status', 'FAILED'),
-      db.from('analytics_delivery_ledger').select('id', { count: 'exact', head: true }).eq('status', 'FAILED').lte('next_attempt_at', now),
+      db.from('analytics_delivery_ledger').select('id', { count: 'exact', head: true }).eq('status', 'DEAD'),
+      db.from('analytics_delivery_ledger').select('id', { count: 'exact', head: true }).in('status', ['PENDING', 'FAILED']).lte('next_attempt_at', now).is('lease_token', null),
+      db.from('analytics_delivery_ledger').select('id', { count: 'exact', head: true }).not('lease_token', 'is', null),
     ])
     delivery = {
       pending: pending.count || 0,
       succeeded: succeeded.count || 0,
       failed: failed.count || 0,
+      dead: dead.count || 0,
       retryable: retryable.count || 0,
+      leased: leased.count || 0,
     }
   } catch {
-    delivery = { pending: 0, succeeded: 0, failed: 0, retryable: 0 }
+    delivery = { pending: 0, succeeded: 0, failed: 0, dead: 0, retryable: 0, leased: 0 }
   }
 
   return {
