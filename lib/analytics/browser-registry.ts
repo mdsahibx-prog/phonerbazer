@@ -15,16 +15,7 @@ export type BrowserAnalyticsRuntimeConfig = {
 
 export type BrowserProviderId = 'GTM' | 'GA4' | 'META_PIXEL' | 'TIKTOK_PIXEL'
 
-type BrowserWindow = Window & {
-  dataLayer?: unknown[]
-  gtag?: (...args: unknown[]) => void
-  fbq?: ((...args: unknown[]) => void) & { callMethod?: (...args: unknown[]) => void; queue?: unknown[]; push?: (...args: unknown[]) => void; loaded?: boolean; version?: string }
-  _fbq?: unknown
-  ttq?: { load?: (id: string) => void; page?: () => void; track?: (name: string, properties?: Record<string, unknown>) => void; _i?: Record<string, unknown> }
-  __COMMERCE_ANALYTICS_GTM__?: { id: string; status: 'loading' | 'ready' | 'error'; startedAt?: number; readyAt?: number; errorAt?: number }
-}
-
-function getWindow() { return window as BrowserWindow }
+function getWindow() { return window as any }
 
 function loadScript(src: string, idValue: string) {
   if (document.getElementById(idValue)) return
