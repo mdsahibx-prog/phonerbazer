@@ -9,6 +9,8 @@ export type AnalyticsPersistenceInput = {
   metadata: Record<string, unknown>
 }
 
+import { createSupabaseAnalyticsPersistenceAdapter } from './persistence-supabase'
+
 export type AnalyticsPersistenceResult = {
   ok: boolean
   duplicate: boolean
@@ -21,5 +23,3 @@ export interface AnalyticsPersistenceAdapter {
 export function getAnalyticsPersistenceAdapter(): AnalyticsPersistenceAdapter {
   return createSupabaseAnalyticsPersistenceAdapter()
 }
-
-import { createSupabaseAnalyticsPersistenceAdapter } from './persistence-supabase'
