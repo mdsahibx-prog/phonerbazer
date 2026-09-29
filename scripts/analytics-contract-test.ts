@@ -2,6 +2,7 @@ import { canonicalCommerceEventSchema } from '../lib/analytics/events'
 import { analyticsEventSchema, normalizeAnalyticsCurrency, normalizeAnalyticsProjectKey } from '../lib/analytics/project-config'
 import { isLiveProviderDispatchAllowed } from '../lib/analytics/provider-policy'
 import { normalizeServerGtmEndpoint, isValidServerGtmEndpoint, buildServerGtmEnvelope } from '../lib/analytics/server-gtm'
+import { ANALYTICS_PROVIDER_ADAPTERS } from '../lib/analytics/provider-adapters'
 
 const base = {
   eventId: '11111111-1111-4111-8111-111111111111',
@@ -58,3 +59,26 @@ if (isLiveProviderDispatchAllowed(true)) throw new Error('Synthetic test events 
 if (!isLiveProviderDispatchAllowed(false)) throw new Error('Live events must remain eligible for provider delivery.')
 
 console.log('live provider dispatch policy tests passed')
+
+for (const provider of ['GA4', 'META_CAPI', 'TIKTOK_EVENTS_API', 'SERVER_GTM'] as const) {
+  if (!ANALYTICS_PROVIDER_ADAPTERS[provider]) throw new Error('Missing analytics provider adapter: ' + provider)
+  if (ANALYTICS_PROVIDER_ADAPTERS[provider].canDispatch({ ...base, testMode: true }, {
+    projectKey: 'demo-store',
+    currency: 'USD',
+    enabled: true,
+    marketingEnabled: true,
+    consentMode: 'advanced',
+    debugMode: true,
+    ga4MeasurementId: 'G-DEMO',
+    gtmContainerId: 'GTM-DEMO',
+    metaPixelId: '123',
+    metaCapiEnabled: true,
+    tiktokPixelId: 'TT-DEMO',
+    tiktokEventsApiEnabled: true,
+    serverGtmEnabled: true,
+    serverGtmEndpoint: 'https://gtm.example.com',
+    environment: 'production',
+    eventControls: {},
+  })) throw new Error('Provider adapter canDispatch bypassed safe test mode: ' + provider)
+}
+console.log('provider adapter registry tests passed')
