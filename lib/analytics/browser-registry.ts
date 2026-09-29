@@ -112,3 +112,82 @@ const ga4Adapter: BrowserProviderAdapter = {
     w.gtag('event', event.eventName, { ...event.commerce, event_id: event.eventId })
   },
 }
+
+const metaPixelAdapter: BrowserProviderAdapter = {
+  id: 'META_PIXEL',
+  canDispatch: (event, config) => Boolean(config.enabled && config.marketingEnabled && config.metaPixelId && event.consent.marketing && !event.testMode),
+  dispatch: (event, config) => {
+    const w = getWindow()
+    const pixelIds = config.metaPixelId.split(/[\s,]+/).map((value) => value.trim()).filter(Boolean)
+    if (!pixelIds.length) return
+    if (!w.fbq) {
+      const fbq = function (this: unknown, ...args: unknown[]) {
+        if (fbq.callMethod) fbq.callMethod.apply(this, args)
+        else fbq.queue?.push(args)
+      } as ((...args: unknown[]) => void) & { callMethod?: (...args: unknown[]) => void; queue?: unknown[]; push?: (...args: unknown[]) => void; loaded?: boolean; version?: string }
+      fbq.push = fbq
+      fbq.loaded = true
+      fbq.version = '2.0'
+      fbq.queue = []
+      w.fbq = fbq
+      w._fbq = fbq
+    }
+    loadScript('https://connect.facebook.net/en_US/fbevents.js', 'commerce-analytics-meta-pixel')
+    const metaEvent = providerEventName('META_PIXEL', event.eventName)
+    for (const pixelId of pixelIds) {
+      if (!initializedMetaPixelIds.has(pixelId)) {
+        w.fbq('init', pixelId)
+        initializedMetaPixelIds.add(pixelId)
+      }
+      if (metaEvent) w.fbq('track', metaEvent, { ...event.commerce, eventID: event.eventId })
+    }
+  },
+}
+
+const tiktokPixelAdapter: BrowserProviderAdapter = {
+  id: 'TIKTOK_PIXEL',
+  canDispatch: (event, config) => Boolean(config.enabled && config.marketingEnabled && config.tiktokPixelId && event.consent.marketing && !event.testMode),
+  dispatch: (event, config) => {
+    const pixelId = config.tiktokPixelId
+    if (!pixelId) return
+    const w = getWindow()
+    if (!w.ttq) {
+      const queue: unknown[] = []
+      w.ttq = {
+        load: (id: string) => queue.push(['load', id]),
+        page: () => queue.push(['page']),
+        track: (name: string, properties?: Record<string, unknown>) => queue.push(['track', name, properties || {}]),
+        _i: {},
+      }
+    }
+    loadScript('https://analytics.tiktok.com/i18n/pixel/events.js?sdkid=' + encodeURIComponent(pixelId), 'commerce-analytics-tiktok-pixel')
+    if (!initializedTikTokPixelIds.has(pixelId)) {
+      w.ttq.load?.(pixelId)
+      initializedTikTokPixelIds.add(pixelId)
+    }
+    if (event.eventName === 'page_view') w.ttq.page?.()
+    else {
+      const tiktokEvent = providerEventName('TIKTOK_PIXEL', event.eventName)
+      if (tiktokEvent) w.ttq.track?.(tiktokEvent, { ...event.commerce, event_id: event.eventId })
+    }
+  },
+}
+
+export const BROWSER_ANALYTICS_PROVIDER_ADAPTERS: Record<BrowserProviderId, BrowserProviderAdapter> = {
+  GTM: gtmAdapter,
+  GA4: ga4Adapter,
+  META_PIXEL: metaPixelAdapter,
+  TIKTOK_PIXEL: tiktokPixelAdapter,
+}
+
+export function initializeBrowserAnalyticsProviders(config: BrowserAnalyticsRuntimeConfig) {
+  if (typeof window === 'undefined') return
+  for (const adapter of Object.values(BROWSER_ANALYTICS_PROVIDER_ADAPTERS)) adapter.initialize?.(config)
+}
+
+export function dispatchBrowserAnalyticsEvent(event: CanonicalCommerceEvent, config: BrowserAnalyticsRuntimeConfig) {
+  if (typeof window === 'undefined') return
+  for (const adapter of Object.values(BROWSER_ANALYTICS_PROVIDER_ADAPTERS)) {
+    if (adapter.canDispatch(event, config)) adapter.dispatch(event, config)
+  }
+}
