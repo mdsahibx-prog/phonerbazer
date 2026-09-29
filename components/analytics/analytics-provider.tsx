@@ -35,6 +35,7 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
           if (cancelled || !config) return
           configureAnalyticsRuntime(config)
           initializeGtm()
+          if (hasAnalyticsConsent() && (getAnalyticsConsent().analytics || getAnalyticsConsent().marketing)) trackPageView()
         })
         .catch(() => { configLoaded = false })
     }
@@ -43,7 +44,7 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
       const next = hasAnalyticsConsent() ? getAnalyticsConsent() : null
       setConsent(next)
       if (next && (next.analytics || next.marketing)) {
-        if (emitPageView || next) trackPageView()
+        if (emitPageView && configLoaded) trackPageView()
         const cancelIdle = runWhenIdle(loadRuntimeConfig, 1200)
         if (cancelled) cancelIdle()
       }
