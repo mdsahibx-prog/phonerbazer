@@ -16,7 +16,10 @@ const LEGACY_ATTRIBUTION_KEY = 'sahigadget-attribution'
 const LEGACY_ANON_KEY = 'sahigadget-anonymous-id'
 const LEGACY_SESSION_KEY = 'sahigadget-session-id'
 let runtimeConfig = { ...DEFAULT_ANALYTICS_PROJECT_CONFIG, enabled: false, marketingEnabled: false, ga4MeasurementId: '', gtmContainerId: '', metaPixelId: '', tiktokPixelId: '', ga4ServerDeliveryEnabled: false }
-type GtmRuntime = { id: string; status: 'loading' | 'ready' | 'error'; startedAt?: number; readyAt?: number; errorAt?: number }
+export function initializeGtm() {
+  initializeBrowserAnalyticsProviders(runtimeConfig)
+  return Boolean(runtimeConfig.enabled && runtimeConfig.gtmContainerId)
+}
 
 export function configureAnalyticsRuntime(config: { projectKey?: string; currency?: string; enabled: boolean; marketingEnabled: boolean; ga4MeasurementId: string; gtmContainerId: string; metaPixelId: string; tiktokPixelId?: string; ga4ServerDeliveryEnabled?: boolean }) {
   runtimeConfig = {
