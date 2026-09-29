@@ -9,7 +9,6 @@ import {
   ANALYTICS_DELIVERY_LEASE_SECONDS,
   ANALYTICS_MAX_DELIVERY_ATTEMPTS,
   claimAnalyticsDeliveryBatch,
-  finalizeAnalyticsDelivery,
   releaseDeliveryForProviderRecheck,
   recordDeliveryResult,
 } from './delivery-ledger'
