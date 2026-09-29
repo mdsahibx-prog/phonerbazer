@@ -37,7 +37,7 @@ export async function retryFailedAnalyticsDeliveries(limit = 20) {
     })
     return {
       ok: result.ok,
-      message: \`${result.attempted} delivery attempt(s), ${result.succeeded} succeeded, ${result.failed} failed, ${result.skipped} skipped.\`,
+      message: result.attempted + ' delivery attempt(s), ' + result.succeeded + ' succeeded, ' + result.failed + ' failed, ' + result.skipped + ' skipped.',
     }
   } catch {
     return { ok: false, message: 'Unable to replay failed analytics deliveries.' }
