@@ -2,7 +2,7 @@ import { canonicalCommerceEventSchema, sanitizeCommerceEvent } from '../lib/anal
 import { analyticsEventSchema, normalizeAnalyticsCurrency, normalizeAnalyticsProjectKey } from '../lib/analytics/project-config'
 import { isLiveProviderDispatchAllowed } from '../lib/analytics/provider-policy'
 import { normalizeServerGtmEndpoint, isValidServerGtmEndpoint, buildServerGtmEnvelope } from '../lib/analytics/server-gtm'
-import { ANALYTICS_PROVIDER_ADAPTERS } from '../lib/analytics/provider-adapters'
+import { ANALYTICS_PROVIDER_ADAPTERS, buildGa4MeasurementPayload } from '../lib/analytics/provider-adapters'
 
 const base = {
   eventId: '11111111-1111-4111-8111-111111111111',
@@ -75,6 +75,10 @@ if (normalizeAnalyticsProjectKey('bad project!') !== 'commerce') throw new Error
 if (normalizeAnalyticsCurrency('bdt') !== 'BDT') throw new Error('Currency normalization failed.')
 if (normalizeAnalyticsCurrency('BD') !== 'USD') throw new Error('Invalid currency was accepted.')
 if (analyticsEventSchema('demo-store') !== 'demo-store.analytics.event') throw new Error('Analytics event namespace failed.')
+const ga4Payload = buildGa4MeasurementPayload(base)
+const ga4EventParams = ga4Payload.events[0].params as Record<string, unknown>
+if (!/^\d+\.\d+$/.test(ga4Payload.client_id)) throw new Error('GA4 client_id contract failed.')
+if (!/^\d+$/.test(String(ga4EventParams.session_id))) throw new Error('GA4 session_id must be numeric.')
 
 if (isLiveProviderDispatchAllowed(true)) throw new Error('Synthetic test events must never be sent to live providers.')
 if (!isLiveProviderDispatchAllowed(false)) throw new Error('Live events must remain eligible for provider delivery.')
