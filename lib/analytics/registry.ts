@@ -1,4 +1,4 @@
-import type { CommerceEventName } from './events'
+import type { CommerceEventName } from './types'
 
 export type AnalyticsEventDefinition = { name: CommerceEventName; category: 'page' | 'catalogue' | 'search' | 'cart' | 'checkout' | 'purchase' | 'lead' | 'support' | 'order' | 'recovery' | 'diagnostic'; required: boolean; marketing: boolean; description: string; providers: string[] }
 
