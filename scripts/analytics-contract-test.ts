@@ -25,7 +25,6 @@ async function main() {
     buildServerGtmEnvelope,
   } = await import('../lib/analytics/server-gtm')
   const { ANALYTICS_PROVIDER_ADAPTERS, buildGa4MeasurementPayload } = await import('../lib/analytics/provider-adapters')
-  const { isBrowserAnalyticsEventEnabled } = await import('../lib/analytics/browser-registry')
   const { isAnalyticsDeliveryPermanentlyIneligible } = await import('../lib/analytics/worker')
   const { isBrowserAnalyticsEventEnabled } = await import('../lib/analytics/browser-registry')
   const { ANALYTICS_MAX_DELIVERY_ATTEMPTS } = await import('../lib/analytics/delivery-ledger')
