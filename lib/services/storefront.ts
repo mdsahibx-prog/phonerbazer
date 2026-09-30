@@ -464,13 +464,34 @@ async function loadStorefrontSettings(): Promise<StorefrontSettings> {
   }
 }
 
-export const getCachedStorefrontSettings = unstable_cache(
-  loadStorefrontSettings,
-  ['storefront-settings-public'],
+// Commerce-sensitive delivery and warranty settings stay uncached so pricing/order
+// flows never receive stale values from a public cache.
+export const getStorefrontSettings = loadStorefrontSettings
+
+async function loadFooterSettings(): Promise<StorefrontSettings> {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return {
+      delivery: { dhakaCharge: 80, outsideDhakaCharge: 130 },
+      warranty: { guaranteeDays: 7, serviceWarrantyYears: 1, policyText: 'Standard 1 Year Brand Warranty' },
+      footer: defaultFooterConfig,
+    }
+  }
+  const supabase = createPublicClient()
+  const { data, error } = await supabase.from('settings').select('key, value').eq('key', 'footer_config').limit(1)
+  if (error) return { ...await loadStorefrontSettings(), footer: defaultFooterConfig }
+  const footer = (data?.[0]?.value ?? {}) as Partial<FooterConfig> & { social?: Partial<FooterConfig['social']>; payments?: Partial<FooterConfig['payments']> }
+  return {
+    delivery: { dhakaCharge: 80, outsideDhakaCharge: 130 },
+    warranty: { guaranteeDays: 7, serviceWarrantyYears: 1, policyText: 'Standard 1 Year Brand Warranty' },
+    footer: { ...defaultFooterConfig, ...footer, social: { ...defaultFooterConfig.social, ...(footer.social ?? {}) }, payments: { ...defaultFooterConfig.payments, ...(footer.payments ?? {}) } },
+  }
+}
+
+export const getCachedFooterSettings = unstable_cache(
+  loadFooterSettings,
+  ['storefront-footer-settings'],
   { revalidate: 300, tags: ['storefront:settings'] },
 )
-
-export const getStorefrontSettings = getCachedStorefrontSettings
 
 export async function getProductTypes() {
   const supabase = await createClient()
