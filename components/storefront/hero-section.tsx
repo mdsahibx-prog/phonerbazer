@@ -168,21 +168,21 @@ export function HeroSection({ banners, productCount, brandCount, categoryCount }
                   fill
                   sizes="100vw"
                   priority={idx === 0}
-                  loading="lazy"
+                  loading={idx === 0 ? 'eager' : 'lazy'}
                   quality={82}
                   onLoad={() => markLoaded(banner.id)}
-                  className={`object-cover transition-opacity duration-500 motion-reduce:transition-none sm:hidden ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                  className={`object-cover motion-reduce:transition-none sm:hidden ${idx === 0 || isLoaded ? 'opacity-100' : 'opacity-0'}`}
                 />
                 <Image
                   src={banner.desktop_image_url || banner.mobile_image_url}
                   alt=""
                 fill
                 sizes="100vw"
-                priority={false}
+                priority={idx === 0}
                 loading={idx === 0 ? 'eager' : 'lazy'}
                 quality={82}
                 onLoad={() => markLoaded(banner.id)}
-                  className={`hidden object-cover transition-opacity duration-500 motion-reduce:transition-none sm:block ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                  className={`hidden object-cover motion-reduce:transition-none sm:block ${idx === 0 || isLoaded ? 'opacity-100' : 'opacity-0'}`}
                 />
               </>
             </div>
