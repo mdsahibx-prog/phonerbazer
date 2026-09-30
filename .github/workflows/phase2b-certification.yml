@@ -1,0 +1,29 @@
+name: Phase 2B certification
+
+on:
+  push:
+    branches:
+      - fix/phase2b-certification-optimization
+  pull_request:
+
+jobs:
+  analytics-certification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm test
+
+      - run: pnpm exec tsc --noEmit
