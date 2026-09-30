@@ -22,6 +22,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'yirbztzrgsvxuetqqiov.supabase.co' },
+      { protocol: 'https', hostname: 'ncknpaezdhsqiicdjtgr.supabase.co' },
     ],
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 86400,
