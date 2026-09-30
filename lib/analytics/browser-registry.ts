@@ -1,6 +1,7 @@
 'use client'
 
 import { providerEventName } from './provider-maps'
+import { ANALYTICS_EVENT_MAP } from './registry'
 import type { CanonicalCommerceEvent, CommerceEventName } from './types'
 
 export type BrowserAnalyticsRuntimeConfig = {
@@ -28,7 +29,8 @@ type BrowserWindow = Window & {
 function getWindow() { return window as BrowserWindow }
 
 export function isBrowserAnalyticsEventEnabled(eventName: CommerceEventName, config: BrowserAnalyticsRuntimeConfig) {
-  return config.eventControls[eventName] !== false
+  const definition = ANALYTICS_EVENT_MAP[eventName]
+  return Boolean(definition?.required || config.eventControls[eventName] !== false)
 }
 
 function loadScript(src: string, idValue: string) {
