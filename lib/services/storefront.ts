@@ -433,7 +433,7 @@ const defaultFooterConfig = {
   payments: { cash_on_delivery: true, visa: false, mastercard: false },
 }
 
-export async function getStorefrontSettings(): Promise<StorefrontSettings> {
+async function loadStorefrontSettings(): Promise<StorefrontSettings> {
   const supabase = await createClient()
   const { data, error } = await supabase.from('settings').select('key, value').in('key', ['delivery_charges', 'business_policy', 'footer_config']).limit(3)
   if (error) {
@@ -456,6 +456,12 @@ export async function getStorefrontSettings(): Promise<StorefrontSettings> {
     footer: { ...defaultFooterConfig, ...(settings.footer_config ?? {}), social: { ...defaultFooterConfig.social, ...(settings.footer_config?.social ?? {}) }, payments: { ...defaultFooterConfig.payments, ...(settings.footer_config?.payments ?? {}) } },
   }
 }
+
+export const getCachedStorefrontSettings = unstable_cache(
+  loadStorefrontSettings,
+  ['storefront-settings-public'],
+  { revalidate: 300, tags: ['storefront:settings'] },
+)
 
 export async function getProductTypes() {
   const supabase = await createClient()
