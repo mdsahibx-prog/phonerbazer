@@ -160,7 +160,7 @@ export function HeroSection({ banners, productCount, brandCount, categoryCount }
           const isActive = idx === activeIndex
           const isLoaded = loadedSlides.has(banner.id)
           return (
-            <div key={banner.id} aria-hidden={!isActive} className={`absolute inset-0 transition-opacity duration-500 ease-out motion-reduce:transition-none ${isActive ? 'z-10 opacity-100' : 'z-0 opacity-0'}`}>
+            <div key={banner.id} aria-hidden={!isActive} className={`absolute inset-0 ${isActive ? 'z-10 opacity-100' : 'z-0 opacity-0'} ${isActive && idx !== 0 ? 'transition-opacity duration-500 ease-out motion-reduce:transition-none' : ''}`}>
               <>
                 <Image
                   src={banner.mobile_image_url || banner.desktop_image_url}
@@ -168,8 +168,9 @@ export function HeroSection({ banners, productCount, brandCount, categoryCount }
                   fill
                   sizes="100vw"
                   priority={idx === 0}
+                  fetchPriority={idx === 0 ? 'high' : 'auto'}
                   loading={idx === 0 ? 'eager' : 'lazy'}
-                  quality={82}
+                  quality={75}
                   onLoad={() => markLoaded(banner.id)}
                   className={`object-cover motion-reduce:transition-none sm:hidden ${idx === 0 || isLoaded ? 'opacity-100' : 'opacity-0'}`}
                 />
@@ -179,8 +180,9 @@ export function HeroSection({ banners, productCount, brandCount, categoryCount }
                 fill
                 sizes="100vw"
                 priority={idx === 0}
+                fetchPriority={idx === 0 ? 'high' : 'auto'}
                 loading={idx === 0 ? 'eager' : 'lazy'}
-                quality={82}
+                quality={75}
                 onLoad={() => markLoaded(banner.id)}
                   className={`hidden object-cover motion-reduce:transition-none sm:block ${idx === 0 || isLoaded ? 'opacity-100' : 'opacity-0'}`}
                 />
