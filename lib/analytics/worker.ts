@@ -26,7 +26,7 @@ function failureFromError(error: unknown): HttpDeliveryResult {
   }
 }
 
-function shouldPermanentlySkip(
+export function isAnalyticsDeliveryPermanentlyIneligible(
   event: CanonicalCommerceEvent,
   provider: AnalyticsProviderId,
   config: Awaited<ReturnType<typeof getAnalyticsConfig>>,
@@ -48,7 +48,7 @@ async function processEntry(
   const adapter = ANALYTICS_PROVIDER_ADAPTERS[provider]
   const leaseToken = entry.lease_token || null
 
-  if (!adapter || shouldPermanentlySkip(event, provider, config)) {
+  if (!adapter || isAnalyticsDeliveryPermanentlyIneligible(event, provider, config)) {
     const finalized = await recordDeliveryResult(
       event,
       provider,
@@ -128,8 +128,25 @@ async function processEntry(
 }
 
 export async function processAnalyticsDeliveryWorker(limit = DEFAULT_BATCH_SIZE) {
-  const config = await getAnalyticsConfig()
   const entries = await claimAnalyticsDeliveryBatch(Math.min(Math.max(limit, 1), 100))
+
+  if (entries.length === 0) {
+    return {
+      ok: true,
+      claimed: 0,
+      attempted: 0,
+      succeeded: 0,
+      failed: 0,
+      skipped: 0,
+      dead: 0,
+      maxAttempts: ANALYTICS_MAX_DELIVERY_ATTEMPTS,
+      leaseSeconds: ANALYTICS_DELIVERY_LEASE_SECONDS,
+      results: [],
+    }
+  }
+
+  // Avoid a config read on the overwhelmingly common empty-queue tick.
+  const config = await getAnalyticsConfig()
   const results: Array<{
     eventId: string
     provider: AnalyticsProviderId
