@@ -14,7 +14,7 @@ export function AnalyticsControlCenter({ initial, diagnostics }: { initial: Anal
   const [replayBusy, setReplayBusy] = useState(false)
   const [ga4ValidationBusy, setGa4ValidationBusy] = useState(false)
   const update = <K extends keyof AnalyticsConfig>(key: K, value: AnalyticsConfig[K]) => setConfig((current) => ({ ...current, [key]: value }))
-  const updateEvent = (eventName: string, enabled: boolean) => update('eventControls', { ...config.eventControls, [eventName]: enabled })
+  const updateEvent = (eventName: string, enabled: boolean) => setConfig((current) => ({ ...current, eventControls: { ...current.eventControls, [eventName]: enabled } }))
   async function save() { setBusy(true); const result = await saveAnalyticsConfig(config); setBusy(false); setNotice(result.message) }
   async function test(eventName: 'page_view' | 'view_item' | 'add_to_cart' | 'begin_checkout' | 'purchase') { setBusy(true); const result = await testAnalyticsEvent(eventName); setBusy(false); setNotice(result.message) }
   async function validateGa4() { setGa4ValidationBusy(true); const result = await validateGa4AnalyticsEvent(); setGa4ValidationBusy(false); setNotice(result.message) }
