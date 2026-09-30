@@ -434,7 +434,7 @@ const defaultFooterConfig = {
 }
 
 async function loadStorefrontSettings(): Promise<StorefrontSettings> {
-  const supabase = await createClient()
+  const supabase = createPublicClient()
   const { data, error } = await supabase.from('settings').select('key, value').in('key', ['delivery_charges', 'business_policy', 'footer_config']).limit(3)
   if (error) {
     return {
@@ -462,6 +462,8 @@ export const getCachedStorefrontSettings = unstable_cache(
   ['storefront-settings-public'],
   { revalidate: 300, tags: ['storefront:settings'] },
 )
+
+export const getStorefrontSettings = getCachedStorefrontSettings
 
 export async function getProductTypes() {
   const supabase = await createClient()
