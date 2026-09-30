@@ -163,6 +163,9 @@ async function main() {
       false,
     )
   }
+  // Server GTM is the primary server-side GA4 route during the cutover.
+  assert.equal(ANALYTICS_PROVIDER_ADAPTERS.GA4.canDispatch(base, { ...adapterConfig, serverGtmEnabled: true }), false)
+  assert.equal(ANALYTICS_PROVIDER_ADAPTERS.GA4.canDispatch(base, { ...adapterConfig, serverGtmEnabled: false }), true)
   assert.equal(ANALYTICS_PROVIDER_ADAPTERS.SERVER_GTM.canDispatch(base, adapterConfig), true)
   delete process.env.SERVER_GTM_HMAC_SECRET
   assert.equal(ANALYTICS_PROVIDER_ADAPTERS.SERVER_GTM.canDispatch(base, adapterConfig), false)
