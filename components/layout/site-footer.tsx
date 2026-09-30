@@ -3,7 +3,7 @@ import Image from 'next/image'
 import { ArrowUpRight, Banknote, Mail, MapPin, Phone, Search, ShoppingBag } from 'lucide-react'
 
 import { siteConfig } from '@/config/site'
-import { getStorefrontSettings } from '@/lib/services/storefront'
+import { getCachedFooterSettings } from '@/lib/services/storefront'
 
 function isPlatformUrl(value: string, platform: string) {
   if (!value) return false
@@ -34,7 +34,7 @@ function XMark({ className }: { className?: string }) {
 }
 
 export async function SiteFooter() {
-  const settings = await getStorefrontSettings()
+  const settings = await getCachedFooterSettings()
   const social = settings.footer.social
   const socialLinks = [
     { key: 'facebook', label: 'Facebook', href: social.facebook || siteConfig.contact.facebook, Icon: FacebookMark },

@@ -1,6 +1,5 @@
-/* eslint-disable @next/next/no-img-element */
-
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowUpRight, Layers3 } from 'lucide-react'
 import { BrandLogo } from '@/components/storefront/brand-logo'
 import type { StorefrontBrand, StorefrontCategory } from '@/lib/services/storefront'
@@ -31,7 +30,7 @@ export function CategoryCard({ category }: { category: StorefrontCategory }) {
   return (
     <Link href={`/products?category=${encodeURIComponent(category.slug)}`} className="group relative flex min-w-0 items-center gap-3 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2.5 text-left shadow-[0_2px_10px_rgba(15,23,42,0.035)] transition duration-200 hover:-translate-y-0.5 hover:border-orange-200 hover:bg-orange-50/60 hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 sm:flex-col sm:items-center sm:gap-2.5 sm:bg-white sm:p-3 sm:text-center">
       <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white bg-white shadow-sm transition group-hover:border-orange-100 group-hover:shadow-md sm:h-24 sm:w-24 sm:rounded-2xl">
-        {imageUrl ? <img src={imageUrl} alt="" className="h-full w-full object-contain p-1.5 transition-transform duration-300 group-hover:scale-105 sm:p-2.5" /> : <Layers3 className="h-6 w-6 text-orange-500" />}
+        {imageUrl ? <Image src={imageUrl} alt="" fill sizes="(max-width: 639px) 64px, 96px" quality={70} className="object-contain p-1.5 transition-transform duration-300 group-hover:scale-105 sm:p-2.5" /> : <Layers3 className="h-6 w-6 text-orange-500" />}
       </div>
       <div className="min-w-0 flex-1 sm:w-full">
         <h2 className="line-clamp-2 text-[12px] font-black leading-4 text-[#151c2f] sm:mt-1 sm:text-sm">{category.name}</h2>

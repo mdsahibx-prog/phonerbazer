@@ -433,8 +433,15 @@ const defaultFooterConfig = {
   payments: { cash_on_delivery: true, visa: false, mastercard: false },
 }
 
-export async function getStorefrontSettings(): Promise<StorefrontSettings> {
-  const supabase = await createClient()
+async function loadStorefrontSettings(): Promise<StorefrontSettings> {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return {
+      delivery: { dhakaCharge: 80, outsideDhakaCharge: 130 },
+      warranty: { guaranteeDays: 7, serviceWarrantyYears: 1, policyText: 'Standard 1 Year Brand Warranty' },
+      footer: defaultFooterConfig,
+    }
+  }
+  const supabase = createPublicClient()
   const { data, error } = await supabase.from('settings').select('key, value').in('key', ['delivery_charges', 'business_policy', 'footer_config']).limit(3)
   if (error) {
     return {
@@ -456,6 +463,35 @@ export async function getStorefrontSettings(): Promise<StorefrontSettings> {
     footer: { ...defaultFooterConfig, ...(settings.footer_config ?? {}), social: { ...defaultFooterConfig.social, ...(settings.footer_config?.social ?? {}) }, payments: { ...defaultFooterConfig.payments, ...(settings.footer_config?.payments ?? {}) } },
   }
 }
+
+// Commerce-sensitive delivery and warranty settings stay uncached so pricing/order
+// flows never receive stale values from a public cache.
+export const getStorefrontSettings = loadStorefrontSettings
+
+async function loadFooterSettings(): Promise<StorefrontSettings> {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return {
+      delivery: { dhakaCharge: 80, outsideDhakaCharge: 130 },
+      warranty: { guaranteeDays: 7, serviceWarrantyYears: 1, policyText: 'Standard 1 Year Brand Warranty' },
+      footer: defaultFooterConfig,
+    }
+  }
+  const supabase = createPublicClient()
+  const { data, error } = await supabase.from('settings').select('key, value').eq('key', 'footer_config').limit(1)
+  if (error) return { ...await loadStorefrontSettings(), footer: defaultFooterConfig }
+  const footer = (data?.[0]?.value ?? {}) as Partial<FooterConfig> & { social?: Partial<FooterConfig['social']>; payments?: Partial<FooterConfig['payments']> }
+  return {
+    delivery: { dhakaCharge: 80, outsideDhakaCharge: 130 },
+    warranty: { guaranteeDays: 7, serviceWarrantyYears: 1, policyText: 'Standard 1 Year Brand Warranty' },
+    footer: { ...defaultFooterConfig, ...footer, social: { ...defaultFooterConfig.social, ...(footer.social ?? {}) }, payments: { ...defaultFooterConfig.payments, ...(footer.payments ?? {}) } },
+  }
+}
+
+export const getCachedFooterSettings = unstable_cache(
+  loadFooterSettings,
+  ['storefront-footer-settings'],
+  { revalidate: 300, tags: ['storefront:settings'] },
+)
 
 export async function getProductTypes() {
   const supabase = await createClient()
