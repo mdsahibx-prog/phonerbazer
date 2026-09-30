@@ -15,7 +15,7 @@ const LEGACY_CONSENT_KEY = 'sahigadget-analytics-consent'
 const LEGACY_ATTRIBUTION_KEY = 'sahigadget-attribution'
 const LEGACY_ANON_KEY = 'sahigadget-anonymous-id'
 const LEGACY_SESSION_KEY = 'sahigadget-session-id'
-let runtimeConfig = { ...DEFAULT_ANALYTICS_PROJECT_CONFIG, enabled: false, marketingEnabled: false, ga4MeasurementId: '', gtmContainerId: '', metaPixelId: '', tiktokPixelId: '', ga4ServerDeliveryEnabled: false }
+let runtimeConfig = { ...DEFAULT_ANALYTICS_PROJECT_CONFIG, enabled: false, marketingEnabled: false, ga4MeasurementId: '', gtmContainerId: '', metaPixelId: '', tiktokPixelId: '', ga4ServerDeliveryEnabled: false, eventControls: {} as Record<string, boolean> }
 function migratedLocalStorage(key: string, legacyKey: string) { const existing = window.localStorage.getItem(key); if (existing !== null) return existing; const legacy = window.localStorage.getItem(legacyKey); if (legacy !== null) { window.localStorage.setItem(key, legacy); return legacy }; return null }
 function migratedSessionStorage(key: string, legacyKey: string) { const existing = window.sessionStorage.getItem(key); if (existing !== null) return existing; const legacy = window.sessionStorage.getItem(legacyKey); if (legacy !== null) { window.sessionStorage.setItem(key, legacy); return legacy }; return null }
 function id(key: string, legacyKey?: string) { const existing = legacyKey ? migratedLocalStorage(key, legacyKey) : window.localStorage.getItem(key); if (existing) return existing; const value = crypto.randomUUID(); window.localStorage.setItem(key, value); return value }
@@ -49,7 +49,7 @@ export function initializeGtm() {
   return Boolean(runtimeConfig.enabled && runtimeConfig.gtmContainerId)
 }
 
-export function configureAnalyticsRuntime(config: { projectKey?: string; currency?: string; enabled: boolean; marketingEnabled: boolean; ga4MeasurementId: string; gtmContainerId: string; metaPixelId: string; tiktokPixelId?: string; ga4ServerDeliveryEnabled?: boolean }) {
+export function configureAnalyticsRuntime(config: { projectKey?: string; currency?: string; enabled: boolean; marketingEnabled: boolean; ga4MeasurementId: string; gtmContainerId: string; metaPixelId: string; tiktokPixelId?: string; ga4ServerDeliveryEnabled?: boolean; eventControls?: Record<string, boolean> }) {
   runtimeConfig = {
     projectKey: normalizeAnalyticsProjectKey(config.projectKey),
     currency: normalizeAnalyticsCurrency(config.currency),
@@ -60,6 +60,7 @@ export function configureAnalyticsRuntime(config: { projectKey?: string; currenc
     metaPixelId: config.metaPixelId.trim(),
     tiktokPixelId: config.tiktokPixelId?.trim() || '',
     ga4ServerDeliveryEnabled: Boolean(config.ga4ServerDeliveryEnabled),
+    eventControls: { ...(config.eventControls || {}) },
   }
   if (typeof window !== 'undefined') initializeBrowserAnalyticsProviders(runtimeConfig)
 }
