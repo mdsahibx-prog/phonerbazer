@@ -23,6 +23,9 @@ async function main() {
     normalizeServerGtmEndpoint,
     isValidServerGtmEndpoint,
     buildServerGtmEnvelope,
+    buildServerGtmRequest,
+    SERVER_GTM_CONTRACT_VERSION,
+    DEFAULT_SERVER_GTM_HMAC_KEY_ID,
   } = await import('../lib/analytics/server-gtm')
   const { ANALYTICS_PROVIDER_ADAPTERS, buildGa4MeasurementPayload } = await import('../lib/analytics/provider-adapters')
   const { isAnalyticsDeliveryPermanentlyIneligible } = await import('../lib/analytics/worker')
@@ -91,9 +94,33 @@ async function main() {
   assert.equal(isValidServerGtmEndpoint('http://gtm.example.com'), false)
   assert.equal(isValidServerGtmEndpoint('https://gtm.example.com/path?bad=1'), false)
 
-  const envelope = buildServerGtmEnvelope(base, 'demo-store')
+  const envelope = buildServerGtmEnvelope(base, 'demo-store', 'preview')
   assert.equal(envelope.schema, 'demo-store.analytics.event')
+  assert.equal(envelope.version, SERVER_GTM_CONTRACT_VERSION)
+  assert.equal(envelope.project_key, 'demo-store')
+  assert.equal(envelope.environment, 'preview')
   assert.equal(envelope.event.id, base.eventId)
+  assert.equal(envelope.event.page_url, base.pageUrl)
+  assert.deepEqual(envelope.event.metadata, base.metadata)
+
+  process.env.SERVER_GTM_HMAC_SECRET = 'test-hmac-secret'
+  delete process.env.SERVER_GTM_HMAC_KEY_ID
+  const signedRequest = buildServerGtmRequest(base, 'demo-store', 'production')
+  assert.equal(signedRequest.signed, true)
+  assert.equal(signedRequest.keyId, DEFAULT_SERVER_GTM_HMAC_KEY_ID)
+  assert.match(signedRequest.headers['x-phonerbazar-timestamp'], /^\d+$/)
+  assert.match(signedRequest.headers['x-phonerbazar-signature'], /^[A-Za-z0-9_-]+$/)
+  assert.equal(signedRequest.headers['x-phonerbazar-schema'], 'demo-store.analytics.event')
+  assert.equal(signedRequest.headers['x-phonerbazar-version'], SERVER_GTM_CONTRACT_VERSION)
+  assert.equal(signedRequest.headers['x-phonerbazar-event-id'], base.eventId)
+  assert.equal(JSON.parse(signedRequest.body).event.id, base.eventId)
+
+  const unsignedEnv = process.env.SERVER_GTM_HMAC_SECRET
+  delete process.env.SERVER_GTM_HMAC_SECRET
+  const unsignedRequest = buildServerGtmRequest(base, 'demo-store', 'production')
+  assert.equal(unsignedRequest.signed, false)
+  assert.equal(unsignedRequest.headers['x-phonerbazar-signature'], undefined)
+  process.env.SERVER_GTM_HMAC_SECRET = unsignedEnv
 
   assert.equal(normalizeAnalyticsProjectKey(' Demo_Store '), 'demo_store')
   assert.equal(normalizeAnalyticsProjectKey('bad project!'), 'commerce')
@@ -128,6 +155,7 @@ async function main() {
     eventControls: {},
   }
 
+  process.env.SERVER_GTM_HMAC_SECRET = 'test-hmac-secret'
   for (const provider of ['GA4', 'META_CAPI', 'TIKTOK_EVENTS_API', 'SERVER_GTM'] as const) {
     assert.ok(ANALYTICS_PROVIDER_ADAPTERS[provider])
     assert.equal(
@@ -135,8 +163,12 @@ async function main() {
       false,
     )
   }
+  assert.equal(ANALYTICS_PROVIDER_ADAPTERS.SERVER_GTM.canDispatch(base, adapterConfig), true)
+  delete process.env.SERVER_GTM_HMAC_SECRET
+  assert.equal(ANALYTICS_PROVIDER_ADAPTERS.SERVER_GTM.canDispatch(base, adapterConfig), false)
 
   // Defense-in-depth worker guard: an invalid event/provider pair must be permanently ineligible.
+  process.env.SERVER_GTM_HMAC_SECRET = 'test-hmac-secret'
   assert.equal(
     isAnalyticsDeliveryPermanentlyIneligible(
       base,
