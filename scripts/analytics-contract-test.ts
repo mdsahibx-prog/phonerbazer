@@ -25,7 +25,8 @@ async function main() {
     buildServerGtmEnvelope,
   } = await import('../lib/analytics/server-gtm')
   const { ANALYTICS_PROVIDER_ADAPTERS, buildGa4MeasurementPayload } = await import('../lib/analytics/provider-adapters')
-  const { ANALYTICS_MAX_DELIVERY_ATTEMPTS, isAnalyticsDeliveryPermanentlyIneligible } = await import('../lib/analytics/worker')
+  const { isAnalyticsDeliveryPermanentlyIneligible } = await import('../lib/analytics/worker')
+  const { ANALYTICS_MAX_DELIVERY_ATTEMPTS } = await import('../lib/analytics/delivery-ledger')
 
   const base = {
     eventId: '11111111-1111-4111-8111-111111111111',
