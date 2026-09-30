@@ -1,0 +1,12 @@
+@layer utilities;
+
+/* Storefront-only Tailwind utilities. The root stylesheet owns theme + preflight. */
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+
+@source "./**/*.{ts,tsx,mdx}";
+@source "../../components/storefront";
+@source "../../components/layout";
+@source "../../components/product";
+@source "../../components/cart";
+@source "../../components/catalog";
+@source "../../components/order";
