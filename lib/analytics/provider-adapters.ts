@@ -86,7 +86,13 @@ function liveEligible(event: CanonicalCommerceEvent) {
 export const ANALYTICS_PROVIDER_ADAPTERS: Record<AnalyticsProviderId, AnalyticsProviderAdapter> = {
   GA4: {
     id: 'GA4',
-    canDispatch: (event, config) => Boolean(liveEligible(event) && event.consent.analytics && config.ga4MeasurementId && process.env.GA4_API_SECRET),
+    canDispatch: (event, config) => Boolean(
+      liveEligible(event) &&
+      event.consent.analytics &&
+      config.ga4MeasurementId &&
+      process.env.GA4_API_SECRET &&
+      !config.serverGtmEnabled,
+    ),
     dispatch: (event, config) => postJson(
       'https://www.google-analytics.com/mp/collect?measurement_id=' + encodeURIComponent(config.ga4MeasurementId) + '&api_secret=' + encodeURIComponent(process.env.GA4_API_SECRET || ''),
       buildGa4MeasurementPayload(event),
