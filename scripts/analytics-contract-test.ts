@@ -25,6 +25,7 @@ async function main() {
     buildServerGtmEnvelope,
   } = await import('../lib/analytics/server-gtm')
   const { ANALYTICS_PROVIDER_ADAPTERS, buildGa4MeasurementPayload } = await import('../lib/analytics/provider-adapters')
+  const { isBrowserAnalyticsEventEnabled } = await import('../lib/analytics/browser-registry')
   const { isAnalyticsDeliveryPermanentlyIneligible } = await import('../lib/analytics/worker')
   const { ANALYTICS_MAX_DELIVERY_ATTEMPTS } = await import('../lib/analytics/delivery-ledger')
 
@@ -172,6 +173,11 @@ async function main() {
     ),
     true,
   )
+
+  const browserConfig = { ...adapterConfig, eventControls: { add_to_cart: true, purchase: true } }
+  assert.equal(isBrowserAnalyticsEventEnabled('add_to_cart', browserConfig), true)
+  assert.equal(isBrowserAnalyticsEventEnabled('add_to_cart', { ...browserConfig, eventControls: { add_to_cart: false } }), false)
+  assert.equal(isBrowserAnalyticsEventEnabled('purchase', { ...browserConfig, eventControls: { purchase: false } }), false)
 
   assert.equal(ANALYTICS_MAX_DELIVERY_ATTEMPTS, 8)
 
