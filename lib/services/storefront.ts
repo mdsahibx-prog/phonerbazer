@@ -434,6 +434,13 @@ const defaultFooterConfig = {
 }
 
 async function loadStorefrontSettings(): Promise<StorefrontSettings> {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return {
+      delivery: { dhakaCharge: 80, outsideDhakaCharge: 130 },
+      warranty: { guaranteeDays: 7, serviceWarrantyYears: 1, policyText: 'Standard 1 Year Brand Warranty' },
+      footer: defaultFooterConfig,
+    }
+  }
   const supabase = createPublicClient()
   const { data, error } = await supabase.from('settings').select('key, value').in('key', ['delivery_charges', 'business_policy', 'footer_config']).limit(3)
   if (error) {
