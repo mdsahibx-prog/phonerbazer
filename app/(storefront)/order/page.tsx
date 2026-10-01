@@ -1,4 +1,3 @@
-import './order.css'
 import Link from 'next/link'
 import { ArrowLeft, ShoppingBag } from 'lucide-react'
 
