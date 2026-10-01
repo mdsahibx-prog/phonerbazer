@@ -1,5 +1,4 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "specVersion": "1.0",
   "host": {
     "displayName": "PhonerBazar",
@@ -9,9 +8,9 @@
     {
       "identifier": "urn:air:phonerbazar.store:webmcp:catalogue-search",
       "displayName": "PhonerBazar Catalogue Search",
-      "type": "text/html",
-      "url": "https://www.phonerbazar.store/products",
-      "description": "Public browser-facing catalogue search and product discovery.",
+      "type": "text/markdown; profile=\"urn:air:agent-skills\"",
+      "url": "https://www.phonerbazar.store/.well-known/catalogue-search.md",
+      "description": "Public, read-only catalogue discovery capability for finding products by name, SKU, brand, or catalogue search.",
       "tags": [
         "ecommerce",
         "search",
@@ -20,26 +19,28 @@
       "capabilities": [
         "WebMCP",
         "CatalogueSearch",
-        "ProductDiscovery"
+        "ProductDiscovery",
+        "ReadOnly"
       ],
       "representativeQueries": [
         "Find a phone by name or SKU",
         "Search the PhonerBazar product catalogue",
         "Find products from a specific brand"
       ],
-      "version": "1.0.0",
-      "updatedAt": "2026-10-01T03:20:00Z"
+      "version": "1.0.1",
+      "updatedAt": "2026-10-01T04:00:00Z"
     },
     {
       "identifier": "urn:air:phonerbazar.store:webmcp:order-tracking",
       "displayName": "PhonerBazar Order Tracking",
-      "type": "text/html",
-      "url": "https://www.phonerbazar.store/track-order",
-      "description": "Read-only order-status lookup through the public tracking page.",
+      "type": "text/markdown; profile=\"urn:air:agent-skills\"",
+      "url": "https://www.phonerbazar.store/.well-known/order-tracking.md",
+      "description": "Read-only customer order-status lookup using the order number and matching checkout mobile number.",
       "tags": [
         "ecommerce",
         "orders",
-        "tracking"
+        "tracking",
+        "customer-support"
       ],
       "capabilities": [
         "WebMCP",
@@ -50,8 +51,8 @@
         "Track my PhonerBazar order",
         "Check the status of my order"
       ],
-      "version": "1.0.0",
-      "updatedAt": "2026-10-01T03:20:00Z"
+      "version": "1.0.1",
+      "updatedAt": "2026-10-01T04:00:00Z"
     }
   ]
 }
