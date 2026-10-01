@@ -11,7 +11,7 @@ export function HeaderMobileMenu() {
   const close=()=>setOpen(false)
   return <div className="flex items-center gap-2 lg:hidden">
     <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-white transition-colors hover:bg-white/10" onClick={()=>setOpen(v=>!v)} aria-expanded={open} aria-controls="mobile-navigation" aria-label={open?'Close menu':'Open menu'}>{open?<X className="h-5 w-5" aria-hidden="true" />:<Menu className="h-5 w-5" aria-hidden="true" />}</button>
-    {open && <div id="mobile-navigation" className="fixed inset-x-0 top-[86px] z-50 border-t border-white/10 bg-[var(--brand-navy)] px-4 py-5 shadow-xl">
+    {open && <div id="mobile-navigation" className="absolute inset-x-0 top-full z-50 border-t border-white/10 bg-[var(--brand-navy)] px-4 py-5 shadow-xl">
       <HeaderSearch mobile />
       <nav className="grid gap-1 border-t border-white/10 pt-3" aria-label="Mobile navigation">
         <Link href="/" onClick={close} className="rounded-xl px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10">Home</Link>
