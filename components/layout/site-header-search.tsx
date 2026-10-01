@@ -32,6 +32,13 @@ function SearchDropdown({ showDropdown, query, isSearching, suggestions, isMobil
 
 export function HeaderSearch({ mobile = false }: { mobile?: boolean }) {
   const router = useRouter()
+  const webMcpFormProps: Record<string, string> = {
+    toolname: mobile ? 'search_catalogue_mobile' : 'search_catalogue',
+    tooldescription: 'Search the public PhonerBazar catalogue by product name, brand, category, or SKU and open the matching search results.',
+  }
+  const webMcpQueryProps: Record<string, string> = {
+    toolparamdescription: 'Product name, brand, category, or SKU to search in the public catalogue.',
+  }
   const [query,setQuery]=useState(''), [suggestions,setSuggestions]=useState<StorefrontProduct[]>([]), [isSearching,setIsSearching]=useState(false), [showDropdown,setShowDropdown]=useState(false)
   const searchRef=useRef<HTMLDivElement>(null)
   useEffect(() => { function onPointerDown(event: MouseEvent) { if (searchRef.current && !searchRef.current.contains(event.target as Node)) setShowDropdown(false) } document.addEventListener('mousedown',onPointerDown); return ()=>document.removeEventListener('mousedown',onPointerDown) },[])
@@ -39,11 +46,11 @@ export function HeaderSearch({ mobile = false }: { mobile?: boolean }) {
   function go(term:string,source:string){if(term)trackSearchEvent({search_term:term,source});router.push(`/search?q=${encodeURIComponent(term)}`);setShowDropdown(false)}
   function submit(event:React.FormEvent<HTMLFormElement>){event.preventDefault();go(query.trim(),'header_search')}
   return <div ref={searchRef} className={mobile ? 'relative mb-4' : 'relative hidden min-w-0 max-w-md flex-1 lg:mx-4 lg:block'}>
-    <form onSubmit={submit} className={mobile ? 'flex items-center rounded-2xl border border-white/15 bg-white px-4 transition-colors focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-200' : undefined} role="search">
+    <form {...webMcpFormProps} onSubmit={submit} className={mobile ? 'flex items-center rounded-2xl border border-white/15 bg-white px-4 transition-colors focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-200' : undefined} role="search">
       <label className="sr-only" htmlFor={mobile ? 'mobile-search' : 'desktop-search'}>Search the catalogue</label>
       <div className={mobile ? 'flex w-full items-center' : 'flex w-full items-center rounded-full border border-white/15 bg-white px-4 transition-colors focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-200'}>
         <Search className="mr-2 h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
-        <input id={mobile ? 'mobile-search' : 'desktop-search'} data-search-input value={query} onChange={e=>{setQuery(e.target.value);setShowDropdown(true)}} onFocus={()=>setShowDropdown(true)} autoComplete="off" placeholder={mobile ? 'Search phones, gadgets, SKU' : 'Search phones, gadgets, or SKU'} className={mobile ? 'h-11 min-w-0 flex-1 appearance-none bg-transparent text-sm outline-none placeholder:text-slate-400 focus:outline-none focus:ring-0' : 'h-10 min-w-0 flex-1 appearance-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:outline-none focus:ring-0'} />
+        <input {...webMcpQueryProps} name="query" id={mobile ? 'mobile-search' : 'desktop-search'} data-search-input value={query} onChange={e=>{setQuery(e.target.value);setShowDropdown(true)}} onFocus={()=>setShowDropdown(true)} autoComplete="off" placeholder={mobile ? 'Search phones, gadgets, SKU' : 'Search phones, gadgets, or SKU'} className={mobile ? 'h-11 min-w-0 flex-1 appearance-none bg-transparent text-sm outline-none placeholder:text-slate-400 focus:outline-none focus:ring-0' : 'h-10 min-w-0 flex-1 appearance-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:outline-none focus:ring-0'} />
         {query && <button type="button" onClick={()=>{setQuery('');setSuggestions([])}} className="mr-2 text-slate-400 hover:text-slate-700" aria-label="Clear search"><X className="h-4 w-4" /></button>}
         <button type="submit" className={mobile ? 'border-l border-slate-200 pl-2 text-xs font-bold text-slate-950' : 'ml-2 rounded-full bg-orange-500 px-4 py-2 text-xs font-black text-white'}>Search</button>
       </div>

@@ -47,3 +47,13 @@ The target project should publish:
 Treat the files under `public/` as deploy-time public outputs. Do not add runtime generation or per-request data fetching just to build `llms.txt`; that would add latency and another failure surface to the storefront.
 
 When the business identity or public URL structure changes, update the static files and this template together in the same release.
+
+
+## WebMCP and ARD
+
+The public agent layer now also supports WebMCP form discovery on safe browser workflows and publishes the current ARD manifest at `/.well-known/ard.json`. The legacy `/.well-known/ai-catalog.json` manifest is retained for compatibility with older consumers.
+
+The site deliberately does not expose autonomous final checkout/order submission as a WebMCP tool. Order creation, payment, stock reservation, and related commerce controls remain behind the existing application flow and server-side validation.
+
+Responsive header search forms use distinct tool names because both desktop and mobile forms exist in the same DOM. They represent the same public read-only capability in two responsive UI contexts.
+

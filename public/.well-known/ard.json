@@ -1,0 +1,57 @@
+{
+  "@context": "https://agenticresourcediscovery.org/context/v1",
+  "entries": [
+    {
+      "@id": "https://www.phonerbazar.store/products",
+      "identifier": "urn:air:phonerbazar.store:webmcp:catalogue-search",
+      "displayName": "PhonerBazar Catalogue Search",
+      "type": "text/html",
+      "url": "https://www.phonerbazar.store/products",
+      "description": "Public PhonerBazar catalogue discovery through the site's browser search and product navigation.",
+      "capabilities": [
+        "WebMCP",
+        "CatalogueSearch",
+        "ProductDiscovery"
+      ],
+      "tags": [
+        "ecommerce",
+        "mobile-phones",
+        "gadgets",
+        "search",
+        "products"
+      ],
+      "representativeQueries": [
+        "Find a phone by name or SKU",
+        "Search the PhonerBazar product catalogue",
+        "Find products from a specific brand"
+      ],
+      "version": "1.0.0",
+      "updatedAt": "2026-10-01T03:20:00Z"
+    },
+    {
+      "@id": "https://www.phonerbazar.store/track-order",
+      "identifier": "urn:air:phonerbazar.store:webmcp:order-tracking",
+      "displayName": "PhonerBazar Order Tracking",
+      "type": "text/html",
+      "url": "https://www.phonerbazar.store/track-order",
+      "description": "Read-only customer order-status lookup using the order number and matching checkout mobile number.",
+      "capabilities": [
+        "WebMCP",
+        "OrderTracking",
+        "ReadOnlyLookup"
+      ],
+      "tags": [
+        "ecommerce",
+        "orders",
+        "tracking",
+        "customer-support"
+      ],
+      "representativeQueries": [
+        "Track my PhonerBazar order",
+        "Check the status of my order"
+      ],
+      "version": "1.0.0",
+      "updatedAt": "2026-10-01T03:20:00Z"
+    }
+  ]
+}
