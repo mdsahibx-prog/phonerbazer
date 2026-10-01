@@ -3,6 +3,7 @@ import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getAnalyticsConfig } from './server'
 import { ANALYTICS_EVENT_REGISTRY } from './registry'
+import { serverGtmSigningConfigured } from './server-gtm'
 
 async function probeGtm(containerId: string) {
   try {
@@ -70,6 +71,14 @@ export async function getAnalyticsDiagnostics() {
     delivery = { pending: 0, succeeded: 0, failed: 0, dead: 0, retryable: 0, leased: 0 }
   }
 
+  const serverGtmStatus = !config.serverGtmEndpoint
+    ? 'DISABLED'
+    : !serverGtmSigningConfigured()
+      ? 'PARTIAL'
+      : config.serverGtmEnabled
+        ? 'CONFIGURED'
+        : 'PAUSED'
+
   return {
     providers: {
       GA4: config.ga4MeasurementId ? (process.env.GA4_API_SECRET ? 'CONFIGURED' : 'PARTIAL') : 'DISABLED',
@@ -80,11 +89,7 @@ export async function getAnalyticsDiagnostics() {
       TIKTOK_EVENTS_API: config.tiktokEventsApiEnabled
         ? (config.tiktokPixelId && process.env.TIKTOK_EVENTS_API_ACCESS_TOKEN ? 'CONFIGURED' : 'PARTIAL')
         : 'DISABLED',
-      SERVER_GTM: config.serverGtmEnabled && config.serverGtmEndpoint
-        ? 'CONFIGURED'
-        : config.serverGtmEndpoint
-          ? 'PAUSED'
-          : 'DISABLED',
+      SERVER_GTM: serverGtmStatus,
     },
     events,
     registry: ANALYTICS_EVENT_REGISTRY,

@@ -3,7 +3,7 @@ import 'server-only'
 import type { CanonicalCommerceEvent } from './types'
 import type { AnalyticsConfig } from './server'
 import { providerEventName } from './provider-maps'
-import { buildServerGtmEnvelope } from './server-gtm'
+import { buildServerGtmRequest, serverGtmSigningConfigured } from './server-gtm'
 import { isLiveProviderDispatchAllowed } from './provider-policy'
 import { postJson, type HttpDeliveryResult } from './transport'
 
@@ -86,7 +86,13 @@ function liveEligible(event: CanonicalCommerceEvent) {
 export const ANALYTICS_PROVIDER_ADAPTERS: Record<AnalyticsProviderId, AnalyticsProviderAdapter> = {
   GA4: {
     id: 'GA4',
-    canDispatch: (event, config) => Boolean(liveEligible(event) && event.consent.analytics && config.ga4MeasurementId && process.env.GA4_API_SECRET),
+    canDispatch: (event, config) => Boolean(
+      liveEligible(event) &&
+      event.consent.analytics &&
+      config.ga4MeasurementId &&
+      process.env.GA4_API_SECRET &&
+      !config.serverGtmEnabled,
+    ),
     dispatch: (event, config) => postJson(
       'https://www.google-analytics.com/mp/collect?measurement_id=' + encodeURIComponent(config.ga4MeasurementId) + '&api_secret=' + encodeURIComponent(process.env.GA4_API_SECRET || ''),
       buildGa4MeasurementPayload(event),
@@ -115,7 +121,16 @@ export const ANALYTICS_PROVIDER_ADAPTERS: Record<AnalyticsProviderId, AnalyticsP
   },
   SERVER_GTM: {
     id: 'SERVER_GTM',
-    canDispatch: (event, config) => Boolean(liveEligible(event) && (event.consent.analytics || event.consent.marketing) && config.serverGtmEnabled && config.serverGtmEndpoint),
-    dispatch: (event, config) => postJson(config.serverGtmEndpoint, buildServerGtmEnvelope(event, config.projectKey)),
+    canDispatch: (event, config) => Boolean(
+      liveEligible(event) &&
+      (event.consent.analytics || event.consent.marketing) &&
+      config.serverGtmEnabled &&
+      config.serverGtmEndpoint &&
+      serverGtmSigningConfigured(),
+    ),
+    dispatch: (event, config) => {
+      const request = buildServerGtmRequest(event, config.projectKey, config.environment)
+      return postJson(config.serverGtmEndpoint, request.body, request.headers)
+    },
   },
 }
