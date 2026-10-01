@@ -1,34 +1,41 @@
-# SahiGadget
+# PhonerBazar
 
-> SahiGadget is a Bangladesh-based online shop for mobile phones and gadgets, serving customers across Bangladesh.
+> PhonerBazar is a Bangladesh-based online store for mobile phones and gadgets. This file is a concise, agent-friendly map of the public website; live product pages are authoritative for current product, price, stock, variant, delivery, and warranty information.
 
-## Public identity
-
-- Website: https://www.sahigadget.shop/
-- Location: Araihazar, Narayanganj, Bangladesh – 1460
-- Customer support: hello@sahigadget.shop
-- Phone: +880 1601-654316
-- Facebook: https://www.facebook.com/sahigadgetbd
-- Currency: BDT
+PhonerBazar serves customers across Bangladesh. Public catalogue and policy pages are intended for customer and agent discovery. Private customer, order, account, authentication, payment, administration, and internal system data are not public resources.
 
 ## Public catalogue
 
-- Home: https://www.sahigadget.shop/
-- Products: https://www.sahigadget.shop/products
-- Brands: https://www.sahigadget.shop/brands
-- Categories: https://www.sahigadget.shop/categories
-- Search: https://www.sahigadget.shop/search (search results are not canonical index pages)
+- [Home](https://www.phonerbazar.store/): Main storefront and current featured catalogue.
+- [Products](https://www.phonerbazar.store/products): Public product catalogue.
+- [Brands](https://www.phonerbazar.store/brands): Public brand directory and brand pages.
+- [Categories](https://www.phonerbazar.store/categories): Public category directory and category pages.
+- [Sitemap](https://www.phonerbazar.store/sitemap.xml): Machine-readable index of public catalogue and content URLs.
+- [Full agent guide](https://www.phonerbazar.store/llms-full.txt): Extended public-site context and interpretation guidance.
 
 ## Customer information
 
-- Shipping: https://www.sahigadget.shop/shipping
-- Warranty: https://www.sahigadget.shop/warranty
-- Returns: https://www.sahigadget.shop/returns
-- Privacy: https://www.sahigadget.shop/privacy
-- Terms: https://www.sahigadget.shop/terms
-- Contact: https://www.sahigadget.shop/contact
-- Help: https://www.sahigadget.shop/help
+- [Shipping](https://www.phonerbazar.store/shipping): Delivery information and delivery-charge guidance.
+- [Warranty](https://www.phonerbazar.store/warranty): Warranty and guarantee information.
+- [Returns](https://www.phonerbazar.store/returns): Returns and applicable customer policy.
+- [Privacy](https://www.phonerbazar.store/privacy): Privacy policy.
+- [Terms](https://www.phonerbazar.store/terms): Terms and conditions.
+- [Contact](https://www.phonerbazar.store/contact): Public customer contact information.
+- [Help](https://www.phonerbazar.store/help): Customer help and guidance.
 
-## Content guidance
+## Agent guidance
 
-Product, brand, and catalogue information should be taken from the public pages above. Prices, stock, variants, delivery charges, warranty terms, and promotions can change; the live product page is authoritative. Do not infer or expose private customer, order, account, authentication, payment, or administration data.
+- Use the live public product page as the source of truth for current price, availability, stock status, variants, product details, promotions, and purchase options.
+- Use public policy pages for shipping, warranty, returns, privacy, and terms; do not infer policy details from product copy when a dedicated policy page exists.
+- Treat search result pages as discovery aids rather than canonical product records.
+- Do not expose or infer private customer, order, account, payment, authentication, administration, internal analytics, or security information.
+- Product and policy information may change over time; re-fetch the relevant live page before presenting time-sensitive facts.
+
+## Business identity
+
+- [PhonerBazar website](https://www.phonerbazar.store/): Official public website.
+- Location: Narayanganj, Dhaka, Bangladesh.
+- Currency: BDT (৳).
+- Customer phone: +880 1874-002918.
+- Customer email: phonerbazar.helpline@gmail.com.
+- [Facebook](https://www.facebook.com/profile.php?id=61576274226905): Official public social profile.
