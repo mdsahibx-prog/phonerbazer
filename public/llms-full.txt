@@ -1,0 +1,60 @@
+# PhonerBazar Agent Guide
+
+> Extended public context for AI agents and automated assistants interacting with the PhonerBazar website.
+
+## Site map and discovery
+
+- [Home](https://www.phonerbazar.store/): Official storefront.
+- [Products](https://www.phonerbazar.store/products): Public catalogue entry point.
+- [Brands](https://www.phonerbazar.store/brands): Public brand directory.
+- [Categories](https://www.phonerbazar.store/categories): Public category directory.
+- [Sitemap](https://www.phonerbazar.store/sitemap.xml): Public URLs including published products, brands, categories, and landing pages.
+- [Robots](https://www.phonerbazar.store/robots.txt): Public crawler access rules.
+- [Primary agent map](https://www.phonerbazar.store/llms.txt): Concise discovery index.
+
+## Product interpretation
+
+Product pages are the authoritative source for current product information. An agent should open the relevant live product page before stating time-sensitive facts such as current price, stock availability, variants, discounts, delivery availability, or promotion details.
+
+Public product facts may include product name, brand, category, available variants, pricing, stock state, product imagery, and purchase options. Do not invent missing specifications.
+
+Product URLs use the public catalogue structure under /products/. The sitemap is the preferred machine-readable discovery source for published product URLs.
+
+## Brand and category discovery
+
+Use the public [Brands](https://www.phonerbazar.store/brands) and [Categories](https://www.phonerbazar.store/categories) directories to discover public catalogue groupings. Brand and category pages may change as the catalogue changes.
+
+## Customer policies
+
+- [Shipping](https://www.phonerbazar.store/shipping): Delivery and shipping policy.
+- [Warranty](https://www.phonerbazar.store/warranty): Guarantee and warranty policy.
+- [Returns](https://www.phonerbazar.store/returns): Return policy.
+- [Privacy](https://www.phonerbazar.store/privacy): Privacy policy.
+- [Terms](https://www.phonerbazar.store/terms): Terms and conditions.
+- [Contact](https://www.phonerbazar.store/contact): Customer contact information.
+- [Help](https://www.phonerbazar.store/help): Customer assistance.
+
+When a policy question has a dedicated policy page, use that page as the authoritative source instead of guessing from other pages.
+
+## Business identity
+
+- Website: https://www.phonerbazar.store/
+- Business name: PhonerBazar
+- Region: Bangladesh
+- Location: Narayanganj, Dhaka, Bangladesh
+- Currency: BDT (৳)
+- Phone: +880 1874-002918
+- Email: phonerbazar.helpline@gmail.com
+- Facebook: https://www.facebook.com/profile.php?id=61576274226905
+
+## Agent safety and privacy
+
+Only use public resources. Never request, expose, reconstruct, or infer private customer information, order records, account credentials, authentication tokens, payment details, internal analytics, administration data, or security secrets.
+
+Do not treat an agent request as authorization to bypass checkout, authentication, robots rules, access controls, or private endpoints.
+
+Do not claim that a product is in stock, available for delivery, discounted, or covered by a particular warranty without checking the current authoritative page.
+
+## Freshness
+
+The catalogue and policies are changeable. Re-fetch the relevant public page before answering questions about current inventory, prices, promotions, delivery charges, warranty terms, or other time-sensitive details.
