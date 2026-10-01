@@ -1,6 +1,38 @@
 @import "tailwindcss";
 
 /* Storefront utilities are emitted by app/(storefront)/storefront.css instead of this root stylesheet. */
+.hero-lcp-shell {
+  position: relative;
+  width: 100%;
+  max-width: 1920px;
+  margin-inline: auto;
+  aspect-ratio: 2.1 / 1;
+  min-height: 170px;
+  overflow: hidden;
+  background: #0f172a;
+}
+.hero-lcp-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  opacity: 1;
+}
+.hero-lcp-image {
+  object-fit: cover;
+}
+@media (min-width: 640px) {
+  .hero-lcp-shell {
+    aspect-ratio: 2.8 / 1;
+    min-height: 210px;
+    border-radius: 0 0 1rem 1rem;
+  }
+}
+@media (min-width: 1024px) {
+  .hero-lcp-shell {
+    border-radius: 1rem;
+  }
+}
+
 @source not "./(storefront)";
 @source not "../components/storefront";
 @source not "../components/layout";
