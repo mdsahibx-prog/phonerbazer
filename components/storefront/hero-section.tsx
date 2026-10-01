@@ -131,7 +131,7 @@ export function HeroSection({ banners, productCount, brandCount, categoryCount }
   return (
     <section aria-label="Promotional banners" className="bg-slate-950">
       <div
-        className="group relative mx-auto aspect-[2.1/1] min-h-[170px] sm:aspect-[2.8/1] sm:min-h-[210px] w-full max-w-[1920px] touch-pan-y select-none overflow-hidden rounded-none bg-slate-900 shadow-[0_18px_48px_-30px_rgba(15,23,42,0.85)] sm:min-h-[210px] sm:rounded-b-2xl lg:rounded-2xl"
+        className="group hero-lcp-shell touch-pan-y select-none shadow-[0_18px_48px_-30px_rgba(15,23,42,0.85)]"
         role="region"
         aria-roledescription="carousel"
         aria-label={`Promotional banner ${activeIndex + 1} of ${banners.length}`}
@@ -172,7 +172,7 @@ export function HeroSection({ banners, productCount, brandCount, categoryCount }
                   loading={idx === 0 ? 'eager' : 'lazy'}
                   quality={75}
                   onLoad={() => markLoaded(banner.id)}
-                  className={`object-cover motion-reduce:transition-none sm:hidden ${idx === 0 || isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                  className={`hero-lcp-image motion-reduce:transition-none sm:hidden ${idx === 0 || isLoaded ? 'opacity-100' : 'opacity-0'}`}
                 />
                 <Image
                   src={banner.desktop_image_url || banner.mobile_image_url}
@@ -184,7 +184,7 @@ export function HeroSection({ banners, productCount, brandCount, categoryCount }
                 loading={idx === 0 ? 'eager' : 'lazy'}
                 quality={75}
                 onLoad={() => markLoaded(banner.id)}
-                  className={`hidden object-cover motion-reduce:transition-none sm:block ${idx === 0 || isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                  className={`hidden hero-lcp-image motion-reduce:transition-none sm:block ${idx === 0 || isLoaded ? 'opacity-100' : 'opacity-0'}`}
                 />
               </>
             </div>
