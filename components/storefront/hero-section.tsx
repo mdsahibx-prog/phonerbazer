@@ -160,7 +160,7 @@ export function HeroSection({ banners, productCount, brandCount, categoryCount }
           const isActive = idx === activeIndex
           const isLoaded = loadedSlides.has(banner.id)
           return (
-            <div key={banner.id} aria-hidden={!isActive} className={`absolute inset-0 ${isActive ? 'z-10 opacity-100' : 'z-0 opacity-0'} ${isActive && idx !== 0 ? 'transition-opacity duration-500 ease-out motion-reduce:transition-none' : ''}`}>
+            <div key={banner.id} aria-hidden={!isActive} className={`hero-lcp-layer ${isActive ? 'z-10 opacity-100' : 'z-0 opacity-0'} ${isActive && idx !== 0 ? 'transition-opacity duration-500 ease-out motion-reduce:transition-none' : ''}`}>
               <>
                 <Image
                   src={banner.mobile_image_url || banner.desktop_image_url}
