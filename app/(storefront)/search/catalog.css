@@ -1,6 +1,0 @@
-@layer utilities;
-
-/* Search uses the catalogue utility family but should not enlarge the shared storefront stylesheet. */
-@import "tailwindcss/utilities.css" layer(utilities) source(none);
-
-@source "../../../components/catalog";

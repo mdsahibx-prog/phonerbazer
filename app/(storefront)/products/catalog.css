@@ -1,6 +1,0 @@
-@layer utilities;
-
-/* Catalogue-only utilities are loaded with the catalogue route instead of every storefront page. */
-@import "tailwindcss/utilities.css" layer(utilities) source(none);
-
-@source "../../../components/catalog";

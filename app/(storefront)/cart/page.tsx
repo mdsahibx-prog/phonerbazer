@@ -1,4 +1,3 @@
-import './cart.css'
 import { CartClient } from '@/components/cart/cart-client'
 import { getCart } from '@/lib/commerce/cart'
 

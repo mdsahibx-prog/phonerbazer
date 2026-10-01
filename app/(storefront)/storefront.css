@@ -7,3 +7,6 @@
 @source "../../components/storefront";
 @source "../../components/layout";
 @source "../../components/product";
+@source "../../components/cart";
+@source "../../components/catalog";
+@source "../../components/order";
