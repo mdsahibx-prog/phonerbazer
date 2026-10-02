@@ -85,8 +85,10 @@ async function emitCartEvent(eventName: 'CART_CREATED' | 'CART_ITEM_ADDED' | 'CA
 export async function getCart() {
   const cart = await getOrCreateCart(false)
   if (!cart) return { id: '', items: [], subtotal: 0, deliveryCharges: (await getStorefrontSettings()).delivery, itemCount: 0 }
-  const items = await loadCartItems(cart.id)
-  const settings = await getStorefrontSettings()
+  const [items, settings] = await Promise.all([
+    loadCartItems(cart.id),
+    getStorefrontSettings(),
+  ])
   const subtotal = items.reduce((sum, item) => sum + Number(item.variant?.price ?? 0) * item.quantity, 0)
   return { id: cart.id, items, subtotal, deliveryCharges: settings.delivery, itemCount: items.reduce((sum, item) => sum + item.quantity, 0) }
 }
@@ -106,15 +108,22 @@ export async function addToCart(input: { productId: string; variantId: string; q
     .eq('product_id', input.productId)
     .maybeSingle()
 
-  const [cart, { data: variant, error: variantError }] = await Promise.all([cartPromise, variantPromise])
+  const cart = await cartPromise
   if (!cart) return { ok: false, message: 'Unable to start a cart.' }
 
-  const { data: existing } = await db
+  // Once the cart id is known, start the existing-item lookup immediately while
+  // the authoritative variant validation query continues in parallel.
+  const existingPromise = db
     .from('cart_items')
     .select('id,quantity')
     .eq('cart_id', cart.id)
     .eq('variant_id', input.variantId)
     .maybeSingle()
+
+  const [{ data: variant, error: variantError }, { data: existing }] = await Promise.all([
+    variantPromise,
+    existingPromise,
+  ])
 
   if (variantError) return { ok: false, message: 'Unable to update your cart.' }
 
