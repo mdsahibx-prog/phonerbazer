@@ -4,7 +4,7 @@ import { ArrowRight, Zap } from 'lucide-react'
 
 import type { HomepageBanner } from '@/lib/services/storefront-utils'
 import { siteConfig } from '@/config/site'
-import { HeroCarousel } from './hero-carousel'
+import { HeroCarouselGate } from './hero-carousel-gate'
 
 type HeroSectionProps = {
   banners: HomepageBanner[]
@@ -89,7 +89,7 @@ export function HeroSection({ banners, productCount, brandCount, categoryCount }
           <span className="sr-only">Open promotion</span>
         </Link>
 
-        {banners.length > 1 ? <HeroCarousel banners={banners} /> : null}
+        {banners.length > 1 ? <HeroCarouselGate banners={banners} /> : null}
       </div>
     </section>
   )
