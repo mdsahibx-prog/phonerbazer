@@ -109,16 +109,14 @@ export async function addToCart(input: { productId: string; variantId: string; q
   const [cart, { data: variant, error: variantError }] = await Promise.all([cartPromise, variantPromise])
   if (!cart) return { ok: false, message: 'Unable to start a cart.' }
 
-  const { data: existing, error: existingError } = await db
+  const { data: existing } = await db
     .from('cart_items')
     .select('id,quantity')
     .eq('cart_id', cart.id)
     .eq('variant_id', input.variantId)
     .maybeSingle()
 
-  // Preserve the same authoritative validation semantics and fail closed if either
-  // the variant lookup or existing-item lookup cannot be trusted.
-  if (variantError || existingError) return { ok: false, message: 'Unable to update your cart.' }
+  if (variantError) return { ok: false, message: 'Unable to update your cart.' }
 
   const productPublished = Boolean((variant?.product as { is_published?: boolean } | null)?.is_published)
   if (!variant || !variant.is_active || !productPublished) {
