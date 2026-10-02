@@ -93,31 +93,46 @@ export async function getCart() {
 
 export async function addToCart(input: { productId: string; variantId: string; quantity?: number }) {
   const quantity = clampQuantity(input.quantity ?? 1)
-  const cart = await getOrCreateCart(true)
-  if (!cart) return { ok: false, message: 'Unable to start a cart.' }
   const db = createAdminClient()
-  // Validate against the authoritative base tables for cart mutations.
-  // The storefront view is presentation-oriented; cart writes must not depend on it.
-  const [{ data: variant, error: variantError }, { data: existing }] = await Promise.all([
-    db
-      .from('product_variants')
-      .select('id,product_id,is_active,stock_quantity,product:products(is_published)')
-      .eq('id', input.variantId)
-      .eq('product_id', input.productId)
-      .maybeSingle(),
-    db.from('cart_items').select('id,quantity').eq('cart_id', cart.id).eq('variant_id', input.variantId).maybeSingle(),
-  ])
+
+  // Start cart lookup and authoritative variant validation together. The previous
+  // flow waited for the cart lookup before starting validation, adding an avoidable
+  // network round trip to the customer-facing mutation path.
+  const cartPromise = getOrCreateCart(true)
+  const variantPromise = db
+    .from('product_variants')
+    .select('id,product_id,is_active,stock_quantity,product:products(is_published)')
+    .eq('id', input.variantId)
+    .eq('product_id', input.productId)
+    .maybeSingle()
+
+  const [cart, { data: variant, error: variantError }] = await Promise.all([cartPromise, variantPromise])
+  if (!cart) return { ok: false, message: 'Unable to start a cart.' }
+
+  const { data: existing, error: existingError } = await db
+    .from('cart_items')
+    .select('id,quantity')
+    .eq('cart_id', cart.id)
+    .eq('variant_id', input.variantId)
+    .maybeSingle()
+
+  // Preserve the same authoritative validation semantics and fail closed if either
+  // the variant lookup or existing-item lookup cannot be trusted.
+  if (variantError || existingError) return { ok: false, message: 'Unable to update your cart.' }
 
   const productPublished = Boolean((variant?.product as { is_published?: boolean } | null)?.is_published)
-  if (variantError || !variant || !variant.is_active || !productPublished) {
+  if (!variant || !variant.is_active || !productPublished) {
     return { ok: false, message: 'This product option is no longer available.' }
   }
   if (Number(variant.stock_quantity) <= 0) return { ok: false, message: 'This product option is out of stock.' }
+
   const nextQuantity = clampQuantity(Number(existing?.quantity ?? 0) + quantity)
   const result = existing
     ? await db.from('cart_items').update({ quantity: nextQuantity, updated_at: new Date().toISOString() }).eq('id', existing.id)
     : await db.from('cart_items').insert({ cart_id: cart.id, product_id: input.productId, variant_id: input.variantId, quantity: nextQuantity })
+
   if (result.error) return { ok: false, message: 'Unable to update your cart.' }
+
   // Keep the add-to-cart critical path fast. The cart page always re-reads authoritative state.
   // Analytics/event logging is intentionally outside the customer-facing response path.
   void emitCartEvent(existing ? 'CART_ITEM_UPDATED' : 'CART_ITEM_ADDED', cart.id, { quantity: nextQuantity }).catch((error) => {
