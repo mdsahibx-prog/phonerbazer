@@ -4,7 +4,6 @@ import { loadCachedAssistantControlConfig } from '@/lib/assistant/config'
 import { SiteFooter } from '@/components/layout/site-footer'
 import { SiteHeader } from '@/components/layout/site-header'
 import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav'
-import './storefront.css'
 
 async function AssistantSlot() {
   const assistantConfig = await loadCachedAssistantControlConfig()
