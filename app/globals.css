@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
-/* Storefront utilities are emitted by app/(storefront)/storefront.css instead of this root stylesheet. */
-@source not "./(storefront)";
-@source not "../components/storefront";
-@source not "../components/layout";
-@source not "../components/product";
-@source not "../components/cart";
-@source not "../components/catalog";
-@source not "../components/order";
+/* Keep storefront Tailwind utilities in the root stylesheet so storefront routes need one CSS request on first load. */
+@source "./(storefront)/**/*.{ts,tsx,mdx}";
+@source "../components/storefront";
+@source "../components/layout";
+@source "../components/product";
+@source "../components/cart";
+@source "../components/catalog";
+@source "../components/order";
 
  :root {
   --background: #f6f7f9;
