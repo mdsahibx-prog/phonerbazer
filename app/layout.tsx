@@ -3,7 +3,6 @@ import type { ReactNode } from 'react'
 import { Geist, Geist_Mono } from 'next/font/google'
 
 import { siteConfig } from '@/config/site'
-import { Toaster } from 'sonner'
 import { AnalyticsRuntime } from '@/components/analytics/analytics-provider'
 import './globals.css'
 
@@ -79,7 +78,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <link rel="ard" href="/.well-known/ard.json" />
       </head>
       <body className="min-h-full bg-slate-50 text-slate-950">
-        <Toaster position="top-right" richColors />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
