@@ -19,6 +19,12 @@ const cspHeader = `
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   experimental: { optimizePackageImports: ['lucide-react', 'recharts'] },
+  turbopack: {
+    resolveAlias: {
+      '../build/polyfills/polyfill-module': './lib/modern-polyfill.js',
+      'next/dist/build/polyfills/polyfill-module': './lib/modern-polyfill.js',
+    },
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'yirbztzrgsvxuetqqiov.supabase.co' },
