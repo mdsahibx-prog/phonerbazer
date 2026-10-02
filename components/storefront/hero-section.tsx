@@ -66,10 +66,8 @@ export function HeroSection({ banners, productCount, brandCount, categoryCount }
             alt=""
             fill
             sizes="100vw"
-            priority
             fetchPriority="high"
-            loading="eager"
-            quality={75}
+            quality={70}
             className="object-cover sm:hidden"
           />
           <Image
@@ -77,10 +75,8 @@ export function HeroSection({ banners, productCount, brandCount, categoryCount }
             alt=""
             fill
             sizes="100vw"
-            priority
             fetchPriority="high"
-            loading="eager"
-            quality={75}
+            quality={70}
             className="hidden object-cover sm:block"
           />
         </div>
