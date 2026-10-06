@@ -26,7 +26,10 @@
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { background: var(--background); color: var(--foreground); font-family: Arial, Helvetica, sans-serif; }/* Premium charcoal, ivory & orange storefront system */\n.storefront-dark { background: var(--brand-navy); color: #fff; }\n.storefront-surface { background: var(--surface); color: var(--foreground); }\n
+body { background: var(--background); color: var(--foreground); font-family: Arial, Helvetica, sans-serif; }/* Premium charcoal, ivory & orange storefront system */
+.storefront-dark { background: var(--brand-navy); color: #fff; }
+.storefront-surface { background: var(--surface); color: var(--foreground); }
+
 button, a, input, select { -webkit-tap-highlight-color: transparent; }
 :focus-visible { outline: 3px solid var(--ring); outline-offset: 3px; }
 ::selection { background: #fed7aa; color: #7c2d12; }
@@ -55,7 +58,17 @@ button, a, input, select { -webkit-tap-highlight-color: transparent; }
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
 }
 
-@keyframes purchase-icon-in {\n  0% { opacity: 0; transform: scale(0.72) rotate(-8deg); }\n  65% { opacity: 1; transform: scale(1.06) rotate(2deg); }\n  100% { opacity: 1; transform: scale(1) rotate(0); }\n}\n\n.purchase-icon { animation: purchase-icon-in 420ms cubic-bezier(0.23, 1, 0.32, 1) both; }\n.grid > .group:nth-child(2) .purchase-icon { animation-delay: 55ms; }\n.grid > .group:nth-child(3) .purchase-icon { animation-delay: 110ms; }\n\n@keyframes loading-progress {
+@keyframes purchase-icon-in {
+  0% { opacity: 0; transform: scale(0.72) rotate(-8deg); }
+  65% { opacity: 1; transform: scale(1.06) rotate(2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+.purchase-icon { animation: purchase-icon-in 420ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+.grid > .group:nth-child(2) .purchase-icon { animation-delay: 55ms; }
+.grid > .group:nth-child(3) .purchase-icon { animation-delay: 110ms; }
+
+@keyframes loading-progress {
   0% { transform: translateX(-120%); opacity: 0.35; }
   50% { opacity: 1; }
   100% { transform: translateX(220%); opacity: 0.35; }
