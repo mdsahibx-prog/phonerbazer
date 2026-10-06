@@ -116,6 +116,26 @@ export function ProductDetailInteractive({ product, settings }: { product: Store
 
         {product.variants.length > 0 ? <div className="mt-8"><div className="flex items-center justify-between gap-3"><p className="text-sm font-black text-slate-950">Choose a variant</p><span className="text-xs font-semibold text-slate-400">{product.variants.length} option{product.variants.length === 1 ? '' : 's'}</span></div><div className="mt-3 grid gap-2 sm:grid-cols-2">{product.variants.map((variant) => { const isSelected = selected?.id === variant.id; const isDisabled = !variant.is_in_stock && !isSelected; const variantImage = product.images.find((image) => image.variant_id === variant.id) || product.images.find((image) => image.variant_id === null); return <button key={variant.id} type="button" onClick={() => selectVariant(variant.id)} disabled={isDisabled} aria-pressed={isSelected} className={`flex min-h-16 items-center justify-between gap-3 rounded-2xl border p-3.5 text-left transition duration-150 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-200 disabled:cursor-not-allowed disabled:opacity-50 ${isSelected ? 'border-orange-500 bg-orange-50 ring-2 ring-orange-100' : 'border-slate-200 bg-white hover:border-slate-400'}`}><span className="flex min-w-0 flex-1 items-center gap-3">{variantImage ? <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white"><img src={variantImage.image_url} alt={variantImage.alt_text || `${getVariantLabel(variant)} color`} width={48} height={48} loading="lazy" decoding="async" className="h-full w-full object-contain" /></span> : <span aria-hidden="true" className="h-12 w-12 shrink-0 rounded-xl border border-slate-200 bg-slate-100" />}<span className="min-w-0"><span className="block break-words font-bold text-slate-950">{getVariantLabel(variant)}</span><span className="mt-1 block break-all text-xs text-slate-500">{formatPrice(variant.price)}{variant.sku ? ` · ${variant.sku}` : ''}</span></span></span></button> })}</div></div> : <p className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">This product does not currently have a purchasable variant.</p>}
 
+        <div className="mt-6 rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          {selected && selected.is_in_stock ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Quantity</span>
+                <div className="inline-flex h-11 items-center rounded-full border border-slate-200 bg-slate-50 p-1 shadow-sm">
+                  <button type="button" aria-label="Decrease quantity" onClick={() => setQuantity((value) => Math.max(1, value - 1))} disabled={quantity <= 1 || cartBusy || buyBusy} className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-700 transition hover:bg-white hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-35 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100"><Minus className="h-4 w-4" /></button>
+                  <span aria-live="polite" className="w-9 text-center text-sm font-black text-slate-950">{quantity}</span>
+                  <button type="button" aria-label="Increase quantity" onClick={() => setQuantity((value) => Math.min(10, value + 1))} disabled={quantity >= 10 || cartBusy || buyBusy} className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-700 transition hover:bg-white hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-35 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100"><Plus className="h-4 w-4" /></button>
+                </div>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <button type="button" disabled={cartBusy || buyBusy} onClick={addSelectedToCart} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-black text-slate-800 transition hover:border-orange-500 hover:text-orange-700 disabled:cursor-not-allowed disabled:opacity-60"><ShoppingCart className="h-4 w-4" />{cartBusy ? 'Adding…' : 'Add to cart'}</button>
+                <button type="button" disabled={cartBusy || buyBusy} onClick={buySelectedNow} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-600 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"><Zap className="h-4 w-4" />{buyBusy ? 'Preparing…' : 'Buy Now'}</button>
+              </div>
+              {cartMessage ? <p role="status" className={`text-sm font-bold ${cartMessage === 'Added to cart.' ? 'text-orange-700' : 'text-rose-600'}`}>{cartMessage}{cartMessage === 'Added to cart.' ? <> <Link href="/cart" className="underline underline-offset-4">View cart</Link></> : null}</p> : null}
+            </div>
+          ) : <p className="text-sm font-bold text-slate-500">This selected variant is unavailable to order.</p>}
+        </div>
+
         <div className="mt-8 rounded-[1.5rem] border border-slate-200 bg-white p-5">
           <div>
             <p className="text-base font-black text-slate-950">Order with confidence</p>
@@ -137,25 +157,6 @@ export function ProductDetailInteractive({ product, settings }: { product: Store
           </div>
         </div>
 
-        <div className="mt-6 rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-          {selected && selected.is_in_stock ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Quantity</span>
-                <div className="inline-flex h-11 items-center rounded-full border border-slate-200 bg-slate-50 p-1 shadow-sm">
-                  <button type="button" aria-label="Decrease quantity" onClick={() => setQuantity((value) => Math.max(1, value - 1))} disabled={quantity <= 1 || cartBusy || buyBusy} className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-700 transition hover:bg-white hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-35 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100"><Minus className="h-4 w-4" /></button>
-                  <span aria-live="polite" className="w-9 text-center text-sm font-black text-slate-950">{quantity}</span>
-                  <button type="button" aria-label="Increase quantity" onClick={() => setQuantity((value) => Math.min(10, value + 1))} disabled={quantity >= 10 || cartBusy || buyBusy} className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-700 transition hover:bg-white hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-35 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100"><Plus className="h-4 w-4" /></button>
-                </div>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <button type="button" disabled={cartBusy || buyBusy} onClick={addSelectedToCart} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-black text-slate-800 transition hover:border-orange-500 hover:text-orange-700 disabled:cursor-not-allowed disabled:opacity-60"><ShoppingCart className="h-4 w-4" />{cartBusy ? 'Adding…' : 'Add to cart'}</button>
-                <button type="button" disabled={cartBusy || buyBusy} onClick={buySelectedNow} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-600 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"><Zap className="h-4 w-4" />{buyBusy ? 'Preparing…' : 'Buy Now'}</button>
-              </div>
-              {cartMessage ? <p role="status" className={`text-sm font-bold ${cartMessage === 'Added to cart.' ? 'text-orange-700' : 'text-rose-600'}`}>{cartMessage}{cartMessage === 'Added to cart.' ? <> <Link href="/cart" className="underline underline-offset-4">View cart</Link></> : null}</p> : null}
-            </div>
-          ) : <p className="text-sm font-bold text-slate-500">This selected variant is unavailable to order.</p>}
-        </div>
 
         
       </div>
