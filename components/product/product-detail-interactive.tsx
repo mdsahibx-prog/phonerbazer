@@ -136,27 +136,6 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
           ) : <p className="text-sm font-bold text-slate-500">This selected variant is unavailable to order.</p>}
         </div>
 
-        <div className="mt-8 rounded-[1.5rem] border border-slate-200 bg-white p-5">
-          <div>
-            <p className="text-base font-black text-slate-950">Order with confidence</p>
-            <p className="mt-1 text-sm leading-6 text-slate-500">Everything you need before ordering. Details are based on the current store policies.</p>
-          </div>
-          <div className="mt-5 divide-y divide-slate-100">
-            <div className="flex items-start gap-3 py-3 first:pt-0">
-              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" />
-              <div><p className="text-sm font-black text-slate-950">Cash on Delivery</p><p className="mt-1 text-sm leading-6 text-slate-500">Place your order through the existing guest checkout and pay according to the available COD flow.</p></div>
-            </div>
-            <div className="flex items-start gap-3 py-3">
-              <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" />
-              <div><p className="text-sm font-black text-slate-950">Delivery across Bangladesh</p><p className="mt-1 text-sm leading-6 text-slate-500">Dhaka {formatPrice(settings.delivery.dhakaCharge)} · Outside Dhaka {formatPrice(settings.delivery.outsideDhakaCharge)}.</p></div>
-            </div>
-            <div className="flex items-start gap-3 py-3 last:pb-0">
-              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" />
-              <div><p className="text-sm font-black text-slate-950">Warranty & support</p><p className="mt-1 text-sm leading-6 text-slate-500">{product.warranty_policy || settings.warranty.policyText}</p></div>
-            </div>
-          </div>
-        </div>
-
 
         
       </div>
