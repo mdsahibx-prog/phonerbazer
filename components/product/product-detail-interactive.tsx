@@ -4,12 +4,12 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, MapPin, Minus, Plus, ShieldCheck, ShoppingCart, Zap } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Minus, Plus, ShoppingCart, Zap } from 'lucide-react'
 import { addToCartAction } from '@/lib/commerce/actions'
 import { prepareGuestCheckoutAction } from '@/lib/commerce/actions'
 
 import { BrandLogo } from '@/components/storefront/brand-logo'
-import type { StorefrontProduct, StorefrontSettings } from '@/lib/services/storefront-utils'
+import type { StorefrontProduct } from '@/lib/services/storefront-utils'
 
 type ProductAnalyticsInput = Parameters<typeof import('@/lib/analytics/client').trackClientEvent>[0]
 
@@ -18,7 +18,7 @@ function trackProductEvent(input: ProductAnalyticsInput) {
 }
 import { formatPrice, getBrandPath, getProductImageAlt, getProductImageUrl, getProductTypeLabel, getPublicAvailability, getVariantLabel } from '@/lib/services/storefront-utils'
 
-export function ProductDetailInteractive({ product, settings }: { product: StorefrontProduct; settings: StorefrontSettings; phone?: string }) {
+export function ProductDetailInteractive({ product }: { product: StorefrontProduct }) {
   const [selectedId, setSelectedId] = useState(product.variants.find((variant) => variant.is_in_stock)?.id || product.variants[0]?.id || '')
   const [quantity, setQuantity] = useState(1)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
