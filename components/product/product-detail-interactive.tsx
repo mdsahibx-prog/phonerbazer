@@ -4,12 +4,12 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, MapPin, Minus, Plus, ShieldCheck, ShoppingCart, Zap } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Minus, Plus, ShoppingCart, Zap } from 'lucide-react'
 import { addToCartAction } from '@/lib/commerce/actions'
 import { prepareGuestCheckoutAction } from '@/lib/commerce/actions'
 
 import { BrandLogo } from '@/components/storefront/brand-logo'
-import type { StorefrontProduct, StorefrontSettings } from '@/lib/services/storefront-utils'
+import type { StorefrontProduct } from '@/lib/services/storefront-utils'
 
 type ProductAnalyticsInput = Parameters<typeof import('@/lib/analytics/client').trackClientEvent>[0]
 
@@ -18,7 +18,7 @@ function trackProductEvent(input: ProductAnalyticsInput) {
 }
 import { formatPrice, getBrandPath, getProductImageAlt, getProductImageUrl, getProductTypeLabel, getPublicAvailability, getVariantLabel } from '@/lib/services/storefront-utils'
 
-export function ProductDetailInteractive({ product, settings }: { product: StorefrontProduct; settings: StorefrontSettings; phone?: string }) {
+export function ProductDetailInteractive({ product }: { product: StorefrontProduct }) {
   const [selectedId, setSelectedId] = useState(product.variants.find((variant) => variant.is_in_stock)?.id || product.variants[0]?.id || '')
   const [quantity, setQuantity] = useState(1)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
@@ -134,27 +134,6 @@ export function ProductDetailInteractive({ product, settings }: { product: Store
               {cartMessage ? <p role="status" className={`text-sm font-bold ${cartMessage === 'Added to cart.' ? 'text-orange-700' : 'text-rose-600'}`}>{cartMessage}{cartMessage === 'Added to cart.' ? <> <Link href="/cart" className="underline underline-offset-4">View cart</Link></> : null}</p> : null}
             </div>
           ) : <p className="text-sm font-bold text-slate-500">This selected variant is unavailable to order.</p>}
-        </div>
-
-        <div className="mt-8 rounded-[1.5rem] border border-slate-200 bg-white p-5">
-          <div>
-            <p className="text-base font-black text-slate-950">Order with confidence</p>
-            <p className="mt-1 text-sm leading-6 text-slate-500">Everything you need before ordering. Details are based on the current store policies.</p>
-          </div>
-          <div className="mt-5 divide-y divide-slate-100">
-            <div className="flex items-start gap-3 py-3 first:pt-0">
-              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" />
-              <div><p className="text-sm font-black text-slate-950">Cash on Delivery</p><p className="mt-1 text-sm leading-6 text-slate-500">Place your order through the existing guest checkout and pay according to the available COD flow.</p></div>
-            </div>
-            <div className="flex items-start gap-3 py-3">
-              <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" />
-              <div><p className="text-sm font-black text-slate-950">Delivery across Bangladesh</p><p className="mt-1 text-sm leading-6 text-slate-500">Dhaka {formatPrice(settings.delivery.dhakaCharge)} · Outside Dhaka {formatPrice(settings.delivery.outsideDhakaCharge)}.</p></div>
-            </div>
-            <div className="flex items-start gap-3 py-3 last:pb-0">
-              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" />
-              <div><p className="text-sm font-black text-slate-950">Warranty & support</p><p className="mt-1 text-sm leading-6 text-slate-500">{product.warranty_policy || settings.warranty.policyText}</p></div>
-            </div>
-          </div>
         </div>
 
 
