@@ -4,7 +4,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, ChevronLeft, ChevronRight, MapPin, PackageCheck, Phone, ShieldCheck } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MapPin, Minus, Phone, Plus, ShieldCheck, ShoppingCart, Zap } from 'lucide-react'
 import { addToCartAction } from '@/lib/commerce/actions'
 import { prepareGuestCheckoutAction } from '@/lib/commerce/actions'
 
@@ -119,25 +119,27 @@ export function ProductDetailInteractive({ product, settings, phone }: { product
 
         <div className="mt-8 grid gap-3 rounded-[1.5rem] border border-slate-200 bg-white p-5"><div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" /><div><p className="text-sm font-black text-slate-950">Warranty & guarantee</p><p className="mt-1 text-sm leading-6 text-slate-500">{product.warranty_policy || settings.warranty.policyText}</p><Link href="/warranty" className="mt-2 inline-flex text-xs font-bold text-orange-700 underline underline-offset-4 hover:text-orange-800">View warranty policy</Link></div></div><div className="flex items-start gap-3"><MapPin className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" /><div><p className="text-sm font-black text-slate-950">Delivery across Bangladesh</p><p className="mt-1 text-sm leading-6 text-slate-500">Dhaka {formatPrice(settings.delivery.dhakaCharge)} · Outside Dhaka {formatPrice(settings.delivery.outsideDhakaCharge)}</p><Link href="/shipping" className="mt-2 inline-flex text-xs font-bold text-orange-700 underline underline-offset-4 hover:text-orange-800">View delivery policy</Link></div></div><div className="flex items-start gap-3"><Phone className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" /><div><p className="text-sm font-black text-slate-950">Need help before ordering?</p><a href={`tel:${phone.replace(/\s+/g, '')}`} className="mt-1 inline-block text-sm font-bold text-slate-700 underline underline-offset-4 hover:text-orange-700">Call {phone}</a></div></div></div>
 
-        <div className="mt-6 rounded-[1.5rem] border border-orange-200 bg-orange-50 p-5">
-          <p className="font-black text-slate-950">Ready to order?</p>
-          <p className="mt-1 text-sm leading-6 text-slate-600">Choose your quantity, then add it to the cart or go straight to guest checkout. Final price, delivery, risk, and stock are checked on the server.</p>
+        <div className="mt-6 rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           {selected && selected.is_in_stock ? (
-            <div className="mt-4 space-y-3">
+            <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
-                <label htmlFor="product-quantity" className="text-sm font-black text-slate-900">Quantity</label>
-                <input id="product-quantity" type="number" min="1" max="10" value={quantity} onChange={(event) => setQuantity(Math.min(10, Math.max(1, Number(event.target.value) || 1)))} disabled={cartBusy || buyBusy} className="h-11 w-20 rounded-xl border border-slate-200 bg-white px-3 text-center font-black outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:opacity-60" />
+                <span className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Quantity</span>
+                <div className="inline-flex h-11 items-center rounded-full border border-slate-200 bg-slate-50 p-1 shadow-sm">
+                  <button type="button" aria-label="Decrease quantity" onClick={() => setQuantity((value) => Math.max(1, value - 1))} disabled={quantity <= 1 || cartBusy || buyBusy} className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-700 transition hover:bg-white hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-35 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100"><Minus className="h-4 w-4" /></button>
+                  <span aria-live="polite" className="w-9 text-center text-sm font-black text-slate-950">{quantity}</span>
+                  <button type="button" aria-label="Increase quantity" onClick={() => setQuantity((value) => Math.min(10, value + 1))} disabled={quantity >= 10 || cartBusy || buyBusy} className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-700 transition hover:bg-white hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-35 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100"><Plus className="h-4 w-4" /></button>
+                </div>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
-                <button type="button" disabled={cartBusy || buyBusy} onClick={addSelectedToCart} className="inline-flex min-h-12 items-center justify-center rounded-full border border-slate-300 px-5 py-3 text-sm font-black text-slate-800 transition hover:border-orange-500 hover:text-orange-700 disabled:cursor-not-allowed disabled:opacity-60">{cartBusy ? 'Adding…' : 'Add to cart'}</button>
-                <button type="button" disabled={cartBusy || buyBusy} onClick={buySelectedNow} className="inline-flex min-h-12 items-center justify-center rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-600 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60">{buyBusy ? 'Preparing checkout…' : 'Buy Now'}</button>
+                <button type="button" disabled={cartBusy || buyBusy} onClick={addSelectedToCart} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-black text-slate-800 transition hover:border-orange-500 hover:text-orange-700 disabled:cursor-not-allowed disabled:opacity-60"><ShoppingCart className="h-4 w-4" />{cartBusy ? 'Adding…' : 'Add to cart'}</button>
+                <button type="button" disabled={cartBusy || buyBusy} onClick={buySelectedNow} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-600 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"><Zap className="h-4 w-4" />{buyBusy ? 'Preparing…' : 'Buy Now'}</button>
               </div>
               {cartMessage ? <p role="status" className={`text-sm font-bold ${cartMessage === 'Added to cart.' ? 'text-orange-700' : 'text-rose-600'}`}>{cartMessage}{cartMessage === 'Added to cart.' ? <> <Link href="/cart" className="underline underline-offset-4">View cart</Link></> : null}</p> : null}
             </div>
-          ) : <p className="mt-4 text-sm font-bold text-slate-500">This selected variant is unavailable to order.</p>}
+          ) : <p className="text-sm font-bold text-slate-500">This selected variant is unavailable to order.</p>}
         </div>
 
-        {selected ? <dl className="mt-8 grid grid-cols-2 gap-x-5 gap-y-5 border-t border-slate-200 pt-6 text-sm sm:gap-x-8">{attributes.map(([label, value]) => <div key={label} className="min-w-0"><dt className="truncate text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 sm:text-xs">{label}</dt><dd className="mt-1 break-words font-bold text-slate-950">{value}</dd></div>)}{selected.sku ? <div className="min-w-0"><dt className="truncate text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 sm:text-xs">SKU</dt><dd className="mt-1 break-all font-bold text-slate-950">{selected.sku}</dd></div> : null}<div className="min-w-0"><dt className="truncate text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 sm:text-xs">Availability</dt><dd className={`mt-1 truncate font-bold ${status.tone === 'in' ? 'text-orange-700' : status.tone === 'low' ? 'text-amber-700' : 'text-slate-500'}`}>{status.label}</dd></div></dl> : null}
+        {selected && attributes.length ? <dl className="mt-8 grid grid-cols-2 gap-x-5 gap-y-5 border-t border-slate-200 pt-6 text-sm sm:gap-x-8">{attributes.map(([label, value]) => <div key={label} className="min-w-0"><dt className="truncate text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 sm:text-xs">{label}</dt><dd className="mt-1 break-words font-bold text-slate-950">{value}</dd></div>)}</dl> : null}
       </div>
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 py-2 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur md:hidden [padding-bottom:max(0.5rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto flex max-w-xl items-center gap-2">
