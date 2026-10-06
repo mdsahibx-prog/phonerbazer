@@ -4,13 +4,18 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { trackClientEvent } from '@/lib/analytics/client'
 import { Check, ChevronLeft, ChevronRight, MapPin, PackageCheck, Phone, ShieldCheck } from 'lucide-react'
 import { addToCartAction } from '@/lib/commerce/actions'
 import { prepareGuestCheckoutAction } from '@/lib/commerce/actions'
 
 import { BrandLogo } from '@/components/storefront/brand-logo'
 import type { StorefrontProduct, StorefrontSettings } from '@/lib/services/storefront-utils'
+
+type ProductAnalyticsInput = Parameters<typeof import('@/lib/analytics/client').trackClientEvent>[0]
+
+function trackProductEvent(input: ProductAnalyticsInput) {
+  void import('@/lib/analytics/client').then(({ trackClientEvent }) => trackClientEvent(input))
+}
 import { formatPrice, getBrandPath, getProductImageAlt, getProductImageUrl, getProductTypeLabel, getPublicAvailability, getVariantLabel } from '@/lib/services/storefront-utils'
 
 export function ProductDetailInteractive({ product, settings, phone }: { product: StorefrontProduct; settings: StorefrontSettings; phone: string }) {
@@ -30,11 +35,11 @@ export function ProductDetailInteractive({ product, settings, phone }: { product
   const imageCount = displayImages.length
   const activeImage = displayImages[activeImageIndex] || displayImages[0]
   const imageUrl = activeImage?.image_url || getProductImageUrl(product)
-  useEffect(() => { if (selected) trackClientEvent({ eventName: 'view_item', commerce: { currency: 'BDT', value: selected.price, items: [{ item_id: selected.sku || selected.id, item_name: product.name, item_brand: product.brand?.name, item_category: product.category?.name, price: selected.price, quantity: 1 }] } }) }, [product.brand?.name, product.category?.name, product.name, selected])
+  useEffect(() => { if (selected) trackProductEvent({ eventName: 'view_item', commerce: { currency: 'BDT', value: selected.price, items: [{ item_id: selected.sku || selected.id, item_name: product.name, item_brand: product.brand?.name, item_category: product.category?.name, price: selected.price, quantity: 1 }] } }) }, [product.brand?.name, product.category?.name, product.name, selected])
 
   useEffect(() => { setActiveImageIndex(0) }, [selectedId])
 
-  function selectVariant(id: string) { const variant = product.variants.find((item) => item.id === id); if (variant) trackClientEvent({ eventName: 'select_item', commerce: { item_list_name: 'product_detail', items: [{ item_id: variant.sku || variant.id, item_name: product.name, price: variant.price, quantity: 1 }] } }); setSelectedId(id) }
+  function selectVariant(id: string) { const variant = product.variants.find((item) => item.id === id); if (variant) trackProductEvent({ eventName: 'select_item', commerce: { item_list_name: 'product_detail', items: [{ item_id: variant.sku || variant.id, item_name: product.name, price: variant.price, quantity: 1 }] } }); setSelectedId(id) }
 
   async function addSelectedToCart() {
     if (!selected || selected.product_id !== product.id || !selected.is_in_stock || cartBusy || buyBusy) {
@@ -44,7 +49,7 @@ export function ProductDetailInteractive({ product, settings, phone }: { product
     setCartBusy(true)
     setCartMessage('')
     const result = await addToCartAction({ productId: product.id, variantId: selected.id, quantity })
-    if (result.ok) trackClientEvent({ eventName: 'add_to_cart', commerce: { currency: 'BDT', value: selected.price, items: [{ item_id: selected.sku || selected.id, item_name: product.name, price: selected.price, quantity }] } })
+    if (result.ok) trackProductEvent({ eventName: 'add_to_cart', commerce: { currency: 'BDT', value: selected.price, items: [{ item_id: selected.sku || selected.id, item_name: product.name, price: selected.price, quantity }] } })
     setCartBusy(false)
     setCartMessage(result.ok ? 'Added to cart.' : result.message ?? 'Unable to update your cart.')
   }
@@ -59,7 +64,7 @@ export function ProductDetailInteractive({ product, settings, phone }: { product
       setCartMessage(result.message)
       return
     }
-    trackClientEvent({
+    trackProductEvent({
       eventName: 'begin_checkout',
       commerce: {
         currency: 'BDT',
