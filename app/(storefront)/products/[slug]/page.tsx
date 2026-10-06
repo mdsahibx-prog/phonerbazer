@@ -9,6 +9,7 @@ import { getProductBySlug, getRelatedProducts, getStorefrontSettings } from '@/l
 import { formatPrice, getCategoryPath, getProductMetaDescription, getProductMetaTitle, getProductPrimaryImage } from '@/lib/services/storefront-utils'
 
 export const revalidate = 60
+export const preferredRegion = 'sin1'
 
 type Params = Promise<{ slug: string }>
 
