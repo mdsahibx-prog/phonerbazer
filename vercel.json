@@ -10,6 +10,14 @@
       "functionFailoverRegions": [
         "iad1"
       ]
+    },
+    "app/(storefront)/order/page.tsx": {
+      "regions": [
+        "sin1"
+      ],
+      "functionFailoverRegions": [
+        "iad1"
+      ]
     }
   }
 }
