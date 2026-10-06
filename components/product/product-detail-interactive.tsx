@@ -4,7 +4,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, MapPin, Minus, Phone, Plus, ShieldCheck, ShoppingCart, Zap } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MapPin, Minus, Plus, ShieldCheck, ShoppingCart, Zap } from 'lucide-react'
 import { addToCartAction } from '@/lib/commerce/actions'
 import { prepareGuestCheckoutAction } from '@/lib/commerce/actions'
 
@@ -18,7 +18,7 @@ function trackProductEvent(input: ProductAnalyticsInput) {
 }
 import { formatPrice, getBrandPath, getProductImageAlt, getProductImageUrl, getProductTypeLabel, getPublicAvailability, getVariantLabel } from '@/lib/services/storefront-utils'
 
-export function ProductDetailInteractive({ product, settings, phone }: { product: StorefrontProduct; settings: StorefrontSettings; phone: string }) {
+export function ProductDetailInteractive({ product, settings }: { product: StorefrontProduct; settings: StorefrontSettings; phone?: string }) {
   const [selectedId, setSelectedId] = useState(product.variants.find((variant) => variant.is_in_stock)?.id || product.variants[0]?.id || '')
   const [quantity, setQuantity] = useState(1)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
@@ -29,7 +29,6 @@ export function ProductDetailInteractive({ product, settings, phone }: { product
   const selected = useMemo(() => product.variants.find((variant) => variant.id === selectedId) || product.variants[0] || null, [product.variants, selectedId])
   const status = selected ? getPublicAvailability([selected]) : { label: 'Price on request', tone: 'out' as const }
   const discount = selected && selected.compare_at_price && selected.compare_at_price > selected.price ? Math.round(((selected.compare_at_price - selected.price) / selected.compare_at_price) * 100) : null
-  const attributes = selected ? [selected.ram && ['RAM', selected.ram], selected.storage && ['Storage', selected.storage], selected.color && ['Colour', selected.color]].filter(Boolean) as string[][] : []
   const variantImages = selected ? product.images.filter((image) => image.variant_id === selected.id).sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.sort_order - b.sort_order) : []
   const displayImages = variantImages.length ? variantImages : product.images
   const imageCount = displayImages.length
@@ -117,7 +116,26 @@ export function ProductDetailInteractive({ product, settings, phone }: { product
 
         {product.variants.length > 0 ? <div className="mt-8"><div className="flex items-center justify-between gap-3"><p className="text-sm font-black text-slate-950">Choose a variant</p><span className="text-xs font-semibold text-slate-400">{product.variants.length} option{product.variants.length === 1 ? '' : 's'}</span></div><div className="mt-3 grid gap-2 sm:grid-cols-2">{product.variants.map((variant) => { const isSelected = selected?.id === variant.id; const isDisabled = !variant.is_in_stock && !isSelected; const variantImage = product.images.find((image) => image.variant_id === variant.id) || product.images.find((image) => image.variant_id === null); return <button key={variant.id} type="button" onClick={() => selectVariant(variant.id)} disabled={isDisabled} aria-pressed={isSelected} className={`flex min-h-16 items-center justify-between gap-3 rounded-2xl border p-3.5 text-left transition duration-150 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-200 disabled:cursor-not-allowed disabled:opacity-50 ${isSelected ? 'border-orange-500 bg-orange-50 ring-2 ring-orange-100' : 'border-slate-200 bg-white hover:border-slate-400'}`}><span className="flex min-w-0 flex-1 items-center gap-3">{variantImage ? <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white"><img src={variantImage.image_url} alt={variantImage.alt_text || `${getVariantLabel(variant)} color`} width={48} height={48} loading="lazy" decoding="async" className="h-full w-full object-contain" /></span> : <span aria-hidden="true" className="h-12 w-12 shrink-0 rounded-xl border border-slate-200 bg-slate-100" />}<span className="min-w-0"><span className="block break-words font-bold text-slate-950">{getVariantLabel(variant)}</span><span className="mt-1 block break-all text-xs text-slate-500">{formatPrice(variant.price)}{variant.sku ? ` · ${variant.sku}` : ''}</span></span></span></button> })}</div></div> : <p className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">This product does not currently have a purchasable variant.</p>}
 
-        <div className="mt-8 grid gap-3 rounded-[1.5rem] border border-slate-200 bg-white p-5"><div className="flex items-start gap-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" /><div><p className="text-sm font-black text-slate-950">Warranty & guarantee</p><p className="mt-1 text-sm leading-6 text-slate-500">{product.warranty_policy || settings.warranty.policyText}</p><Link href="/warranty" className="mt-2 inline-flex text-xs font-bold text-orange-700 underline underline-offset-4 hover:text-orange-800">View warranty policy</Link></div></div><div className="flex items-start gap-3"><MapPin className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" /><div><p className="text-sm font-black text-slate-950">Delivery across Bangladesh</p><p className="mt-1 text-sm leading-6 text-slate-500">Dhaka {formatPrice(settings.delivery.dhakaCharge)} · Outside Dhaka {formatPrice(settings.delivery.outsideDhakaCharge)}</p><Link href="/shipping" className="mt-2 inline-flex text-xs font-bold text-orange-700 underline underline-offset-4 hover:text-orange-800">View delivery policy</Link></div></div><div className="flex items-start gap-3"><Phone className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" /><div><p className="text-sm font-black text-slate-950">Need help before ordering?</p><a href={`tel:${phone.replace(/\s+/g, '')}`} className="mt-1 inline-block text-sm font-bold text-slate-700 underline underline-offset-4 hover:text-orange-700">Call {phone}</a></div></div></div>
+        <div className="mt-8 rounded-[1.5rem] border border-slate-200 bg-white p-5">
+          <div>
+            <p className="text-base font-black text-slate-950">Order with confidence</p>
+            <p className="mt-1 text-sm leading-6 text-slate-500">Everything you need before ordering. Details are based on the current store policies.</p>
+          </div>
+          <div className="mt-5 divide-y divide-slate-100">
+            <div className="flex items-start gap-3 py-3 first:pt-0">
+              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" />
+              <div><p className="text-sm font-black text-slate-950">Cash on Delivery</p><p className="mt-1 text-sm leading-6 text-slate-500">Place your order through the existing guest checkout and pay according to the available COD flow.</p></div>
+            </div>
+            <div className="flex items-start gap-3 py-3">
+              <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" />
+              <div><p className="text-sm font-black text-slate-950">Delivery across Bangladesh</p><p className="mt-1 text-sm leading-6 text-slate-500">Dhaka {formatPrice(settings.delivery.dhakaCharge)} · Outside Dhaka {formatPrice(settings.delivery.outsideDhakaCharge)}.</p></div>
+            </div>
+            <div className="flex items-start gap-3 py-3 last:pb-0">
+              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" />
+              <div><p className="text-sm font-black text-slate-950">Warranty & support</p><p className="mt-1 text-sm leading-6 text-slate-500">{product.warranty_policy || settings.warranty.policyText}</p></div>
+            </div>
+          </div>
+        </div>
 
         <div className="mt-6 rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           {selected && selected.is_in_stock ? (
@@ -139,7 +157,7 @@ export function ProductDetailInteractive({ product, settings, phone }: { product
           ) : <p className="text-sm font-bold text-slate-500">This selected variant is unavailable to order.</p>}
         </div>
 
-        {selected && attributes.length ? <dl className="mt-8 grid grid-cols-2 gap-x-5 gap-y-5 border-t border-slate-200 pt-6 text-sm sm:gap-x-8">{attributes.map(([label, value]) => <div key={label} className="min-w-0"><dt className="truncate text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 sm:text-xs">{label}</dt><dd className="mt-1 break-words font-bold text-slate-950">{value}</dd></div>)}</dl> : null}
+        
       </div>
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 py-2 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur md:hidden [padding-bottom:max(0.5rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto flex max-w-xl items-center gap-2">
