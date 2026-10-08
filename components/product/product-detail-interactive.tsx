@@ -191,6 +191,14 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
           </div>
         </div>
       </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 py-2 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur md:hidden [padding-bottom:max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="mx-auto flex max-w-xl items-center gap-2">
+          <div className="min-w-0 flex-1"><p className="truncate text-[11px] font-semibold text-slate-500">{selected ? getVariantLabel(selected) : product.name}</p><p className="text-base font-black text-slate-950">{selected ? formatPrice(selected.price) : 'Price on request'}</p></div>
+          <button type="button" disabled={!selected || !selected.is_in_stock || cartBusy || buyBusy} onClick={addSelectedToCart} className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-xs font-black text-slate-800 disabled:opacity-50">{cartBusy ? 'Adding…' : 'Add to Cart'}</button>
+          <button type="button" disabled={!selected || !selected.is_in_stock || cartBusy || buyBusy} onClick={buySelectedNow} className="group inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-[#FF6B00] px-4 text-xs font-black text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[.98] disabled:opacity-50"><Zap className="h-4 w-4 transition-transform duration-150 group-hover:scale-110 group-active:scale-90" />{buyBusy ? 'Opening…' : 'Buy Now'}</button>
+        </div>
+      </div>
     </div>
   )
 }
