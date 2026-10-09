@@ -254,7 +254,7 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
       return
     }
     const highlights = confirmed.slice(0, 3).map((field) => `${field.label.trim()}: ${field.value.trim()}`)
-    const productLabel = [brand, name].filter(Boolean).join(' ')
+    const productLabel = brand && !name.toLowerCase().startsWith(brand.toLowerCase()) ? `${brand} ${name}` : name
     const generatedShort = `${productLabel} feature phone. Key details: ${highlights.map((item) => item.replace(': ', ' — ')).join('; ')}.`
     if (!String(form.getValues('shortDescription') ?? '').trim()) {
       form.setValue('shortDescription', generatedShort.slice(0, 300), { shouldDirty: true, shouldValidate: true })
