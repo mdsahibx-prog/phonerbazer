@@ -54,6 +54,7 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
     setCartBusy(false)
     setCartAdded(result.ok)
     setCartMessage(result.ok ? 'Added to cart.' : result.message ?? 'Unable to update your cart.')
+    if (result.ok && typeof window !== 'undefined') window.dispatchEvent(new Event('phonerbazar:cart-updated'))
   }
 
   async function buySelectedNow() {
