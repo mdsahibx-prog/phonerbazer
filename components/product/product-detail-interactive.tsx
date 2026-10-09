@@ -4,7 +4,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BadgeCheck, Banknote, CheckCircle2, ChevronLeft, ChevronRight, HardDrive, Layers3, MemoryStick, Minus, Palette, Plus, Share2, ShieldCheck, ShoppingCart, Tag, Truck, Zap } from 'lucide-react'
+import { BatteryCharging, Banknote, CheckCircle2, ChevronLeft, ChevronRight, HardDrive, Layers3, MemoryStick, Minus, Monitor, Palette, Plus, Share2, ShieldCheck, ShoppingCart, Tag, Truck, Zap } from 'lucide-react'
 import { addToCartAction } from '@/lib/commerce/actions'
 import { prepareGuestCheckoutAction } from '@/lib/commerce/actions'
 
@@ -99,6 +99,14 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
   const ramValues = Array.from(new Set(product.variants.map((variant) => variant.ram).filter(Boolean))).join(' · ')
   const storageValues = Array.from(new Set(product.variants.map((variant) => variant.storage).filter(Boolean))).join(' · ')
   const colourValues = Array.from(new Set(product.variants.map((variant) => variant.color).filter(Boolean))).join(' · ')
+  const productSpecText = [product.short_description, product.description].filter(Boolean).join(' ').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ')
+  const readSpec = (pattern: RegExp) => {
+    const match = productSpecText.match(pattern)
+    return match?.[1]?.trim().replace(/\s+/g, ' ').replace(/[.,;]+$/, '') || ''
+  }
+  const isNokia2720Flip = /nokia\s*2720\s*flip/i.test(product.name)
+  const displaySpec = readSpec(/(?:display(?:\s*size)?|screen\s*size)\s*[:\-]\s*([^|;\n\r<]{1,70})/i) || (isNokia2720Flip ? '2.8″ + 1.3″ external' : '')
+  const batterySpec = readSpec(/(?:battery(?:\s*capacity)?|battery\s*size)\s*[:\-]\s*([^|;\n\r<]{1,50})/i) || (isNokia2720Flip ? '1,500 mAh' : '')
 
   function selectImage(index: number) {
     setActiveImageIndex(Math.max(0, Math.min(index, Math.max(imageCount - 1, 0))))
@@ -135,25 +143,30 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
               {product.category ? <Link href={'/products?category=' + encodeURIComponent(product.category.slug)} className="text-xs font-bold text-slate-400 transition-colors hover:text-orange-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-200">{product.category.name}</Link> : null}
             </div>
 
-            <div className="mt-5">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Price</p>
-              <div className="mt-1 flex flex-wrap items-end gap-x-3 gap-y-2">
-                <p className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{selected ? formatPrice(selected.price) : 'Price on request'}</p>
-                {selected?.compare_at_price && selected.compare_at_price > selected.price ? <p className="pb-1 text-sm text-slate-400 line-through">{formatPrice(selected.compare_at_price)}</p> : null}
+            <div className="mt-5 grid grid-cols-[minmax(0,1fr)_minmax(108px,.7fr)] items-center gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(145px,.55fr)] sm:gap-4">
+              <div className="min-w-0">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Price</p>
+                <div className="mt-1 flex flex-wrap items-end gap-x-3 gap-y-1">
+                  <p className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{selected ? formatPrice(selected.price) : 'Price on request'}</p>
+                  {selected?.compare_at_price && selected.compare_at_price > selected.price ? <p className="pb-1 text-sm text-slate-400 line-through">{formatPrice(selected.compare_at_price)}</p> : null}
+                </div>
+                {selected?.compare_at_price && selected.compare_at_price > selected.price ? <span className="mt-2 inline-flex rounded-full bg-orange-50 px-3 py-1.5 text-xs font-black text-orange-700">Save {formatPrice(selected.compare_at_price - selected.price)} · {discount}% off</span> : null}
               </div>
-              {selected?.compare_at_price && selected.compare_at_price > selected.price ? <span className="mt-2 inline-flex rounded-full bg-orange-50 px-3 py-1.5 text-xs font-black text-orange-700">Save {formatPrice(selected.compare_at_price - selected.price)} · {discount}% off</span> : null}
+              <div className="flex min-h-[112px] flex-col justify-center rounded-2xl border border-orange-100 bg-gradient-to-br from-orange-50 via-white to-amber-50 p-3 shadow-sm sm:min-h-[120px] sm:p-4">
+                <span className="mb-2 inline-flex h-8 w-8 items-center justify-center rounded-xl bg-white text-orange-700 shadow-sm ring-1 ring-orange-100"><Banknote className="h-4 w-4" /></span>
+                <p className="text-xs font-black leading-4 text-slate-950 sm:text-sm">Cash on Delivery</p>
+                <p className="mt-1 text-[10px] font-semibold leading-4 text-slate-500 sm:text-xs">Pay when your order arrives</p>
+              </div>
             </div>
 
             {(product.brand || product.category || product.product_type || colourValues || ramValues || storageValues) ? (
               <div className="mt-6 border-t border-slate-100 pt-5">
                 <div className="flex items-center justify-between gap-3"><p className="text-sm font-black text-slate-950">Key highlights</p><span className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Product overview</span></div>
-                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {product.brand ? <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3"><Tag className="h-4 w-4 text-orange-600" /><p className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Brand</p><p className="mt-0.5 break-words text-xs font-bold text-slate-950">{product.brand.name}</p></div> : null}
-                  {product.product_type ? <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3"><Layers3 className="h-4 w-4 text-orange-600" /><p className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Type</p><p className="mt-0.5 break-words text-xs font-bold text-slate-950">{getProductTypeLabel(product.product_type)}</p></div> : null}
-                  {colourValues ? <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3"><Palette className="h-4 w-4 text-orange-600" /><p className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Colour</p><p className="mt-0.5 break-words text-xs font-bold text-slate-950">{colourValues}</p></div> : null}
-                  {ramValues ? <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3"><MemoryStick className="h-4 w-4 text-orange-600" /><p className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">RAM</p><p className="mt-0.5 break-words text-xs font-bold text-slate-950">{ramValues}</p></div> : null}
-                  {storageValues ? <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3"><HardDrive className="h-4 w-4 text-orange-600" /><p className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Storage</p><p className="mt-0.5 break-words text-xs font-bold text-slate-950">{storageValues}</p></div> : null}
-                  {product.category ? <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3"><BadgeCheck className="h-4 w-4 text-orange-600" /><p className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Category</p><p className="mt-0.5 break-words text-xs font-bold text-slate-950">{product.category.name}</p></div> : null}
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {product.brand ? <div className="min-h-[92px] rounded-xl border border-slate-100 bg-slate-50/70 p-3"><Tag className="h-4 w-4 text-orange-600" /><p className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Brand</p><p className="mt-0.5 break-words text-xs font-bold text-slate-950">{product.brand.name}</p></div> : null}
+                  <div className="min-h-[92px] rounded-xl border border-slate-100 bg-slate-50/70 p-3"><Monitor className="h-4 w-4 text-orange-600" /><p className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Display</p><p className="mt-0.5 break-words text-xs font-bold text-slate-950">{displaySpec || 'See full specifications'}</p></div>
+                  {colourValues ? <div className="min-h-[92px] rounded-xl border border-slate-100 bg-slate-50/70 p-3"><Palette className="h-4 w-4 text-orange-600" /><p className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Colour</p><p className="mt-0.5 break-words text-xs font-bold text-slate-950">{colourValues}</p></div> : null}
+                  <div className="min-h-[92px] rounded-xl border border-slate-100 bg-slate-50/70 p-3"><BatteryCharging className="h-4 w-4 text-orange-600" /><p className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Battery</p><p className="mt-0.5 break-words text-xs font-bold text-slate-950">{batterySpec || 'See full specifications'}</p></div>
                 </div>
               </div>
             ) : null}
