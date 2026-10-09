@@ -107,6 +107,19 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
   const isNokia2720Flip = /nokia\s*2720\s*flip/i.test(product.name)
   const displaySpec = readSpec(/(?:display(?:\s*size)?|screen\s*size)\s*[:\-]\s*([^|;\n\r<]{1,70})/i) || (isNokia2720Flip ? '2.8″ + 1.3″ external' : '')
   const batterySpec = readSpec(/(?:battery(?:\s*capacity)?|battery\s*size)\s*[:\-]\s*([^|;\n\r<]{1,50})/i) || (isNokia2720Flip ? '1,500 mAh' : '')
+  const descriptionSections = (product.description || '').split(/\n(?=##\s)/).map((section) => {
+    const lines = section.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+    const firstLine = lines[0] || ''
+    const title = firstLine.startsWith('## ') ? firstLine.replace(/^##\s*/, '') : 'About this phone'
+    const bodyLines = firstLine.startsWith('## ') ? lines.slice(1) : lines
+    const details = bodyLines.flatMap((line) => {
+      const match = line.replace(/^[-*•]\s*/, '').match(/^([^:]{2,48}):\s*(.{1,180})$/)
+      return match ? [{ label: match[1].trim(), value: match[2].trim() }] : []
+    })
+    const paragraphs = bodyLines.filter((line) => !line.replace(/^[-*•]\s*/, '').match(/^[^:]{2,48}:\s*\S/))
+    return { title, details, paragraphs }
+  }).filter((section) => section.details.length || section.paragraphs.length)
+
 
   function selectImage(index: number) {
     setActiveImageIndex(Math.max(0, Math.min(index, Math.max(imageCount - 1, 0))))
@@ -211,6 +224,25 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
           </div>
         </div>
       </div>
+
+      {descriptionSections.length > 0 ? (
+        <section className="mt-8 space-y-4 border-t border-slate-100 pt-7 sm:mt-10 sm:pt-9" aria-labelledby="product-details-heading">
+          <div className="max-w-2xl">
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-orange-600">Know your phone</p>
+            <h2 id="product-details-heading" className="mt-1 text-xl font-black tracking-tight text-slate-950 sm:text-2xl">Product details & specifications</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-500">The essential details, organised for quick reading on any screen.</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {descriptionSections.map((section, index) => (
+              <section key={section.title + index} className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <h3 className="border-b border-slate-100 bg-slate-50/80 px-4 py-3 text-sm font-black text-slate-900">{section.title}</h3>
+                {section.paragraphs.length > 0 ? <div className="space-y-2 px-4 py-4">{section.paragraphs.map((paragraph, paragraphIndex) => <p key={paragraphIndex} className="text-sm leading-6 text-slate-600">{paragraph.replace(/^[-*•]\s*/, '')}</p>)}</div> : null}
+                {section.details.length > 0 ? <dl className="divide-y divide-slate-100 px-4">{section.details.map((detail, detailIndex) => <div key={detail.label + detailIndex} className="grid grid-cols-[minmax(0,.85fr)_minmax(0,1.15fr)] gap-3 py-3"><dt className="text-xs font-semibold leading-5 text-slate-500">{detail.label}</dt><dd className="break-words text-right text-xs font-bold leading-5 text-slate-900">{detail.value}</dd></div>)}</dl> : null}
+              </section>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 py-2 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur md:hidden [padding-bottom:max(0.5rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto flex max-w-xl items-center gap-2">
