@@ -12,6 +12,57 @@ import { brandSchema, categorySchema, productSchema, variantSchema } from '@/lib
 const inputClass = 'h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100'
 const labelClass = 'mb-1.5 block text-xs font-bold uppercase tracking-[0.12em] text-slate-600'
 
+const DEFAULT_SPECIFICATION_LABELS = [
+  'Mobile Type', 'GSM/CDMA', 'Network', 'SIM', 'Display', 'Sound', 'RAM',
+  'Built In Memory', 'External Memory', 'CPU', 'GPU', 'Bluetooth', 'USB',
+  'Camera', 'Video', 'OS', 'FM Radio', 'Battery Capacity', 'Battery Type',
+] as const
+
+type SpecificationField = { id: string; label: string; value: string }
+
+function blankSpecificationFields(): SpecificationField[] {
+  return DEFAULT_SPECIFICATION_LABELS.map((label) => ({ id: label, label, value: '' }))
+}
+
+function splitDescriptionSpecifications(description: string | null | undefined) {
+  const sections = String(description ?? '').split(/(?=^##\s)/m)
+  const specifications: SpecificationField[] = []
+  const contentSections: string[] = []
+  for (const section of sections) {
+    const heading = section.match(/^##\s*(.+)/)?.[1]?.trim() ?? ''
+    if (/^(?:mobile phone\s+)?full specifications?$/i.test(heading)) {
+      for (const line of section.split(/\r?\n/).slice(1)) {
+        const match = line.replace(/^[-*•]\s*/, '').match(/^([^:]{1,48}):\s*(.{1,180})$/)
+        if (match) specifications.push({ id: `existing-${specifications.length}-${match[1].trim()}`, label: match[1].trim(), value: match[2].trim() })
+      }
+    } else if (section.trim()) {
+      contentSections.push(section.trim())
+    }
+  }
+  return { description: contentSections.join('\n\n'), specifications }
+}
+
+function mergeSpecificationFields(existing: SpecificationField[]): SpecificationField[] {
+  const byLabel = new Map(existing.map((field) => [field.label.trim().toLowerCase(), field]))
+  const standard = DEFAULT_SPECIFICATION_LABELS.map((label) => byLabel.get(label.toLowerCase()) ?? { id: label, label, value: '' })
+  const standardLabels = new Set(DEFAULT_SPECIFICATION_LABELS.map((label) => label.toLowerCase()))
+  const custom = existing.filter((field) => !standardLabels.has(field.label.trim().toLowerCase()))
+  return [...standard, ...custom]
+}
+
+function composeDescriptionWithSpecifications(description: string, fields: SpecificationField[]) {
+  const validFields = fields.flatMap((field) => {
+    const label = field.label.replace(/[\r\n:]+/g, ' ').trim().slice(0, 48)
+    const value = field.value.replace(/[\r\n]+/g, ' ').trim().slice(0, 180)
+    return label && value ? [`${label}: ${value}`] : []
+  })
+  const base = description.trim()
+  if (!validFields.length) return base
+  const specificationSection = `## Mobile Phone Full Specification\n\n${validFields.join('\n')}`
+  return [base, specificationSection].filter(Boolean).join('\n\n')
+}
+
+
 type ProductManagerProps = { products: any[]; brands: any[]; categories: any[]; images: any[] }
 
 function ResultMessage({ message }: { message: string | null }) {
@@ -76,6 +127,7 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft' | 'archived'>('all')
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all')
+  const [specifications, setSpecifications] = useState<SpecificationField[]>(() => blankSpecificationFields())
   const form = useForm<any>({
     resolver: zodResolver(productSchema),
     defaultValues: {
@@ -109,6 +161,11 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
   }, [products, search, statusFilter, stockFilter])
 
   function editProduct(product: any) {
+    const isFeaturePhone = product.product_type === 'feature_phone'
+    const parsedContent = isFeaturePhone
+      ? splitDescriptionSpecifications(product.description)
+      : { description: product.description ?? '', specifications: [] as SpecificationField[] }
+    setSpecifications(isFeaturePhone ? mergeSpecificationFields(parsedContent.specifications) : blankSpecificationFields())
     form.reset({
       id: product.id,
       name: product.name,
@@ -120,7 +177,7 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
       isPublished: product.is_published,
       isFeatured: product.is_featured,
       shortDescription: product.short_description ?? '',
-      description: product.description ?? '',
+      description: parsedContent.description,
       warrantyPolicy: product.warranty_policy ?? '',
       metaTitle: product.meta_title ?? '',
       metaDescription: product.meta_description ?? '',
@@ -131,6 +188,7 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
 
   function resetProduct() {
     form.reset()
+    setSpecifications(blankSpecificationFields())
     setMessage(null)
   }
   function generateSlug() {
@@ -159,9 +217,19 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
       </div>
 
       <form className="mt-5 space-y-4" onSubmit={form.handleSubmit((values) => startTransition(async () => {
-        const result = await saveProduct(values)
+        const description = values.productType === 'feature_phone'
+          ? composeDescriptionWithSpecifications(values.description ?? '', specifications)
+          : String(values.description ?? '').trim()
+        if (description.length > 5000) {
+          setMessage('Product description and specifications must be 5,000 characters or fewer. Remove some details and try again.')
+          return
+        }
+        const result = await saveProduct({ ...values, description })
         setMessage(result.message)
-        if (result.ok) form.reset()
+        if (result.ok) {
+          form.reset()
+          setSpecifications(blankSpecificationFields())
+        }
       }))}>
         <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
           <div className="mb-3 flex items-center justify-between"><p className="text-xs font-black uppercase tracking-[0.12em] text-slate-700">Core details</p><span className="text-[10px] font-semibold text-slate-400">Required first</span></div>
@@ -183,6 +251,25 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
             <div><label className={labelClass}>Warranty policy</label><textarea className="min-h-20 w-full rounded-lg border border-slate-200 bg-white p-3 text-sm outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100" placeholder="Warranty or service terms shown to customers." {...form.register('warrantyPolicy')} /></div>
           </div>
         </details>
+
+        {form.watch('productType') === 'feature_phone' ? <details open className="rounded-xl border border-emerald-200 bg-white">
+          <summary className="cursor-pointer list-none px-4 py-3 text-sm font-bold text-slate-800">Feature phone specifications <span className="ml-2 text-xs font-medium text-emerald-700">Add confirmed details</span></summary>
+          <div className="border-t border-slate-100 p-4">
+            <p className="mb-4 text-sm leading-6 text-slate-500">Add technical details for this feature phone. Only confirmed values are saved; leave unknown fields blank. Add custom rows for specifications not listed here.</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {specifications.map((field, index) => <div key={field.id} className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <label className={labelClass + " mb-0"} htmlFor={`product-spec-label-${index}`}>Specification name</label>
+                  <button type="button" onClick={() => setSpecifications((items) => items.filter((item) => item.id !== field.id))} className="rounded-md px-2 py-1 text-xs font-bold text-rose-600 hover:bg-rose-50" aria-label={`Remove ${field.label || 'specification'} field`}>Remove</button>
+                </div>
+                <input id={`product-spec-label-${index}`} className={inputClass} value={field.label} maxLength={48} onChange={(event) => setSpecifications((items) => items.map((item) => item.id === field.id ? { ...item, label: event.target.value } : item))} placeholder="e.g. Display" />
+                <label className={labelClass + " mt-3 block"} htmlFor={`product-spec-value-${index}`}>Value</label>
+                <input id={`product-spec-value-${index}`} className={inputClass} value={field.value} maxLength={180} onChange={(event) => setSpecifications((items) => items.map((item) => item.id === field.id ? { ...item, value: event.target.value } : item))} placeholder={field.label ? `Enter ${field.label.toLowerCase()}` : 'Enter specification value'} />
+              </div>)}
+            </div>
+            <button type="button" onClick={() => setSpecifications((items) => [...items, { id: `custom-${crypto.randomUUID()}`, label: '', value: '' }])} className="mt-4 inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-orange-300 hover:text-orange-700"><Plus className="h-4 w-4" /> Add custom specification</button>
+          </div>
+        </details> : null}
 
         <details className="rounded-xl border border-slate-200 bg-white">
           <summary className="cursor-pointer list-none px-4 py-3 text-sm font-bold text-slate-800">Search & merchandising</summary>
