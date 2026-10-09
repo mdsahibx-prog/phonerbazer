@@ -214,7 +214,12 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
       </div>
 
       <form className="mt-5 space-y-4" onSubmit={form.handleSubmit((values) => startTransition(async () => {
-        const result = await saveProduct({ ...values, description: composeDescriptionWithSpecifications(values.description ?? '', specifications) })
+        const description = composeDescriptionWithSpecifications(values.description ?? '', specifications)
+        if (description.length > 5000) {
+          setMessage('Product description and specifications must be 5,000 characters or fewer. Remove some details and try again.')
+          return
+        }
+        const result = await saveProduct({ ...values, description })
         setMessage(result.message)
         if (result.ok) {
           form.reset()
