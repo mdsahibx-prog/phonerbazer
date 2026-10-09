@@ -4,7 +4,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BadgeCheck, Banknote, ChevronLeft, ChevronRight, HardDrive, Layers3, MemoryStick, Minus, Palette, Plus, Share2, ShieldCheck, ShoppingCart, Tag, Truck, Zap } from 'lucide-react'
+import { BadgeCheck, Banknote, CheckCircle2, ChevronLeft, ChevronRight, HardDrive, Layers3, MemoryStick, Minus, Palette, Plus, Share2, ShieldCheck, ShoppingCart, Tag, Truck, Zap } from 'lucide-react'
 import { addToCartAction } from '@/lib/commerce/actions'
 import { prepareGuestCheckoutAction } from '@/lib/commerce/actions'
 
@@ -24,6 +24,7 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [cartMessage, setCartMessage] = useState('')
   const [cartBusy, setCartBusy] = useState(false)
+  const [cartAdded, setCartAdded] = useState(false)
   const [buyBusy, setBuyBusy] = useState(false)
   const router = useRouter()
   const selected = useMemo(() => product.variants.find((variant) => variant.id === selectedId) || product.variants[0] || null, [product.variants, selectedId])
@@ -46,10 +47,12 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
       return
     }
     setCartBusy(true)
+    setCartAdded(false)
     setCartMessage('')
     const result = await addToCartAction({ productId: product.id, variantId: selected.id, quantity })
     if (result.ok) trackProductEvent({ eventName: 'add_to_cart', commerce: { currency: 'BDT', value: selected.price, items: [{ item_id: selected.sku || selected.id, item_name: product.name, price: selected.price, quantity }] } })
     setCartBusy(false)
+    setCartAdded(result.ok)
     setCartMessage(result.ok ? 'Added to cart.' : result.message ?? 'Unable to update your cart.')
   }
 
@@ -177,7 +180,9 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
               {selected && selected.is_in_stock ? <div className="space-y-3">
                 <div className="flex items-center justify-between gap-3"><span className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Quantity</span><div className="inline-flex h-10 items-center rounded-full border border-slate-200 bg-slate-50 p-1 shadow-sm"><button type="button" aria-label="Decrease quantity" onClick={() => setQuantity((value) => Math.max(1, value - 1))} disabled={quantity <= 1 || cartBusy || buyBusy} className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-700 transition hover:bg-white hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-35 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100"><Minus className="h-4 w-4" /></button><span aria-live="polite" className="w-8 text-center text-sm font-black text-slate-950">{quantity}</span><button type="button" aria-label="Increase quantity" onClick={() => setQuantity((value) => Math.min(10, value + 1))} disabled={quantity >= 10 || cartBusy || buyBusy} className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-700 transition hover:bg-white hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-35 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100"><Plus className="h-4 w-4" /></button></div></div>
                 <div className="grid gap-2 sm:grid-cols-2">
-                  <button type="button" disabled={cartBusy || buyBusy} onClick={addSelectedToCart} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-black text-slate-800 transition duration-200 hover:-translate-y-0.5 hover:border-orange-500 hover:text-orange-700 hover:shadow-md active:translate-y-0 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-60"><ShoppingCart className="h-4 w-4" />{cartBusy ? 'Adding…' : 'Add to cart'}</button>
+                  <button type="button" disabled={cartBusy || buyBusy} onClick={addSelectedToCart} aria-label={cartAdded ? 'Added to cart successfully' : 'Add product to cart'} className={"inline-flex min-h-12 items-center justify-center gap-2 rounded-full border px-5 py-3 text-sm font-black transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-60 " + (cartAdded ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300' : 'border-slate-300 bg-white text-slate-800 hover:border-orange-500 hover:text-orange-700')}>
+                    {cartBusy ? <ShoppingCart className="h-4 w-4 animate-pulse" /> : cartAdded ? <CheckCircle2 className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
+                    {cartBusy ? 'Adding…' : cartAdded ? 'Added to Cart' : 'Add to cart'}</button>
                   <button type="button" disabled={cartBusy || buyBusy} onClick={buySelectedNow} className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-orange-600 hover:text-slate-950 hover:shadow-lg active:translate-y-0 active:scale-[.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-200 disabled:cursor-not-allowed disabled:opacity-60"><Zap className="h-4 w-4 transition-transform duration-150 group-hover:scale-110 group-active:scale-90" />{buyBusy ? 'Preparing…' : 'Buy Now'}</button>
                 </div>
                 {cartMessage ? <p role="status" className={"text-sm font-bold " + (cartMessage === 'Added to cart.' || cartMessage === 'Product link copied.' ? 'text-orange-700' : 'text-rose-600')}>{cartMessage}{cartMessage === 'Added to cart.' ? <> <Link href="/cart" className="underline underline-offset-4">View cart</Link></> : null}</p> : null}
@@ -195,7 +200,9 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 py-2 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur md:hidden [padding-bottom:max(0.5rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto flex max-w-xl items-center gap-2">
           <div className="min-w-0 flex-1"><p className="truncate text-[11px] font-semibold text-slate-500">{selected ? getVariantLabel(selected) : product.name}</p><p className="text-base font-black text-slate-950">{selected ? formatPrice(selected.price) : 'Price on request'}</p></div>
-          <button type="button" disabled={!selected || !selected.is_in_stock || cartBusy || buyBusy} onClick={addSelectedToCart} className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-xs font-black text-slate-800 disabled:opacity-50">{cartBusy ? 'Adding…' : 'Add to Cart'}</button>
+          <button type="button" disabled={!selected || !selected.is_in_stock || cartBusy || buyBusy} onClick={addSelectedToCart} aria-label={cartAdded ? 'Added to cart successfully' : 'Add product to cart'} className={"inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-black transition duration-150 active:scale-[.97] disabled:opacity-50 " + (cartAdded ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-300 bg-white text-slate-800')}>
+            {cartBusy ? <ShoppingCart className="h-4 w-4 animate-pulse" /> : cartAdded ? <CheckCircle2 className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
+            {cartBusy ? 'Adding…' : cartAdded ? 'Added' : 'Add to Cart'}</button>
           <button type="button" disabled={!selected || !selected.is_in_stock || cartBusy || buyBusy} onClick={buySelectedNow} className="group inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-[#FF6B00] px-4 text-xs font-black text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[.98] disabled:opacity-50"><Zap className="h-4 w-4 transition-transform duration-150 group-hover:scale-110 group-active:scale-90" />{buyBusy ? 'Opening…' : 'Buy Now'}</button>
         </div>
       </div>
