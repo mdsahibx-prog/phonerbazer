@@ -306,6 +306,12 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
             <div><label className={labelClass}>Category</label><select className={inputClass} value={form.watch('categoryId') ?? ''} onChange={(event) => form.setValue('categoryId', event.target.value || null)}><option value="">Select category</option>{categories.map((category: any) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div>
             <div><label className={labelClass}>Product type</label><select className={inputClass} {...form.register('productType')}><option value="phone">Phone</option><option value="feature_phone">Feature phone</option><option value="accessory">Accessory</option></select></div>
             <div><label className={labelClass}>Lifecycle</label><select className={inputClass} {...form.register('status')}><option value="draft">Draft</option><option value="active">Active</option><option value="archived">Archived</option></select></div>
+            <div className="sm:col-span-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
+              <label className="flex cursor-pointer items-start gap-3 text-sm font-semibold text-slate-800">
+                <input type="checkbox" className="mt-0.5 h-4 w-4 accent-emerald-600" {...form.register('isPublished')} />
+                <span>Publish to storefront<span className="mt-1 block text-xs font-normal leading-5 text-slate-600">Turn this on to make the product visible in the public shop. Save the product to apply the change.</span></span>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -374,7 +380,6 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
               <div><label className={labelClass}>SEO description</label><textarea className="min-h-20 w-full rounded-lg border border-slate-200 p-3 text-sm" placeholder="Short search-engine friendly description." {...form.register('metaDescription')} /></div>
             </div>
             <div className="flex flex-wrap gap-4">
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-700"><input type="checkbox" {...form.register('isPublished')} /> Publish to storefront</label>
               <label className="flex items-center gap-2 text-sm font-medium text-slate-700"><input type="checkbox" {...form.register('isFeatured')} /> Feature on storefront</label>
             </div>
           </div>
