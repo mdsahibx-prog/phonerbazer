@@ -127,15 +127,14 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
-          {product.brand ? <div className="flex flex-wrap items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-orange-600"><Link href={getBrandPath(product.brand.slug)} className="inline-flex items-center gap-2 rounded-full transition-colors hover:text-orange-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-200"><BrandLogo brand={product.brand} size="sm" className="h-7 w-7 rounded-lg p-1" /><span>{product.brand.name}</span></Link><span aria-hidden="true" className="text-slate-300">·</span><span className="text-slate-400">{getProductTypeLabel(product.product_type)}</span></div> : <p className="text-xs font-black uppercase tracking-[0.16em] text-orange-600">PhonerBazar</p>}
-          <h1 className="mt-2 break-words text-3xl font-black tracking-[-0.055em] text-slate-950 sm:text-4xl lg:text-[2.75rem]">{product.name}</h1>
+      <div className="mb-4 min-w-0">
+        {product.brand ? <div className="flex flex-wrap items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-orange-600"><Link href={getBrandPath(product.brand.slug)} className="inline-flex items-center gap-2 rounded-full transition-colors hover:text-orange-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-200"><BrandLogo brand={product.brand} size="sm" className="h-7 w-7 rounded-lg p-1" /><span>{product.brand.name}</span></Link><span aria-hidden="true" className="text-slate-300">·</span><span className="text-slate-400">{getProductTypeLabel(product.product_type)}</span></div> : <p className="text-xs font-black uppercase tracking-[0.16em] text-orange-600">PhonerBazar</p>}
+        <div className="mt-2 flex min-w-0 items-center gap-3">
+          <h1 className="min-w-0 flex-1 break-words text-3xl font-black tracking-[-0.055em] text-slate-950 sm:text-4xl lg:text-[2.75rem]">{product.name}</h1>
+          <button type="button" onClick={shareProduct} aria-label="Share product" title="Share product" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition duration-150 hover:border-orange-300 hover:text-orange-700 hover:shadow-md active:scale-[.96] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100">
+            <Share2 className="h-4 w-4" />
+          </button>
         </div>
-        <button type="button" onClick={shareProduct} className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-xs font-black text-slate-700 shadow-sm transition duration-150 hover:-translate-y-0.5 hover:border-orange-300 hover:text-orange-700 hover:shadow-md active:translate-y-0 active:scale-[.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100">
-          <Share2 className="h-4 w-4" />
-          Share
-        </button>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,.94fr)_minmax(0,1.06fr)] lg:items-start lg:gap-10 xl:gap-14">
