@@ -34,14 +34,9 @@ function getProductBreadcrumbItems(product: ProductForSeo) {
     { label: 'Home', href: '/' },
     { label: 'Products', href: '/products' },
     ...(product.brand ? [{ label: product.brand.name, href: `/brands/${encodeURIComponent(product.brand.slug)}` }] : []),
-    ...(product.category ? [{ label: product.category.name, href: getCategoryPath(product.category.slug) }] : []),
+    ...(product.category ? [{ label: product.category.name, href: `/products?category=${encodeURIComponent(product.category.slug)}` }] : []),
     { label: product.name, href: `/products/${encodeURIComponent(product.slug)}` },
   ]
-}
-
-function ProductBreadcrumbs({ product }: { product: ProductForSeo }) {
-  const items = getProductBreadcrumbItems(product)
-  return <nav aria-label="Breadcrumb" className="min-w-0 overflow-hidden text-xs font-semibold text-slate-500"><ol className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">{items.map((item, index) => <li key={`${item.href}-${item.label}`} className="inline-flex min-w-0 items-center gap-2">{index === items.length - 1 ? <span aria-current="page" className="min-w-0 max-w-full truncate font-bold text-slate-950">{item.label}</span> : <><Link href={item.href} className="max-w-[12rem] truncate transition-colors hover:text-orange-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-200">{item.label}</Link><span aria-hidden="true" className="text-slate-300">/</span></>}</li>)}</ol></nav>
 }
 
 export default async function ProductDetailPage({ params }: { params: Params }) {
@@ -118,7 +113,7 @@ export default async function ProductDetailPage({ params }: { params: Params }) 
     ],
   }
 
-  return <main className="flex-1"><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /><div className="mx-auto max-w-7xl px-4 pb-20 pt-6 sm:px-6 lg:px-8"><ProductBreadcrumbs product={product} /><div className="mt-7"><ProductDetailInteractive product={product} /></div>
+  return <main className="flex-1"><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /><div className="mx-auto max-w-7xl px-4 pb-20 pt-4 sm:px-6 sm:pt-5 lg:px-8"><ProductDetailInteractive product={product} />
 
 
   </div></main>
