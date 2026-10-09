@@ -32,7 +32,7 @@ function splitDescriptionSpecifications(description: string | null | undefined) 
     const heading = section.match(/^##\s*(.+)/)?.[1]?.trim() ?? ''
     if (/^(?:mobile phone\s+)?full specifications?$/i.test(heading)) {
       for (const line of section.split(/\r?\n/).slice(1)) {
-        const match = line.replace(/^[-*•]\s*/, '').match(/^([^:]{1,80}):\s*(.{1,500})$/)
+        const match = line.replace(/^[-*•]\s*/, '').match(/^([^:]{1,48}):\s*(.{1,180})$/)
         if (match) specifications.push({ id: `existing-${specifications.length}-${match[1].trim()}`, label: match[1].trim(), value: match[2].trim() })
       }
     } else if (section.trim()) {
