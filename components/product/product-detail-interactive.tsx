@@ -47,6 +47,7 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
       return
     }
     setCartBusy(true)
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('phonerbazar:cart-pending'))
     setCartAdded(false)
     setCartMessage('')
     const result = await addToCartAction({ productId: product.id, variantId: selected.id, quantity })
@@ -54,7 +55,7 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
     setCartBusy(false)
     setCartAdded(result.ok)
     setCartMessage(result.ok ? 'Added to cart.' : result.message ?? 'Unable to update your cart.')
-    if (result.ok && typeof window !== 'undefined') window.dispatchEvent(new Event('phonerbazar:cart-updated'))
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event(result.ok ? 'phonerbazar:cart-updated' : 'phonerbazar:cart-error'))
   }
 
   async function buySelectedNow() {
