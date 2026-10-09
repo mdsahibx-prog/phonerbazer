@@ -4,7 +4,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BatteryCharging, Banknote, CheckCircle2, ChevronLeft, ChevronRight, HardDrive, Layers3, MemoryStick, Minus, Monitor, Palette, Plus, Share2, ShieldCheck, ShoppingCart, Tag, Truck, Zap } from 'lucide-react'
+import { BatteryCharging, Banknote, Camera, CheckCircle2, ChevronLeft, ChevronRight, Cpu, HardDrive, Layers3, MemoryStick, Minus, Monitor, Palette, Plus, Share2, ShieldCheck, ShoppingCart, Tag, Truck, Wifi, Zap } from 'lucide-react'
 import { addToCartAction } from '@/lib/commerce/actions'
 import { prepareGuestCheckoutAction } from '@/lib/commerce/actions'
 
@@ -128,13 +128,13 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
   return (
     <div>
       <div className="mb-4 min-w-0">
-        <div className="flex min-w-0 items-center gap-3">
-          <h1 className="min-w-0 flex-1 break-words text-3xl font-black tracking-[-0.055em] text-slate-950 sm:text-4xl lg:text-[2.75rem]">{product.name}</h1>
+        <h1 className="max-w-full break-words text-[1.7rem] font-black leading-[1.12] tracking-[-0.045em] text-slate-950 sm:text-4xl sm:leading-tight lg:text-[2.75rem]">{product.name}</h1>
+        <div className="mt-3 flex min-w-0 flex-wrap items-center justify-between gap-2">
+          {product.brand ? <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs font-black uppercase tracking-[0.12em] text-slate-500"><Link href={getBrandPath(product.brand.slug)} className="inline-flex items-center gap-2 rounded-full transition-colors hover:text-orange-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-200"><BrandLogo brand={product.brand} size="sm" className="h-7 w-7 rounded-lg bg-white p-1 ring-1 ring-slate-200" /><span className="font-black text-slate-700">{product.brand.name}</span></Link><span aria-hidden="true" className="text-slate-300">·</span><span>{getProductTypeLabel(product.product_type)}</span></div> : <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">PhonerBazar</p>}
           <button type="button" onClick={shareProduct} aria-label="Share product" title="Share product" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition duration-150 hover:border-orange-300 hover:text-orange-700 hover:shadow-md active:scale-[.96] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100">
             <Share2 className="h-4 w-4" />
           </button>
         </div>
-        {product.brand ? <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-slate-500"><Link href={getBrandPath(product.brand.slug)} className="inline-flex items-center gap-2 rounded-full transition-colors hover:text-orange-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-200"><BrandLogo brand={product.brand} size="sm" className="h-7 w-7 rounded-lg bg-white p-1 ring-1 ring-slate-200" /><span className="font-black text-slate-700">{product.brand.name}</span></Link><span aria-hidden="true" className="text-slate-300">·</span><span>{getProductTypeLabel(product.product_type)}</span></div> : <p className="mt-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">PhonerBazar</p>}
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,.94fr)_minmax(0,1.06fr)] lg:items-start lg:gap-10 xl:gap-14">
@@ -236,7 +236,11 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
               <section key={section.title + index} className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <h3 className="border-b border-slate-100 bg-slate-50/80 px-4 py-3 text-sm font-black text-slate-900">{section.title}</h3>
                 {section.paragraphs.length > 0 ? <div className="space-y-2 px-4 py-4">{section.paragraphs.map((paragraph, paragraphIndex) => <p key={paragraphIndex} className="text-sm leading-6 text-slate-600">{paragraph.replace(/^[-*•]\s*/, '')}</p>)}</div> : null}
-                {section.details.length > 0 ? <dl className="divide-y divide-slate-100 px-4">{section.details.map((detail, detailIndex) => <div key={detail.label + detailIndex} className="grid grid-cols-[minmax(0,.85fr)_minmax(0,1.15fr)] gap-3 py-3"><dt className="text-xs font-semibold leading-5 text-slate-500">{detail.label}</dt><dd className="break-words text-right text-xs font-bold leading-5 text-slate-900">{detail.value}</dd></div>)}</dl> : null}
+                {section.details.length > 0 ? <dl className="divide-y divide-slate-100 px-4">{section.details.map((detail, detailIndex) => {
+                  const label = detail.label.toLowerCase()
+                  const SpecIcon = /battery|mah|charging/.test(label) ? BatteryCharging : /display|screen|resolution/.test(label) ? Monitor : /ram|memory|processor|chipset|cpu/.test(label) ? Cpu : /storage|rom|internal memory/.test(label) ? HardDrive : /camera|video|megapixel/.test(label) ? Camera : /network|connectivity|wireless|wi.?fi|bluetooth|sim/.test(label) ? Wifi : /colour|color/.test(label) ? Palette : /variant|model|type/.test(label) ? Layers3 : null
+                  return <div key={detail.label + detailIndex} className="grid grid-cols-[minmax(0,.9fr)_minmax(0,1.1fr)] items-start gap-3 py-3"><dt className="flex min-w-0 items-start gap-2 text-xs font-semibold leading-5 text-slate-600">{SpecIcon ? <SpecIcon aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" /> : null}<span className="break-words">{detail.label}</span></dt><dd className="break-words text-right text-xs font-bold leading-5 text-slate-900">{detail.value}</dd></div>
+                })}</dl> : null}
               </section>
             ))}
           </div>
