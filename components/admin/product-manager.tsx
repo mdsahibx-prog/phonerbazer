@@ -52,8 +52,8 @@ function mergeSpecificationFields(existing: SpecificationField[]): Specification
 
 function composeDescriptionWithSpecifications(description: string, fields: SpecificationField[]) {
   const validFields = fields.flatMap((field) => {
-    const label = field.label.replace(/[\r\n:]+/g, ' ').trim().slice(0, 80)
-    const value = field.value.replace(/[\r\n]+/g, ' ').trim().slice(0, 500)
+    const label = field.label.replace(/[\r\n:]+/g, ' ').trim().slice(0, 48)
+    const value = field.value.replace(/[\r\n]+/g, ' ').trim().slice(0, 180)
     return label && value ? [`${label}: ${value}`] : []
   })
   const base = description.trim()
@@ -257,9 +257,9 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
                   <label className={labelClass + " mb-0"} htmlFor={`product-spec-label-${index}`}>Specification name</label>
                   <button type="button" onClick={() => setSpecifications((items) => items.filter((item) => item.id !== field.id))} className="rounded-md px-2 py-1 text-xs font-bold text-rose-600 hover:bg-rose-50" aria-label={`Remove ${field.label || 'specification'} field`}>Remove</button>
                 </div>
-                <input id={`product-spec-label-${index}`} className={inputClass} value={field.label} maxLength={80} onChange={(event) => setSpecifications((items) => items.map((item) => item.id === field.id ? { ...item, label: event.target.value } : item))} placeholder="e.g. Display" />
+                <input id={`product-spec-label-${index}`} className={inputClass} value={field.label} maxLength={48} onChange={(event) => setSpecifications((items) => items.map((item) => item.id === field.id ? { ...item, label: event.target.value } : item))} placeholder="e.g. Display" />
                 <label className={labelClass + " mt-3 block"} htmlFor={`product-spec-value-${index}`}>Value</label>
-                <input id={`product-spec-value-${index}`} className={inputClass} value={field.value} maxLength={500} onChange={(event) => setSpecifications((items) => items.map((item) => item.id === field.id ? { ...item, value: event.target.value } : item))} placeholder={field.label ? `Enter ${field.label.toLowerCase()}` : 'Enter specification value'} />
+                <input id={`product-spec-value-${index}`} className={inputClass} value={field.value} maxLength={180} onChange={(event) => setSpecifications((items) => items.map((item) => item.id === field.id ? { ...item, value: event.target.value } : item))} placeholder={field.label ? `Enter ${field.label.toLowerCase()}` : 'Enter specification value'} />
               </div>)}
             </div>
             <button type="button" onClick={() => setSpecifications((items) => [...items, { id: `custom-${crypto.randomUUID()}`, label: '', value: '' }])} className="mt-4 inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-orange-300 hover:text-orange-700"><Plus className="h-4 w-4" /> Add custom specification</button>
