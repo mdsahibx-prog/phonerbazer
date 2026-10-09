@@ -4,7 +4,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMemo, useState, useTransition } from 'react'
 import { useForm } from 'react-hook-form'
-import { Archive, Boxes, ImagePlus, Pencil, Plus, Search, Save, Tag, Trash2, Upload, AlertTriangle, Layers3 } from 'lucide-react'
+import { Archive, Boxes, ImagePlus, Pencil, Plus, Search, Save, Tag, Trash2, Upload, AlertTriangle, Layers3, Sparkles, ClipboardPaste, CheckCircle2, WandSparkles } from 'lucide-react'
 
 import { archiveProduct, deleteProductImage, getProductImagesForAdmin, removeBrandLogo, saveBrand, saveCategory, uploadCategoryImage, saveProduct, saveVariant, uploadBrandLogo, uploadProductImage } from '@/lib/admin/actions'
 import { brandSchema, categorySchema, productSchema, variantSchema } from '@/lib/admin/schema'
@@ -60,6 +60,17 @@ function composeDescriptionWithSpecifications(description: string, fields: Speci
   if (!validFields.length) return base
   const specificationSection = `## Mobile Phone Full Specification\n\n${validFields.join('\n')}`
   return [base, specificationSection].filter(Boolean).join('\n\n')
+}
+
+
+function parseBulkSpecifications(text: string): Array<{ label: string; value: string }> {
+  return text.split(/\r?\n/)
+    .map((line) => line.trim().replace(/^[-*•]\s*/, ''))
+    .map((line) => {
+      const match = line.match(/^([^:=]{1,48})\s*[:=]\s*(.{1,180})$/)
+      return match ? { label: match[1].trim(), value: match[2].trim() } : null
+    })
+    .filter((field): field is { label: string; value: string } => Boolean(field?.label && field.value))
 }
 
 
@@ -128,6 +139,8 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft' | 'archived'>('all')
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all')
   const [specifications, setSpecifications] = useState<SpecificationField[]>(() => blankSpecificationFields())
+  const [bulkSpecText, setBulkSpecText] = useState('')
+  const [bulkImportOpen, setBulkImportOpen] = useState(false)
   const form = useForm<any>({
     resolver: zodResolver(productSchema),
     defaultValues: {
@@ -204,6 +217,58 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
     if (shortDescription && !form.getValues('metaDescription')) form.setValue('metaDescription', shortDescription.slice(0, 155))
   }
 
+  function importBulkSpecifications() {
+    const parsed = parseBulkSpecifications(bulkSpecText)
+    if (!parsed.length) {
+      setMessage('No valid specifications found. Paste one “Name: Value” pair per line.')
+      return
+    }
+    const next = [...specifications]
+    let added = 0
+    for (const item of parsed) {
+      const normalized = item.label.toLowerCase()
+      const existingIndex = next.findIndex((field) => field.label.trim().toLowerCase() === normalized)
+      if (existingIndex >= 0) {
+        next[existingIndex] = { ...next[existingIndex], value: item.value.slice(0, 180) }
+      } else {
+        next.push({ id: `import-${crypto.randomUUID()}`, label: item.label.slice(0, 48), value: item.value.slice(0, 180) })
+        added += 1
+      }
+    }
+    setSpecifications(next)
+    setMessage(`Imported ${parsed.length} specification${parsed.length === 1 ? '' : 's'}; ${added} new custom field${added === 1 ? '' : 's'} added. Please verify each value before saving.`)
+    setBulkSpecText('')
+    setBulkImportOpen(false)
+  }
+
+  function generateDraftFromSpecifications() {
+    const name = String(form.getValues('name') ?? '').trim()
+    const brand = brands.find((item: any) => item.id === form.getValues('brandId'))?.name ?? ''
+    const confirmed = specifications.filter((field) => field.label.trim() && field.value.trim())
+    if (!name) {
+      setMessage('Add a product name first, then generate a draft.')
+      return
+    }
+    if (!confirmed.length) {
+      setMessage('Enter at least one confirmed specification first. The generator will not invent technical details.')
+      return
+    }
+    const highlights = confirmed.slice(0, 3).map((field) => `${field.label.trim()}: ${field.value.trim()}`)
+    const productLabel = brand && !name.toLowerCase().startsWith(brand.toLowerCase()) ? `${brand} ${name}` : name
+    const generatedShort = `${productLabel} feature phone. Key details: ${highlights.map((item) => item.replace(': ', ' — ')).join('; ')}.`
+    if (!String(form.getValues('shortDescription') ?? '').trim()) {
+      form.setValue('shortDescription', generatedShort.slice(0, 300), { shouldDirty: true, shouldValidate: true })
+    }
+    if (!String(form.getValues('metaTitle') ?? '').trim()) {
+      form.setValue('metaTitle', productLabel.slice(0, 70), { shouldDirty: true })
+    }
+    if (!String(form.getValues('metaDescription') ?? '').trim()) {
+      const seo = `${productLabel} specifications: ${highlights.map((item) => item.replace(': ', ' — ')).join(', ')}. View details at Phonerbazar.`
+      form.setValue('metaDescription', seo.slice(0, 155), { shouldDirty: true })
+    }
+    setMessage('Draft short description and empty SEO fields generated from the details you entered. Review and edit before saving.')
+  }
+
 
   return <div className="grid gap-6 xl:grid-cols-[.82fr_1.18fr]">
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -252,24 +317,52 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
           </div>
         </details>
 
-        {form.watch('productType') === 'feature_phone' ? <details open className="rounded-xl border border-emerald-200 bg-white">
-          <summary className="cursor-pointer list-none px-4 py-3 text-sm font-bold text-slate-800">Feature phone specifications <span className="ml-2 text-xs font-medium text-emerald-700">Add confirmed details</span></summary>
-          <div className="border-t border-slate-100 p-4">
-            <p className="mb-4 text-sm leading-6 text-slate-500">Add technical details for this feature phone. Only confirmed values are saved; leave unknown fields blank. Add custom rows for specifications not listed here.</p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {specifications.map((field, index) => <div key={field.id} className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <label className={labelClass + " mb-0"} htmlFor={`product-spec-label-${index}`}>Specification name</label>
-                  <button type="button" onClick={() => setSpecifications((items) => items.filter((item) => item.id !== field.id))} className="rounded-md px-2 py-1 text-xs font-bold text-rose-600 hover:bg-rose-50" aria-label={`Remove ${field.label || 'specification'} field`}>Remove</button>
+        {form.watch('productType') === 'feature_phone' ? <section className="overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm">
+          <div className="bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-4 sm:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm"><CheckCircle2 className="h-5 w-5" /></span>
+                <div>
+                  <h3 className="text-base font-black tracking-tight text-slate-950">Feature phone specifications</h3>
+                  <p className="mt-1 max-w-xl text-sm leading-5 text-slate-600">Enter verified facts only. Unknown fields can stay empty. Paste a spec sheet to fill several fields at once.</p>
                 </div>
-                <input id={`product-spec-label-${index}`} className={inputClass} value={field.label} maxLength={48} onChange={(event) => setSpecifications((items) => items.map((item) => item.id === field.id ? { ...item, label: event.target.value } : item))} placeholder="e.g. Display" />
-                <label className={labelClass + " mt-3 block"} htmlFor={`product-spec-value-${index}`}>Value</label>
-                <input id={`product-spec-value-${index}`} className={inputClass} value={field.value} maxLength={180} onChange={(event) => setSpecifications((items) => items.map((item) => item.id === field.id ? { ...item, value: event.target.value } : item))} placeholder={field.label ? `Enter ${field.label.toLowerCase()}` : 'Enter specification value'} />
+              </div>
+              <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-bold text-emerald-800"><Sparkles className="h-3.5 w-3.5" /> Smart editor</span>
+            </div>
+            <div className="mt-4 rounded-xl border border-emerald-100 bg-white/90 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div><p className="text-sm font-bold text-slate-800">Specification completeness</p><p className="mt-0.5 text-xs text-slate-500">{specifications.filter((field) => field.label.trim() && field.value.trim()).length} of {specifications.length} fields filled</p></div>
+                <span className="text-lg font-black tabular-nums text-emerald-700">{specifications.length ? Math.round(specifications.filter((field) => field.label.trim() && field.value.trim()).length / specifications.length * 100) : 0}%</span>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-emerald-100"><div className="h-full rounded-full bg-emerald-600 transition-[width]" style={{ width: `${specifications.length ? Math.round(specifications.filter((field) => field.label.trim() && field.value.trim()).length / specifications.length * 100) : 0}%` }} /></div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" onClick={() => setBulkImportOpen((open) => !open)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50"><ClipboardPaste className="h-4 w-4" /> {bulkImportOpen ? 'Close bulk import' : 'Paste / import specs'}</button>
+              <button type="button" onClick={generateDraftFromSpecifications} className="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-900 px-3 text-xs font-bold text-white transition hover:bg-slate-700"><WandSparkles className="h-4 w-4" /> Generate draft & SEO</button>
+            </div>
+          </div>
+          {bulkImportOpen ? <div className="border-t border-emerald-100 bg-emerald-50/40 p-4">
+            <label className={labelClass} htmlFor="bulk-feature-specs">Paste specification text</label>
+            <p className="mb-2 text-xs leading-5 text-slate-500">Use one item per line, for example: <span className="font-semibold text-slate-700">Display: 2.4 inch</span>. Existing labels will be updated; new labels become custom fields.</p>
+            <textarea id="bulk-feature-specs" value={bulkSpecText} onChange={(event) => setBulkSpecText(event.target.value)} className="min-h-32 w-full rounded-xl border border-slate-200 bg-white p-3 font-mono text-xs leading-5 text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100" placeholder={'Network: GSM 900 / 1800\nSIM: Dual SIM\nDisplay: 2.4 inch\nBattery Capacity: 1200 mAh'} />
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-slate-500">No AI service or external API is required.</span><button type="button" onClick={importBulkSpecifications} className="inline-flex h-9 items-center gap-2 rounded-lg bg-emerald-700 px-4 text-xs font-bold text-white transition hover:bg-emerald-800"><ClipboardPaste className="h-4 w-4" /> Import details</button></div>
+          </div> : null}
+          <div className="border-t border-slate-100 p-3 sm:p-4">
+            <div className="mb-3 flex items-center justify-between gap-3"><p className="text-xs font-black uppercase tracking-[0.12em] text-slate-600">Technical details</p><span className="text-[10px] font-semibold text-slate-400">Labels up to 48 · values up to 180 chars</span></div>
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              {specifications.map((field, index) => <div key={field.id} className="group rounded-xl border border-slate-200 bg-white p-3 transition hover:border-emerald-200 hover:shadow-sm focus-within:border-emerald-300 focus-within:ring-2 focus-within:ring-emerald-50">
+                <div className="mb-2 flex items-center gap-2">
+                  <label className="min-w-0 flex-1 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500" htmlFor={`product-spec-label-${index}`}>Field name</label>
+                  <button type="button" onClick={() => setSpecifications((items) => items.filter((item) => item.id !== field.id))} className="rounded-md px-2 py-1 text-[10px] font-bold text-slate-400 transition hover:bg-rose-50 hover:text-rose-600" aria-label={`Remove ${field.label || 'specification'} field`}>Remove</button>
+                </div>
+                <input id={`product-spec-label-${index}`} className={inputClass + ' h-9 bg-slate-50 text-xs font-semibold'} value={field.label} maxLength={48} onChange={(event) => setSpecifications((items) => items.map((item) => item.id === field.id ? { ...item, label: event.target.value } : item))} placeholder="Specification name" />
+                <label className="mb-1.5 mt-2.5 block text-[10px] font-black uppercase tracking-[0.1em] text-slate-500" htmlFor={`product-spec-value-${index}`}>Confirmed value</label>
+                <input id={`product-spec-value-${index}`} className={inputClass + ' h-9 text-sm'} value={field.value} maxLength={180} onChange={(event) => setSpecifications((items) => items.map((item) => item.id === field.id ? { ...item, value: event.target.value } : item))} placeholder={field.label ? `Enter ${field.label.toLowerCase()}` : 'Enter value'} />
               </div>)}
             </div>
-            <button type="button" onClick={() => setSpecifications((items) => [...items, { id: `custom-${crypto.randomUUID()}`, label: '', value: '' }])} className="mt-4 inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-orange-300 hover:text-orange-700"><Plus className="h-4 w-4" /> Add custom specification</button>
+            <button type="button" onClick={() => setSpecifications((items) => [...items, { id: `custom-${crypto.randomUUID()}`, label: '', value: '' }])} className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 text-sm font-bold text-slate-700 transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-800"><Plus className="h-4 w-4" /> Add custom specification</button>
           </div>
-        </details> : null}
+        </section> : null}
 
         <details className="rounded-xl border border-slate-200 bg-white">
           <summary className="cursor-pointer list-none px-4 py-3 text-sm font-bold text-slate-800">Search & merchandising</summary>
