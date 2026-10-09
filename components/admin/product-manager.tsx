@@ -25,21 +25,21 @@ function blankSpecificationFields(): SpecificationField[] {
 }
 
 function splitDescriptionSpecifications(description: string | null | undefined) {
-  const sections = String(description ?? '').split(/(?=^##\\s)/m)
+  const sections = String(description ?? '').split(/(?=^##\s)/m)
   const specifications: SpecificationField[] = []
   const contentSections: string[] = []
   for (const section of sections) {
-    const heading = section.match(/^##\\s*(.+)/)?.[1]?.trim() ?? ''
-    if (/^(?:mobile phone\\s+)?full specifications?$/i.test(heading)) {
-      for (const line of section.split(/\\r?\\n/).slice(1)) {
-        const match = line.replace(/^[-*•]\\s*/, '').match(/^([^:]{1,80}):\\s*(.{1,500})$/)
+    const heading = section.match(/^##\s*(.+)/)?.[1]?.trim() ?? ''
+    if (/^(?:mobile phone\s+)?full specifications?$/i.test(heading)) {
+      for (const line of section.split(/\r?\n/).slice(1)) {
+        const match = line.replace(/^[-*•]\s*/, '').match(/^([^:]{1,80}):\s*(.{1,500})$/)
         if (match) specifications.push({ id: `existing-${specifications.length}-${match[1].trim()}`, label: match[1].trim(), value: match[2].trim() })
       }
     } else if (section.trim()) {
       contentSections.push(section.trim())
     }
   }
-  return { description: contentSections.join('\\n\\n'), specifications }
+  return { description: contentSections.join('\n\n'), specifications }
 }
 
 function mergeSpecificationFields(existing: SpecificationField[]): SpecificationField[] {
@@ -52,14 +52,14 @@ function mergeSpecificationFields(existing: SpecificationField[]): Specification
 
 function composeDescriptionWithSpecifications(description: string, fields: SpecificationField[]) {
   const validFields = fields.flatMap((field) => {
-    const label = field.label.replace(/[\\r\\n:]+/g, ' ').trim().slice(0, 80)
-    const value = field.value.replace(/[\\r\\n]+/g, ' ').trim().slice(0, 500)
+    const label = field.label.replace(/[\r\n:]+/g, ' ').trim().slice(0, 80)
+    const value = field.value.replace(/[\r\n]+/g, ' ').trim().slice(0, 500)
     return label && value ? [`${label}: ${value}`] : []
   })
   const base = description.trim()
   if (!validFields.length) return base
-  const specificationSection = `## Mobile Phone Full Specification\\n\\n${validFields.join('\\n')}`
-  return [base, specificationSection].filter(Boolean).join('\\n\\n')
+  const specificationSection = `## Mobile Phone Full Specification\n\n${validFields.join('\n')}`
+  return [base, specificationSection].filter(Boolean).join('\n\n')
 }
 
 
