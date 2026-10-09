@@ -161,8 +161,11 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
   }, [products, search, statusFilter, stockFilter])
 
   function editProduct(product: any) {
-    const parsedContent = splitDescriptionSpecifications(product.description)
-    setSpecifications(mergeSpecificationFields(parsedContent.specifications))
+    const isFeaturePhone = product.product_type === 'feature_phone'
+    const parsedContent = isFeaturePhone
+      ? splitDescriptionSpecifications(product.description)
+      : { description: product.description ?? '', specifications: [] as SpecificationField[] }
+    setSpecifications(isFeaturePhone ? mergeSpecificationFields(parsedContent.specifications) : blankSpecificationFields())
     form.reset({
       id: product.id,
       name: product.name,
@@ -214,7 +217,9 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
       </div>
 
       <form className="mt-5 space-y-4" onSubmit={form.handleSubmit((values) => startTransition(async () => {
-        const description = composeDescriptionWithSpecifications(values.description ?? '', specifications)
+        const description = values.productType === 'feature_phone'
+          ? composeDescriptionWithSpecifications(values.description ?? '', specifications)
+          : String(values.description ?? '').trim()
         if (description.length > 5000) {
           setMessage('Product description and specifications must be 5,000 characters or fewer. Remove some details and try again.')
           return
@@ -247,10 +252,10 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
           </div>
         </details>
 
-        <details className="rounded-xl border border-slate-200 bg-white">
-          <summary className="cursor-pointer list-none px-4 py-3 text-sm font-bold text-slate-800">Technical specifications <span className="ml-2 text-xs font-medium text-slate-400">Optional · appears on product page</span></summary>
+        {form.watch('productType') === 'feature_phone' ? <details open className="rounded-xl border border-emerald-200 bg-white">
+          <summary className="cursor-pointer list-none px-4 py-3 text-sm font-bold text-slate-800">Feature phone specifications <span className="ml-2 text-xs font-medium text-emerald-700">Add confirmed details</span></summary>
           <div className="border-t border-slate-100 p-4">
-            <p className="mb-4 text-sm leading-6 text-slate-500">Enter a value only when it is confirmed for this exact model. Empty fields are omitted from the storefront. Add custom rows for specifications not listed here.</p>
+            <p className="mb-4 text-sm leading-6 text-slate-500">Add technical details for this feature phone. Only confirmed values are saved; leave unknown fields blank. Add custom rows for specifications not listed here.</p>
             <div className="grid gap-3 sm:grid-cols-2">
               {specifications.map((field, index) => <div key={field.id} className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
                 <div className="mb-2 flex items-center justify-between gap-2">
@@ -264,7 +269,7 @@ function ProductTab({ products, brands, categories }: Omit<ProductManagerProps, 
             </div>
             <button type="button" onClick={() => setSpecifications((items) => [...items, { id: `custom-${crypto.randomUUID()}`, label: '', value: '' }])} className="mt-4 inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-orange-300 hover:text-orange-700"><Plus className="h-4 w-4" /> Add custom specification</button>
           </div>
-        </details>
+        </details> : null}
 
         <details className="rounded-xl border border-slate-200 bg-white">
           <summary className="cursor-pointer list-none px-4 py-3 text-sm font-bold text-slate-800">Search & merchandising</summary>
