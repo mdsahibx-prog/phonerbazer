@@ -1,4 +1,4 @@
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://phonerbazar.store";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.phonerbazar.store";
 export const siteConfig = {
   name: "PhonerBazar",
   tagline: "সঠিক দাম, সঠিক গ্যাজেট",
