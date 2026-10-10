@@ -9,6 +9,8 @@ import { getProductById } from '@/lib/services/storefront'
 export const metadata = {
   title: 'Order with Cash on Delivery',
   description: 'Secure guest checkout for PhonerBazar orders in Bangladesh.',
+  alternates: { canonical: '/order' },
+  robots: { index: false, follow: true },
 }
 
 type SearchParams = Promise<{ productId?: string; variantId?: string; quantity?: string; checkoutRequestId?: string; source?: string }>
