@@ -47,6 +47,7 @@ jobs:
         run: >-
           pnpm exec eslint
           app/api/analytics/route.ts
+          lib/analytics/browser-registry.ts
           lib/analytics/client.ts
           lib/analytics/events.ts
           lib/analytics/ingestion-policy.ts
