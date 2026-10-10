@@ -92,6 +92,25 @@ async function main() {
   }
   assert.equal(sanitizeCommerceEvent(privateQueryUrl).pageUrl, 'https://example.test/product')
 
+  const privateAnalyticsFields = sanitizeCommerceEvent({
+    ...base,
+    pageUrl: 'https://example.test/verify-order/private-order-token?email=private@example.com',
+    pagePath: '/verify-order/private-order-token',
+    source: 'campaign-private@example.com',
+    commerce: {
+      currency: 'BDT',
+      search_term: 'call me on 01712345678',
+      items: [{ item_id: 'SKU-1', item_name: 'contact buyer@example.com', price: 1200, quantity: 1 }],
+    },
+  })
+  assert.equal(privateAnalyticsFields.pagePath, '/verify-order/[redacted]')
+  assert.equal(privateAnalyticsFields.source, '[redacted]')
+  assert.equal(privateAnalyticsFields.commerce?.['search_term'], '[redacted]')
+  const privateItems = privateAnalyticsFields.commerce?.['items']
+  assert.equal(Array.isArray(privateItems) ? (privateItems[0] as Record<string, unknown>).item_name : '', '[redacted]')
+  assert.equal(privateAnalyticsFields.pageUrl?.includes('private-order-token'), false)
+  assert.equal(privateAnalyticsFields.pageUrl?.includes('private@example.com'), false)
+
   const unknown = { ...base, unexpected: 'should be rejected' }
   assert.equal(canonicalCommerceEventSchema.safeParse(unknown).success, false)
 
