@@ -102,14 +102,21 @@ export function trackClientEvent(input: ClientEventInput) {
   const attributionData = attribution()
   const commerce = input.commerce ? { currency: runtimeConfig.currency, ...input.commerce } : input.commerce
   const event: CanonicalCommerceEvent = { eventId: input.eventId || crypto.randomUUID(), eventName: input.eventName, eventVersion: '1.0', occurredAt: new Date().toISOString(), sessionId: sessionId(), anonymousId: id(ANON_KEY, LEGACY_ANON_KEY), pageUrl: window.location.href, pagePath: window.location.pathname, referrer: document.referrer || null, source: attributionData.utm_source || null, medium: attributionData.utm_medium || null, campaign: attributionData.utm_campaign || null, device: { type: /Mobi/i.test(navigator.userAgent) ? 'mobile' : 'desktop', language: navigator.language }, consent: currentConsent, commerce: commerce ? { ...commerce, ...attributionData } : attributionData, metadata: input.metadata as Record<string, string | number | boolean | null> | undefined, testMode: input.testMode }
-  if (currentConsent.analytics || currentConsent.marketing || input.testMode) {
+  const hasAnalyticsConsent = currentConsent.analytics || currentConsent.marketing
+  if (hasAnalyticsConsent || input.testMode) {
     window.dispatchEvent(new CustomEvent('commerce-analytics-event', { detail: event }))
-    const body = JSON.stringify(event)
-    try {
-      const blob = new Blob([body], { type: 'application/json' })
-      if (!navigator.sendBeacon('/api/analytics', blob)) void fetch('/api/analytics', { method: 'POST', headers: { 'content-type': 'application/json' }, body, keepalive: true }).catch(() => undefined)
-    } catch {
-      void fetch('/api/analytics', { method: 'POST', headers: { 'content-type': 'application/json' }, body, keepalive: true }).catch(() => undefined)
+
+    // Test-mode events are local diagnostics only and must never enter the public API.
+    if (hasAnalyticsConsent && !input.testMode) {
+      const body = JSON.stringify(event)
+      try {
+        const blob = new Blob([body], { type: 'application/json' })
+        if (!navigator.sendBeacon('/api/analytics', blob)) {
+          void fetch('/api/analytics', { method: 'POST', headers: { 'content-type': 'application/json' }, body, keepalive: true }).catch(() => undefined)
+        }
+      } catch {
+        void fetch('/api/analytics', { method: 'POST', headers: { 'content-type': 'application/json' }, body, keepalive: true }).catch(() => undefined)
+      }
     }
   }
   dispatchBrowserAnalyticsEvent(event, runtimeConfig)
