@@ -33,3 +33,20 @@ export function isClientIngestibleEventName(eventName: string): eventName is Com
 export function hasAnalyticsOrMarketingConsent(event: Pick<CanonicalCommerceEvent, 'consent'>) {
   return event.consent.analytics || event.consent.marketing
 }
+
+/**
+ * Public browser ingestion should not be usable as a cross-origin write target.
+ * This is defense-in-depth (not authentication; non-browser clients can forge headers).
+ */
+export function isSameOriginAnalyticsRequest(requestUrl: string, origin: string | null, fetchSite: string | null) {
+  if (origin) {
+    if (origin === 'null') return false
+    try {
+      return new URL(origin).origin === new URL(requestUrl).origin
+    } catch {
+      return false
+    }
+  }
+
+  return fetchSite !== 'cross-site'
+}
