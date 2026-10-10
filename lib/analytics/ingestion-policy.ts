@@ -48,5 +48,7 @@ export function isSameOriginAnalyticsRequest(requestUrl: string, origin: string 
     }
   }
 
-  return fetchSite !== 'cross-site'
+  // Browser requests normally include Origin on POST. If absent, accept only
+  // an explicit same-origin Fetch Metadata signal; fail closed otherwise.
+  return fetchSite?.toLowerCase() === 'same-origin'
 }
