@@ -6,7 +6,7 @@ import { ProductGrid } from '@/components/product/product-card'
 import { getHomepageData, getProducts } from '@/lib/services/storefront'
 
 export const metadata: Metadata = {
-  title: 'Offers — PhonerBazar',
+  title: 'Offers & Deals',
   description: 'Explore current phone and gadget deals from PhonerBazar.',
   alternates: { canonical: '/offers' },
 }
