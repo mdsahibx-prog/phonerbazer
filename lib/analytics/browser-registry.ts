@@ -299,3 +299,16 @@ export function dispatchBrowserAnalyticsEvent(event: CanonicalCommerceEvent, con
     if (adapter.canDispatch(event, config)) adapter.dispatch(event, config)
   }
 }
+
+/**
+ * Dispatch an authoritative purchase only to Meta Pixel. This deliberately
+ * avoids pushing the event through GTM/GA4, where it could double-count the
+ * server-recorded GA4 purchase.
+ */
+export function dispatchBrowserMetaPixelEvent(event: CanonicalCommerceEvent, config: BrowserAnalyticsRuntimeConfig) {
+  if (typeof window === 'undefined') return false
+  const adapter = BROWSER_ANALYTICS_PROVIDER_ADAPTERS.META_PIXEL
+  if (!adapter.canDispatch(event, config)) return false
+  adapter.dispatch(event, config)
+  return true
+}
