@@ -43,5 +43,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Lint analytics changes
+        run: >-
+          pnpm exec eslint
+          app/api/analytics/route.ts
+          lib/analytics/client.ts
+          lib/analytics/events.ts
+          lib/analytics/ingestion-policy.ts
+          lib/analytics/provider-adapters.ts
+          scripts/analytics-contract-test.ts
+
       - name: Run commerce and analytics contract tests
         run: pnpm test
