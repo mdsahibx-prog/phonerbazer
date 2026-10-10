@@ -39,7 +39,7 @@ function pushGtmConsent(next: Consent, includeDefault = false) {
   w.dataLayer = w.dataLayer || []
   // Use the documented gtag command queue shape (dataLayer.push(arguments)),
   // not a hand-built nested array that GTM may treat as an ordinary message.
-  w.gtag = w.gtag || function (...args: unknown[]) {
+  w.gtag = w.gtag || function () {
     w.dataLayer = w.dataLayer || []
     w.dataLayer.push(arguments)
   }
