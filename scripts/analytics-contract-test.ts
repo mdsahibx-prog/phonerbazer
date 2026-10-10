@@ -13,7 +13,7 @@ runtimeModule._load = function (request: string, parent: unknown, isMain: boolea
 
 async function main() {
   const { canonicalCommerceEventSchema, sanitizeCommerceEvent } = await import('../lib/analytics/events')
-  const { isClientIngestibleEventName, hasAnalyticsOrMarketingConsent } = await import('../lib/analytics/ingestion-policy')
+  const { isClientIngestibleEventName, hasAnalyticsOrMarketingConsent, isSameOriginAnalyticsRequest } = await import('../lib/analytics/ingestion-policy')
   const {
     analyticsEventSchema,
     normalizeAnalyticsCurrency,
@@ -67,6 +67,21 @@ async function main() {
     ...base,
     consent: { necessary: true, analytics: false, marketing: false },
   }), false)
+  assert.equal(isSameOriginAnalyticsRequest(
+    'https://www.phonerbazar.store/api/analytics',
+    'https://www.phonerbazar.store',
+    'same-origin',
+  ), true)
+  assert.equal(isSameOriginAnalyticsRequest(
+    'https://www.phonerbazar.store/api/analytics',
+    'https://attacker.example',
+    'cross-site',
+  ), false)
+  assert.equal(isSameOriginAnalyticsRequest(
+    'https://www.phonerbazar.store/api/analytics',
+    'null',
+    'cross-site',
+  ), false)
 
   const oversized = { ...base, pagePath: 'x'.repeat(501) }
   assert.equal(canonicalCommerceEventSchema.safeParse(oversized).success, false)
