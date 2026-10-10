@@ -5,7 +5,7 @@ import {
   recordCanonicalEvent,
   sanitizeCommerceEvent,
 } from '@/lib/analytics/events'
-import { hasAnalyticsOrMarketingConsent, isClientIngestibleEventName } from '@/lib/analytics/ingestion-policy'
+import { hasAnalyticsOrMarketingConsent, isClientIngestibleEventName, isSameOriginAnalyticsRequest } from '@/lib/analytics/ingestion-policy'
 import { dispatchAnalyticsEvent } from '@/lib/analytics/server'
 
 export const runtime = 'nodejs'
@@ -16,6 +16,14 @@ const NO_STORE = { 'Cache-Control': 'no-store' }
 
 export async function POST(request: Request) {
   try {
+    if (!isSameOriginAnalyticsRequest(
+      request.url,
+      request.headers.get('origin'),
+      request.headers.get('sec-fetch-site'),
+    )) {
+      return NextResponse.json({ ok: false, message: 'Cross-origin analytics request rejected.' }, { status: 403, headers: NO_STORE })
+    }
+
     const declaredLength = Number(request.headers.get('content-length') || 0)
     if (Number.isFinite(declaredLength) && declaredLength > MAX_EVENT_BYTES) {
       return NextResponse.json({ ok: false, message: 'Analytics event is too large.' }, { status: 413, headers: NO_STORE })
