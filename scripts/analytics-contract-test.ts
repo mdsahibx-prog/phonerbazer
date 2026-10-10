@@ -82,6 +82,21 @@ async function main() {
     'null',
     'cross-site',
   ), false)
+  assert.equal(isSameOriginAnalyticsRequest(
+    'https://www.phonerbazar.store/api/analytics',
+    null,
+    'same-origin',
+  ), true)
+  assert.equal(isSameOriginAnalyticsRequest(
+    'https://www.phonerbazar.store/api/analytics',
+    null,
+    null,
+  ), false)
+  assert.equal(isSameOriginAnalyticsRequest(
+    'https://www.phonerbazar.store/api/analytics',
+    null,
+    'same-site',
+  ), false)
 
   const oversized = { ...base, pagePath: 'x'.repeat(501) }
   assert.equal(canonicalCommerceEventSchema.safeParse(oversized).success, false)
