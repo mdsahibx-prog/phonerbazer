@@ -6,8 +6,9 @@ import { siteConfig } from '@/config/site'
 import { Breadcrumbs } from '@/components/storefront/page-intro'
 
 export const metadata: Metadata = {
-  title: 'Help & Policies · SahiGadget',
-  description: 'Customer care, delivery information, warranty terms, return policies, privacy, terms, and contact information for SahiGadget Bangladesh.',
+  title: 'Help & Policies',
+  description: 'Customer care, delivery information, warranty terms, return policies, privacy, terms, and contact information for PhonerBazar Bangladesh.',
+  alternates: { canonical: '/help' },
 }
 
 const policySections = [
@@ -17,7 +18,7 @@ const policySections = [
   { title: 'Terms & Conditions', description: 'Read the guidelines for product information, pricing, Cash on Delivery verification, orders, delivery, and customer responsibilities.', icon: FileText, href: '/terms', cta: 'Read Terms' },
   { title: 'Privacy Policy', description: 'Understand how customer, order, delivery, and website information may be used to operate and support the store.', icon: Lock, href: '/privacy', cta: 'Read Privacy Policy' },
   { title: 'Customer Support', description: `Need help? Call ${siteConfig.contact.phone} or email ${siteConfig.contact.publicEmail}.`, icon: Phone, href: '/contact', cta: 'Contact Support' },
-  { title: 'Order Tracking', description: 'Check the current status of an existing SahiGadget order using your order details.', icon: HelpCircle, href: '/track-order', cta: 'Track Order' },
+  { title: 'Order Tracking', description: 'Check the current status of an existing PhonerBazar order using your order details.', icon: HelpCircle, href: '/track-order', cta: 'Track Order' },
 ]
 
 export default function HelpPage() {

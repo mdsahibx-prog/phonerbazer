@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const product = await getProductBySlug(slug)
   if (!product) return { title: 'Product not found' }
 
-  const title = getProductMetaTitle(product)
+  const title = getProductMetaTitle(product).replace(/\s*[|·—-]\s*PhonerBazar$/i, '')
   const description = getProductMetaDescription(product)
   const image = getProductPrimaryImage(product)
   return {

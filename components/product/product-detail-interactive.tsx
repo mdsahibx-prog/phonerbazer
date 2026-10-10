@@ -4,7 +4,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BatteryCharging, Banknote, CheckCircle2, ChevronLeft, ChevronRight, HardDrive, Layers3, MemoryStick, Minus, Monitor, Palette, Plus, Share2, ShieldCheck, ShoppingCart, Tag, Truck, Zap } from 'lucide-react'
+import { BatteryCharging, Banknote, CheckCircle2, ChevronLeft, ChevronRight, Minus, Monitor, Palette, Plus, Share2, ShieldCheck, ShoppingCart, Tag, Truck, Zap } from 'lucide-react'
 import { addToCartAction } from '@/lib/commerce/actions'
 import { prepareGuestCheckoutAction } from '@/lib/commerce/actions'
 
@@ -37,9 +37,7 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
   const imageUrl = activeImage?.image_url || getProductImageUrl(product)
   useEffect(() => { if (selected) trackProductEvent({ eventName: 'view_item', commerce: { currency: 'BDT', value: selected.price, items: [{ item_id: selected.sku || selected.id, item_name: product.name, item_brand: product.brand?.name, item_category: product.category?.name, price: selected.price, quantity: 1 }] } }) }, [product.brand?.name, product.category?.name, product.name, selected])
 
-  useEffect(() => { setActiveImageIndex(0) }, [selectedId])
-
-  function selectVariant(id: string) { const variant = product.variants.find((item) => item.id === id); if (variant) trackProductEvent({ eventName: 'select_item', commerce: { item_list_name: 'product_detail', items: [{ item_id: variant.sku || variant.id, item_name: product.name, price: variant.price, quantity: 1 }] } }); setSelectedId(id) }
+  function selectVariant(id: string) { const variant = product.variants.find((item) => item.id === id); if (variant) { trackProductEvent({ eventName: 'select_item', commerce: { item_list_name: 'product_detail', items: [{ item_id: variant.sku || variant.id, item_name: product.name, price: variant.price, quantity: 1 }] } }); setActiveImageIndex(0); setSelectedId(id) } }
 
   async function addSelectedToCart() {
     if (!selected || selected.product_id !== product.id || !selected.is_in_stock || cartBusy || buyBusy) {

@@ -6,8 +6,9 @@ import { ContactForm } from '@/components/storefront/contact-form'
 import { siteConfig } from '@/config/site'
 
 export const metadata: Metadata = {
-  title: 'Contact Support · SahiGadget',
-  description: 'Contact SahiGadget customer support about orders, delivery, warranty, returns, and product assistance.',
+  title: 'Contact Support',
+  description: 'Contact PhonerBazar customer support about orders, delivery, warranty, returns, and product assistance.',
+  alternates: { canonical: '/contact' },
 }
 
 export default function ContactPage() {
@@ -42,7 +43,7 @@ export default function ContactPage() {
             </section>
             <section className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm" aria-labelledby="location-title">
               <div className="p-5"><p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-600">Location</p><h2 id="location-title" className="mt-2 text-lg font-black text-slate-950">Araihazar, Narayanganj</h2><p className="mt-2 text-sm leading-6 text-slate-600">Our listed business location in Bangladesh.</p></div>
-              <iframe title="SahiGadget location map" src={`https://www.openstreetmap.org/export/embed.html?search=${mapQuery}&zoom=12`} className="h-64 w-full border-0" loading="lazy" />
+              <iframe title="PhonerBazar location map" src={`https://www.openstreetmap.org/export/embed.html?search=${mapQuery}&zoom=12`} className="h-64 w-full border-0" loading="lazy" />
               <a href={`https://www.openstreetmap.org/search?query=${mapQuery}`} target="_blank" rel="noreferrer" className="block border-t border-slate-100 px-5 py-3 text-xs font-bold text-emerald-700 hover:text-slate-950">Open map in a new tab</a>
             </section>
           </aside>

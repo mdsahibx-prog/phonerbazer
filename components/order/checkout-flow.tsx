@@ -37,9 +37,6 @@ const DISTRICTS_BY_DIVISION: Record<string, string[]> = {
 
 type Step = 'contact' | 'delivery' | 'review'
 
-function money(value: number) {
-  return `৳${new Intl.NumberFormat('en-BD', { maximumFractionDigits: 0 }).format(value)}`
-}
 
 function Input({ label, value, onChange, onBlur, error, type = 'text', placeholder, autoComplete }: { label: string; value: string; onChange: (value: string) => void; onBlur?: () => void; error?: string; type?: string; placeholder: string; autoComplete?: string }) {
   return <label className="block min-w-0">

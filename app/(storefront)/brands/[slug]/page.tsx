@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: BrandPageProps): Promise<Meta
   const { slug } = await params
   const brand = await getBrandBySlug(slug)
   if (!brand) return { title: 'Brand not found' }
-  const title = getBrandMetaTitle(brand)
+  const title = getBrandMetaTitle(brand).replace(/\s*[|·—-]\s*PhonerBazar$/i, '')
   const description = brand.meta_description || getBrandDescription(brand)
   const canonical = getBrandPath(brand.slug)
   return {

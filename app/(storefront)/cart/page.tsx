@@ -1,7 +1,7 @@
 import { CartClient } from '@/components/cart/cart-client'
 import { getCart } from '@/lib/commerce/cart'
 
-export const metadata = { title: 'Shopping Cart · SahiGadget' }
+export const metadata = { title: 'Shopping Cart', alternates: { canonical: '/cart' }, robots: { index: false, follow: true } }
 
 export default async function CartPage() {
   const cart = await getCart()

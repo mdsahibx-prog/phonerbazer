@@ -7,7 +7,6 @@ import { loadOrderSuccessById } from '@/lib/orders/actions'
 import { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
 import { getCart } from './cart'
 import { quoteCartCheckout } from './checkout'
-import { assessCustomerRisk } from '@/lib/risk/service'
 import { markCheckoutSession, recordCommerceEvent, recordPurchaseOnce } from '@/lib/analytics/events'
 import { getPaymentsForOrder, initiatePaymentForOrder, paymentRequirementForRiskAction, PaymentError } from '@/lib/payments/service'
 

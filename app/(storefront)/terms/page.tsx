@@ -3,8 +3,9 @@ import type { Metadata } from 'next'
 import { PolicyPage } from '@/components/storefront/policy-page'
 
 export const metadata: Metadata = {
-  title: 'Terms & Conditions · PhonerBazar',
+  title: 'Terms & Conditions',
   description: 'The terms that apply to browsing, ordering, verification, delivery, warranty, and customer use of PhonerBazar.',
+  alternates: { canonical: '/terms' },
 }
 
 export default function TermsPage() {
@@ -51,7 +52,7 @@ export default function TermsPage() {
         'PhonerBazar may update these terms when its services, policies, or legal obligations change. The latest version published on the website will apply to future use and orders, subject to applicable law.',
         'These terms are intended to operate under applicable Bangladesh law. Any dispute should first be raised with PhonerBazar so the circumstances can be reviewed and an appropriate resolution explored.'
       ]},
-      { id: 'contact', title: '17. Contact information', body: 'For questions about these terms, call +880 1874-002918, email helpline.sahigadget@gmail.com, or write to Narayanganj, Dhaka, Bangladesh.' },
+      { id: 'contact', title: '17. Contact information', body: 'For questions about these terms, call +880 1874-002918, email phonerbazar.helpline@gmail.com, or write to Narayanganj, Dhaka, Bangladesh.' },
     ]}
     relatedLinks={[{ label: 'Privacy policy', href: '/privacy' }, { label: 'Shipping & delivery', href: '/shipping' }, { label: 'Returns & replacements', href: '/returns' }, { label: 'Contact support', href: '/contact' }]}
   />

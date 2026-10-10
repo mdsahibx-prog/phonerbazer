@@ -19,7 +19,7 @@ import { HeroSection } from '@/components/storefront/hero-section'
 
 
 export const metadata = {
-  title: 'PhonerBazar — Authentic Mobile Phones & Gadgets in Bangladesh',
+  title: 'Authentic Mobile Phones & Gadgets in Bangladesh',
   description: 'Shop verified mobile phones, feature phones, smartwatches, and tech gadgets with Cash on Delivery across Bangladesh.',
 }
 
