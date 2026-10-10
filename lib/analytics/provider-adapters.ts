@@ -7,6 +7,38 @@ import { buildServerGtmEnvelope } from './server-gtm'
 import { isLiveProviderDispatchAllowed } from './provider-policy'
 import { postJson, type HttpDeliveryResult } from './transport'
 
+/**
+ * GA4's debug/validation endpoint may return HTTP 200 for invalid events.
+ * Treat a payload as valid only when the response contains an empty
+ * validationMessages array.
+ */
+export function interpretGa4ValidationResponse(result: HttpDeliveryResult): HttpDeliveryResult {
+  if (!result.ok) return result
+
+  let payload: unknown
+  try {
+    payload = JSON.parse(result.responseBody || '')
+  } catch {
+    return { ...result, ok: false, category: 'HTTP_ERROR', responseBody: 'Invalid JSON from GA4 validation endpoint.' }
+  }
+
+  if (!payload || typeof payload !== 'object' || !Array.isArray((payload as { validationMessages?: unknown }).validationMessages)) {
+    return { ...result, ok: false, category: 'HTTP_ERROR', responseBody: 'Unexpected GA4 validation response format.' }
+  }
+
+  const messages = (payload as { validationMessages: unknown[] }).validationMessages
+  if (messages.length > 0) {
+    return {
+      ...result,
+      ok: false,
+      category: 'HTTP_ERROR',
+      responseBody: JSON.stringify(messages).slice(0, 1000),
+    }
+  }
+
+  return result
+}
+
 export const ANALYTICS_PROVIDER_IDS = ['GA4', 'META_CAPI', 'TIKTOK_EVENTS_API', 'SERVER_GTM'] as const
 export type AnalyticsProviderId = (typeof ANALYTICS_PROVIDER_IDS)[number]
 
@@ -91,10 +123,10 @@ export const ANALYTICS_PROVIDER_ADAPTERS: Record<AnalyticsProviderId, AnalyticsP
       'https://www.google-analytics.com/mp/collect?measurement_id=' + encodeURIComponent(config.ga4MeasurementId) + '&api_secret=' + encodeURIComponent(process.env.GA4_API_SECRET || ''),
       buildGa4MeasurementPayload(event),
     ),
-    validate: (event, config) => postJson(
+    validate: async (event, config) => interpretGa4ValidationResponse(await postJson(
       'https://www.google-analytics.com/debug/mp/collect?measurement_id=' + encodeURIComponent(config.ga4MeasurementId) + '&api_secret=' + encodeURIComponent(process.env.GA4_API_SECRET || ''),
       { ...buildGa4MeasurementPayload(event), validation_behavior: 'ENFORCE_RECOMMENDATIONS' },
-    ),
+    )),
   },
   META_CAPI: {
     id: 'META_CAPI',
