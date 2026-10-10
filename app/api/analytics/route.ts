@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     }
 
     after(() => dispatchAnalyticsEvent(event).then((result) => {
-      const deliveries = 'deliveries' in result ? result.deliveries : []
+      const deliveries = 'deliveries' in result && Array.isArray(result.deliveries) ? result.deliveries : []
       console.log(JSON.stringify({
         level: result.ok ? 'info' : 'warn',
         msg: 'analytics_dispatch_result',
