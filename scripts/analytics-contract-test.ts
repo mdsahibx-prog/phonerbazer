@@ -13,6 +13,7 @@ runtimeModule._load = function (request: string, parent: unknown, isMain: boolea
 
 async function main() {
   const { canonicalCommerceEventSchema, sanitizeCommerceEvent } = await import('../lib/analytics/events')
+  const { isClientIngestibleEventName, hasAnalyticsOrMarketingConsent } = await import('../lib/analytics/ingestion-policy')
   const {
     analyticsEventSchema,
     normalizeAnalyticsCurrency,
@@ -53,6 +54,19 @@ async function main() {
   }
 
   assert.equal(canonicalCommerceEventSchema.safeParse(base).success, true)
+
+  // The public browser endpoint must not accept server-authoritative lifecycle events.
+  assert.equal(isClientIngestibleEventName('page_view'), true)
+  assert.equal(isClientIngestibleEventName('add_to_cart'), true)
+  assert.equal(isClientIngestibleEventName('purchase'), false)
+  assert.equal(isClientIngestibleEventName('ORDER_COMPLETED'), false)
+  assert.equal(isClientIngestibleEventName('PAYMENT_VERIFIED'), false)
+  assert.equal(isClientIngestibleEventName('RISK_ASSESSED'), false)
+  assert.equal(hasAnalyticsOrMarketingConsent(base), true)
+  assert.equal(hasAnalyticsOrMarketingConsent({
+    ...base,
+    consent: { necessary: true, analytics: false, marketing: false },
+  }), false)
 
   const oversized = { ...base, pagePath: 'x'.repeat(501) }
   assert.equal(canonicalCommerceEventSchema.safeParse(oversized).success, false)
