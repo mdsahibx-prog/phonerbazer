@@ -35,18 +35,24 @@ function consentPayload(next: Consent) {
 
 function pushGtmConsent(next: Consent, includeDefault = false) {
   if (typeof window === 'undefined') return
-  const w = window as typeof window & { dataLayer?: unknown[] }
+  const w = window as typeof window & { dataLayer?: unknown[]; gtag?: (...args: unknown[]) => void }
   w.dataLayer = w.dataLayer || []
+  // Use the documented gtag command queue shape (dataLayer.push(arguments)),
+  // not a hand-built nested array that GTM may treat as an ordinary message.
+  w.gtag = w.gtag || function (...args: unknown[]) {
+    w.dataLayer = w.dataLayer || []
+    w.dataLayer.push(arguments)
+  }
   if (includeDefault) {
     // Consent defaults must be queued before the GTM/gtag script is injected.
-    w.dataLayer.push(['consent', 'default', {
+    w.gtag('consent', 'default', {
       analytics_storage: 'denied',
       ad_storage: 'denied',
       ad_user_data: 'denied',
       ad_personalization: 'denied',
-    }])
+    })
   }
-  w.dataLayer.push(['consent', 'update', consentPayload(next)])
+  w.gtag('consent', 'update', consentPayload(next))
 }
 
 function hasLoadedGoogleTag() {
