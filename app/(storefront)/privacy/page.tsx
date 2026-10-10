@@ -3,8 +3,9 @@ import type { Metadata } from 'next'
 import { PolicyPage } from '@/components/storefront/policy-page'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy · PhonerBazar',
+  title: 'Privacy Policy',
   description: 'How PhonerBazar uses customer, order, delivery, and website information to operate the store and provide support.',
+  alternates: { canonical: '/privacy' },
 }
 
 export default function PrivacyPage() {
@@ -40,7 +41,7 @@ export default function PrivacyPage() {
         'To help protect customer information, PhonerBazar may request reasonable details to verify the identity of the person making a request.'
       ]},
       { id: 'updates', title: '10. Policy updates', body: 'PhonerBazar may update this policy when the website, operational services, or applicable requirements change. The updated policy will be published on this page with its current wording.' },
-      { id: 'contact', title: '11. Contact information', body: 'For privacy questions or requests, call +880 1874-002918, email helpline.sahigadget@gmail.com, or write to Narayanganj, Dhaka, Bangladesh.' },
+      { id: 'contact', title: '11. Contact information', body: 'For privacy questions or requests, call +880 1874-002918, email phonerbazar.helpline@gmail.com, or write to Narayanganj, Dhaka, Bangladesh.' },
     ]}
     relatedLinks={[{ label: 'Terms & conditions', href: '/terms' }, { label: 'Contact support', href: '/contact' }, { label: 'Shipping & delivery', href: '/shipping' }, { label: 'Track an order', href: '/track-order' }]}
   />
