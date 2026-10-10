@@ -41,6 +41,8 @@ function pushGtmConsent(next: Consent, includeDefault = false) {
   // not a hand-built nested array that GTM may treat as an ordinary message.
   w.gtag = w.gtag || function () {
     w.dataLayer = w.dataLayer || []
+    // Google documents this exact queue shape for Consent Mode commands.
+    // eslint-disable-next-line prefer-rest-params
     w.dataLayer.push(arguments)
   }
   if (includeDefault) {
