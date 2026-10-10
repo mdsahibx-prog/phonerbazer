@@ -46,6 +46,25 @@ const initializedMetaPixelIds = new Set<string>()
 const initializedTikTokPixelIds = new Set<string>()
 let initializedGa4MeasurementId = ''
 
+/** Parse configured Meta pixel IDs once each, preserving their configured order. */
+export function getMetaPixelIds(configuredIds: string) {
+  return [...new Set(configuredIds.split(/[\s,]+/).map((value) => value.trim()).filter(Boolean))]
+}
+
+/**
+ * Meta's trackSingle targets exactly one pixel. eventID belongs in the options
+ * argument, not in event data, so it can be matched to a future CAPI event_id.
+ */
+export function buildMetaPixelTrackSingleArgs(pixelId: string, metaEvent: string, event: CanonicalCommerceEvent) {
+  return [
+    'trackSingle',
+    pixelId,
+    metaEvent,
+    { ...(event.commerce || {}) },
+    { eventID: event.eventId },
+  ] as const
+}
+
 type BrowserProviderAdapter = {
   id: BrowserProviderId
   canDispatch: (event: CanonicalCommerceEvent, config: BrowserAnalyticsRuntimeConfig) => boolean
@@ -127,7 +146,7 @@ const metaPixelAdapter: BrowserProviderAdapter = {
   canDispatch: (event, config) => Boolean(isBrowserAnalyticsEventEnabled(event.eventName, config) && config.enabled && config.marketingEnabled && config.metaPixelId && event.consent.marketing && !event.testMode),
   dispatch: (event, config) => {
     const w = getWindow()
-    const pixelIds = config.metaPixelId.split(/[\s,]+/).map((value) => value.trim()).filter(Boolean)
+    const pixelIds = getMetaPixelIds(config.metaPixelId)
     if (!pixelIds.length) return
     if (!w.fbq) {
       const fbq = function (this: unknown, ...args: unknown[]) {
@@ -145,12 +164,20 @@ const metaPixelAdapter: BrowserProviderAdapter = {
     const fbq = w.fbq
     if (!fbq) return
     const metaEvent = providerEventName('META_PIXEL', event.eventName)
+
+    // Initialize each configured pixel exactly once. Use trackSingle below so
+    // one event isn't broadcast to every pixel once per loop iteration.
     for (const pixelId of pixelIds) {
       if (!initializedMetaPixelIds.has(pixelId)) {
         fbq('init', pixelId)
         initializedMetaPixelIds.add(pixelId)
       }
-      if (metaEvent) fbq('track', metaEvent, { ...event.commerce, eventID: event.eventId })
+    }
+
+    if (metaEvent) {
+      for (const pixelId of pixelIds) {
+        fbq(...buildMetaPixelTrackSingleArgs(pixelId, metaEvent, event))
+      }
     }
   },
 }
