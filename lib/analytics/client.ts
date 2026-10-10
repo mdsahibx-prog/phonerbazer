@@ -24,23 +24,54 @@ function consent(): Consent { try { const value = JSON.parse(migratedLocalStorag
 function attribution() { const url = new URL(window.location.href); const keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'ttclid']; const current = Object.fromEntries(keys.map((key) => [key, url.searchParams.get(key)]).filter(([, value]) => value)); const prior = JSON.parse(migratedSessionStorage(ATTRIBUTION_KEY, LEGACY_ATTRIBUTION_KEY) || '{}') as Record<string, string>; const merged = { ...current, ...prior }; if (Object.keys(current).length) window.sessionStorage.setItem(ATTRIBUTION_KEY, JSON.stringify({ ...merged, landing_page: prior.landing_page || window.location.pathname })); return merged }
 export function hasAnalyticsConsent() { return migratedLocalStorage(CONSENT_KEY, LEGACY_CONSENT_KEY) !== null }
 export function getAnalyticsConsent() { return consent() }
-function pushGtmConsent(next: Consent) {
-  if (typeof window === 'undefined') return
-  const w = window as typeof window & { dataLayer?: unknown[] }
-  w.dataLayer = w.dataLayer || []
-  w.dataLayer.push(['consent', 'update', {
+function consentPayload(next: Consent) {
+  return {
     analytics_storage: next.analytics ? 'granted' : 'denied',
     ad_storage: next.marketing ? 'granted' : 'denied',
     ad_user_data: next.marketing ? 'granted' : 'denied',
     ad_personalization: next.marketing ? 'granted' : 'denied',
-  }])
+  }
 }
+
+function pushGtmConsent(next: Consent, includeDefault = false) {
+  if (typeof window === 'undefined') return
+  const w = window as typeof window & { dataLayer?: unknown[]; gtag?: (...args: unknown[]) => void }
+  w.dataLayer = w.dataLayer || []
+  // Use the documented gtag command queue shape (dataLayer.push(arguments)),
+  // not a hand-built nested array that GTM may treat as an ordinary message.
+  w.gtag = w.gtag || function () {
+    w.dataLayer = w.dataLayer || []
+    // Google documents this exact queue shape for Consent Mode commands.
+    // eslint-disable-next-line prefer-rest-params
+    w.dataLayer.push(arguments)
+  }
+  if (includeDefault) {
+    // Consent defaults must be queued before the GTM/gtag script is injected.
+    w.gtag('consent', 'default', {
+      analytics_storage: 'denied',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+    })
+  }
+  w.gtag('consent', 'update', consentPayload(next))
+}
+
+function hasLoadedGoogleTag() {
+  return Boolean(
+    document.getElementById('commerce-analytics-gtm') ||
+    document.getElementById('commerce-analytics-ga4'),
+  )
+}
+
 export function setAnalyticsConsent(value: Consent | 'granted' | 'denied') {
   const next: Consent = typeof value === 'string'
     ? { necessary: true, analytics: value === 'granted', marketing: false }
     : { necessary: true, analytics: Boolean(value.analytics), marketing: Boolean(value.marketing) }
   window.localStorage.setItem(CONSENT_KEY, JSON.stringify(next))
-  pushGtmConsent(next)
+  // For a first-time choice, configureAnalyticsRuntime will queue default then
+  // update before the tag script is injected. After tags load, update in place.
+  if (hasLoadedGoogleTag()) pushGtmConsent(next)
   window.dispatchEvent(new CustomEvent('analytics-consent-change'))
 }
 
@@ -62,7 +93,15 @@ export function configureAnalyticsRuntime(config: { projectKey?: string; currenc
     ga4ServerDeliveryEnabled: Boolean(config.ga4ServerDeliveryEnabled),
     eventControls: { ...(config.eventControls || {}) },
   }
-  if (typeof window !== 'undefined') initializeBrowserAnalyticsProviders(runtimeConfig)
+  if (typeof window !== 'undefined') {
+    const hasConfiguredGoogleTag = Boolean(runtimeConfig.enabled && (runtimeConfig.gtmContainerId || runtimeConfig.ga4MeasurementId))
+    const currentConsent = consent()
+    if (hasConfiguredGoogleTag && (currentConsent.analytics || currentConsent.marketing)) {
+      // Queue both states before any Google tag script loads, including returning visitors.
+      pushGtmConsent(currentConsent, true)
+      initializeBrowserAnalyticsProviders(runtimeConfig)
+    }
+  }
 }
 
 export function trackClientEvent(input: ClientEventInput) {
@@ -71,14 +110,21 @@ export function trackClientEvent(input: ClientEventInput) {
   const attributionData = attribution()
   const commerce = input.commerce ? { currency: runtimeConfig.currency, ...input.commerce } : input.commerce
   const event: CanonicalCommerceEvent = { eventId: input.eventId || crypto.randomUUID(), eventName: input.eventName, eventVersion: '1.0', occurredAt: new Date().toISOString(), sessionId: sessionId(), anonymousId: id(ANON_KEY, LEGACY_ANON_KEY), pageUrl: window.location.href, pagePath: window.location.pathname, referrer: document.referrer || null, source: attributionData.utm_source || null, medium: attributionData.utm_medium || null, campaign: attributionData.utm_campaign || null, device: { type: /Mobi/i.test(navigator.userAgent) ? 'mobile' : 'desktop', language: navigator.language }, consent: currentConsent, commerce: commerce ? { ...commerce, ...attributionData } : attributionData, metadata: input.metadata as Record<string, string | number | boolean | null> | undefined, testMode: input.testMode }
-  if (currentConsent.analytics || currentConsent.marketing || input.testMode) {
+  const hasAnalyticsConsent = currentConsent.analytics || currentConsent.marketing
+  if (hasAnalyticsConsent || input.testMode) {
     window.dispatchEvent(new CustomEvent('commerce-analytics-event', { detail: event }))
-    const body = JSON.stringify(event)
-    try {
-      const blob = new Blob([body], { type: 'application/json' })
-      if (!navigator.sendBeacon('/api/analytics', blob)) void fetch('/api/analytics', { method: 'POST', headers: { 'content-type': 'application/json' }, body, keepalive: true }).catch(() => undefined)
-    } catch {
-      void fetch('/api/analytics', { method: 'POST', headers: { 'content-type': 'application/json' }, body, keepalive: true }).catch(() => undefined)
+
+    // Test-mode events are local diagnostics only and must never enter the public API.
+    if (hasAnalyticsConsent && !input.testMode) {
+      const body = JSON.stringify(event)
+      try {
+        const blob = new Blob([body], { type: 'application/json' })
+        if (!navigator.sendBeacon('/api/analytics', blob)) {
+          void fetch('/api/analytics', { method: 'POST', headers: { 'content-type': 'application/json' }, body, keepalive: true }).catch(() => undefined)
+        }
+      } catch {
+        void fetch('/api/analytics', { method: 'POST', headers: { 'content-type': 'application/json' }, body, keepalive: true }).catch(() => undefined)
+      }
     }
   }
   dispatchBrowserAnalyticsEvent(event, runtimeConfig)

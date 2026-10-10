@@ -13,6 +13,7 @@ runtimeModule._load = function (request: string, parent: unknown, isMain: boolea
 
 async function main() {
   const { canonicalCommerceEventSchema, sanitizeCommerceEvent } = await import('../lib/analytics/events')
+  const { isClientIngestibleEventName, hasAnalyticsOrMarketingConsent, isSameOriginAnalyticsRequest } = await import('../lib/analytics/ingestion-policy')
   const {
     analyticsEventSchema,
     normalizeAnalyticsCurrency,
@@ -24,7 +25,7 @@ async function main() {
     isValidServerGtmEndpoint,
     buildServerGtmEnvelope,
   } = await import('../lib/analytics/server-gtm')
-  const { ANALYTICS_PROVIDER_ADAPTERS, buildGa4MeasurementPayload } = await import('../lib/analytics/provider-adapters')
+  const { ANALYTICS_PROVIDER_ADAPTERS, buildGa4MeasurementPayload, interpretGa4ValidationResponse } = await import('../lib/analytics/provider-adapters')
   const { isAnalyticsDeliveryPermanentlyIneligible } = await import('../lib/analytics/worker')
   const { isBrowserAnalyticsEventEnabled } = await import('../lib/analytics/browser-registry')
   const { ANALYTICS_MAX_DELIVERY_ATTEMPTS } = await import('../lib/analytics/delivery-ledger')
@@ -54,6 +55,49 @@ async function main() {
 
   assert.equal(canonicalCommerceEventSchema.safeParse(base).success, true)
 
+  // The public browser endpoint must not accept server-authoritative lifecycle events.
+  assert.equal(isClientIngestibleEventName('page_view'), true)
+  assert.equal(isClientIngestibleEventName('add_to_cart'), true)
+  assert.equal(isClientIngestibleEventName('purchase'), false)
+  assert.equal(isClientIngestibleEventName('ORDER_COMPLETED'), false)
+  assert.equal(isClientIngestibleEventName('PAYMENT_VERIFIED'), false)
+  assert.equal(isClientIngestibleEventName('RISK_ASSESSED'), false)
+  assert.equal(hasAnalyticsOrMarketingConsent(base), true)
+  assert.equal(hasAnalyticsOrMarketingConsent({
+    ...base,
+    consent: { necessary: true, analytics: false, marketing: false },
+  }), false)
+  assert.equal(isSameOriginAnalyticsRequest(
+    'https://www.phonerbazar.store/api/analytics',
+    'https://www.phonerbazar.store',
+    'same-origin',
+  ), true)
+  assert.equal(isSameOriginAnalyticsRequest(
+    'https://www.phonerbazar.store/api/analytics',
+    'https://attacker.example',
+    'cross-site',
+  ), false)
+  assert.equal(isSameOriginAnalyticsRequest(
+    'https://www.phonerbazar.store/api/analytics',
+    'null',
+    'cross-site',
+  ), false)
+  assert.equal(isSameOriginAnalyticsRequest(
+    'https://www.phonerbazar.store/api/analytics',
+    null,
+    'same-origin',
+  ), true)
+  assert.equal(isSameOriginAnalyticsRequest(
+    'https://www.phonerbazar.store/api/analytics',
+    null,
+    null,
+  ), false)
+  assert.equal(isSameOriginAnalyticsRequest(
+    'https://www.phonerbazar.store/api/analytics',
+    null,
+    'same-site',
+  ), false)
+
   const oversized = { ...base, pagePath: 'x'.repeat(501) }
   assert.equal(canonicalCommerceEventSchema.safeParse(oversized).success, false)
 
@@ -62,6 +106,25 @@ async function main() {
     pageUrl: 'https://example.test/product?email=private@example.com&token=secret#fragment',
   }
   assert.equal(sanitizeCommerceEvent(privateQueryUrl).pageUrl, 'https://example.test/product')
+
+  const privateAnalyticsFields = sanitizeCommerceEvent({
+    ...base,
+    pageUrl: 'https://example.test/verify-order/private-order-token?email=private@example.com',
+    pagePath: '/verify-order/private-order-token',
+    source: 'campaign-private@example.com',
+    commerce: {
+      currency: 'BDT',
+      search_term: 'call me on 01712345678',
+      items: [{ item_id: 'SKU-1', item_name: 'contact buyer@example.com', price: 1200, quantity: 1 }],
+    },
+  })
+  assert.equal(privateAnalyticsFields.pagePath, '/verify-order/[redacted]')
+  assert.equal(privateAnalyticsFields.source, '[redacted]')
+  assert.equal(privateAnalyticsFields.commerce?.['search_term'], '[redacted]')
+  const privateItems = privateAnalyticsFields.commerce?.['items']
+  assert.equal(Array.isArray(privateItems) ? (privateItems[0] as Record<string, unknown>).item_name : '', '[redacted]')
+  assert.equal(privateAnalyticsFields.pageUrl?.includes('private-order-token'), false)
+  assert.equal(privateAnalyticsFields.pageUrl?.includes('private@example.com'), false)
 
   const unknown = { ...base, unexpected: 'should be rejected' }
   assert.equal(canonicalCommerceEventSchema.safeParse(unknown).success, false)
@@ -105,6 +168,32 @@ async function main() {
   const ga4EventParams = ga4Payload.events[0].params as Record<string, unknown>
   assert.match(ga4Payload.client_id, /^\d+\.\d+$/)
   assert.match(String(ga4EventParams.session_id), /^\d+$/)
+
+  // GA4's validation endpoint can return HTTP 200 with validation errors.
+  const validGa4Response = interpretGa4ValidationResponse({
+    ok: true, latency: 8, status: 200,
+    responseBody: '{"validationMessages":[]}', attempts: 1,
+  })
+  assert.equal(validGa4Response.ok, true)
+
+  const invalidGa4Response = interpretGa4ValidationResponse({
+    ok: true, latency: 8, status: 200,
+    responseBody: '{"validationMessages":[{"fieldPath":"events[0].name","description":"Unexpected event"}]}',
+    attempts: 1,
+  })
+  assert.equal(invalidGa4Response.ok, false)
+  assert.equal(invalidGa4Response.category, 'HTTP_ERROR')
+
+  const malformedGa4Response = interpretGa4ValidationResponse({
+    ok: true, latency: 8, status: 200, responseBody: '{}', attempts: 1,
+  })
+  assert.equal(malformedGa4Response.ok, false)
+
+  const failedGa4Response = interpretGa4ValidationResponse({
+    ok: false, latency: 10, status: 500, category: 'HTTP_ERROR',
+    attempts: 1, responseBody: 'server error',
+  })
+  assert.equal(failedGa4Response.ok, false)
 
   assert.equal(isLiveProviderDispatchAllowed(true), false)
   assert.equal(isLiveProviderDispatchAllowed(false), true)
