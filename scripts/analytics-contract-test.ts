@@ -27,7 +27,7 @@ async function main() {
   } = await import('../lib/analytics/server-gtm')
   const { ANALYTICS_PROVIDER_ADAPTERS, buildGa4MeasurementPayload, interpretGa4ValidationResponse } = await import('../lib/analytics/provider-adapters')
   const { isAnalyticsDeliveryPermanentlyIneligible } = await import('../lib/analytics/worker')
-  const { isBrowserAnalyticsEventEnabled } = await import('../lib/analytics/browser-registry')
+  const { isBrowserAnalyticsEventEnabled, getMetaPixelIds, buildMetaPixelTrackSingleArgs } = await import('../lib/analytics/browser-registry')
   const { ANALYTICS_MAX_DELIVERY_ATTEMPTS } = await import('../lib/analytics/delivery-ledger')
 
   const base = {
@@ -267,6 +267,26 @@ async function main() {
   assert.equal(isBrowserAnalyticsEventEnabled('add_to_cart', browserConfig), true)
   assert.equal(isBrowserAnalyticsEventEnabled('add_to_cart', { ...browserConfig, eventControls: { add_to_cart: false } }), false)
   assert.equal(isBrowserAnalyticsEventEnabled('purchase', { ...browserConfig, eventControls: { purchase: false } }), true)
+
+  // Meta must initialize each configured pixel once and dispatch only once per pixel.
+  assert.deepEqual(
+    getMetaPixelIds(' 2040714466673633, 1052046197788557 2040714466673633 '),
+    ['2040714466673633', '1052046197788557'],
+  )
+  assert.deepEqual(
+    getMetaPixelIds(' ,  , '),
+    [],
+  )
+  assert.deepEqual(
+    buildMetaPixelTrackSingleArgs('2040714466673633', 'AddToCart', base),
+    [
+      'trackSingle',
+      '2040714466673633',
+      'AddToCart',
+      { ...base.commerce },
+      { eventID: base.eventId },
+    ],
+  )
 
   assert.equal(ANALYTICS_MAX_DELIVERY_ATTEMPTS, 8)
 
