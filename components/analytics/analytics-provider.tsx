@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { DEFAULT_ANALYTICS_PROJECT_CONFIG } from '@/lib/analytics/project-config'
-import { configureAnalyticsRuntime, getAnalyticsConsent, hasAnalyticsConsent, initializeGtm, setAnalyticsConsent, trackPageView } from '@/lib/analytics/client'
+import { configureAnalyticsRuntime, getAnalyticsConsent, hasAnalyticsConsent, initializeGtm, isAnalyticsPageViewPathAllowed, setAnalyticsConsent, trackPageView } from '@/lib/analytics/client'
 
 type Consent = { necessary: true; analytics: boolean; marketing: boolean }
 type RuntimeConfig = { projectKey: string; currency: string; enabled: boolean; marketingEnabled: boolean; ga4MeasurementId: string; gtmContainerId: string; metaPixelId: string; tiktokPixelId: string; ga4ServerDeliveryEnabled?: boolean; eventControls: Record<string, boolean> }
@@ -21,30 +22,63 @@ function runWhenIdle(callback: () => void, timeout = 1500) {
 
 export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { runtimeConfig?: RuntimeConfig }) {
   const [consent, setConsent] = useState<Consent | null>(null)
+  const pathname = usePathname()
+  const currentPathRef = useRef<string | null>(pathname)
+  const lastPageViewPathRef = useRef<string | null>(null)
+
+  const trackCurrentPageOnce = (path: string | null) => {
+    if (!path || !isAnalyticsPageViewPathAllowed(path)) return
+    if (!hasAnalyticsConsent()) return
+    const currentConsent = getAnalyticsConsent()
+    if (!currentConsent.analytics && !currentConsent.marketing) return
+    if (lastPageViewPathRef.current === path) return
+    trackPageView()
+    lastPageViewPathRef.current = path
+  }
+
+  // Next.js App Router transitions don't reload the document. Track each
+  // public route explicitly so Pixel history auto-tracking can stay disabled.
+  useEffect(() => {
+    const previousPath = currentPathRef.current
+    currentPathRef.current = pathname
+    if (previousPath !== pathname && pathname) {
+      const currentConsent = hasAnalyticsConsent() ? getAnalyticsConsent() : null
+      if (currentConsent && (currentConsent.analytics || currentConsent.marketing) && isAnalyticsPageViewPathAllowed(pathname)) {
+        trackPageView()
+        lastPageViewPathRef.current = pathname
+      }
+    }
+  }, [pathname])
 
   useEffect(() => {
     let cancelled = false
-    let configLoaded = false
+    let configRequestStarted = false
 
     const loadRuntimeConfig = () => {
-      if (configLoaded || cancelled) return
-      configLoaded = true
+      if (configRequestStarted || cancelled) return
+      configRequestStarted = true
       void fetch('/api/analytics/config', { cache: 'no-store' })
-        .then((response) => response.ok ? response.json() : null)
+        .then((response) => response.ok ? response.json() as Promise<RuntimeConfig> : null)
         .then((config: RuntimeConfig | null) => {
-          if (cancelled || !config) return
-          configureAnalyticsRuntime(config)
+          if (cancelled) return
+          if (!config || typeof config.enabled !== 'boolean') {
+            configRequestStarted = false
+            return
+          }
+          configureAnalyticsRuntime(config, true)
           initializeGtm()
-          if (hasAnalyticsConsent() && (getAnalyticsConsent().analytics || getAnalyticsConsent().marketing)) trackPageView()
+          trackCurrentPageOnce(currentPathRef.current)
         })
-        .catch(() => { configLoaded = false })
+        .catch(() => { configRequestStarted = false })
     }
 
-    const sync = (emitPageView = false) => {
+    const sync = () => {
       const next = hasAnalyticsConsent() ? getAnalyticsConsent() : null
       setConsent(next)
       if (next && (next.analytics || next.marketing)) {
-        if (emitPageView && configLoaded) trackPageView()
+        // Dispatch promptly; browser provider calls are queued until public config
+        // has loaded, so first-landing PageView/ViewContent events are not lost.
+        trackCurrentPageOnce(currentPathRef.current)
         const cancelIdle = runWhenIdle(loadRuntimeConfig, 1200)
         if (cancelled) cancelIdle()
       }
@@ -53,7 +87,7 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
     configureAnalyticsRuntime(runtimeConfig)
     sync()
 
-    const onConsentChange = () => sync(true)
+    const onConsentChange = () => sync()
     window.addEventListener('analytics-consent-change', onConsentChange)
 
     return () => {
