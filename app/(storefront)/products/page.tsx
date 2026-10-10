@@ -12,7 +12,7 @@ export async function generateMetadata({ searchParams }: { searchParams: SearchP
   const hasQueryState = Object.values(params).some((value) => Array.isArray(value) ? value.some(Boolean) : Boolean(value))
   return {
     title: 'Shop the catalogue',
-    description: 'Browse published mobile phones and gadgets from the SahiGadget catalogue.',
+    description: 'Browse published mobile phones and gadgets from PhonerBazar.',
     alternates: { canonical: '/products' },
     robots: hasQueryState ? { index: false, follow: true } : { index: true, follow: true },
   }
