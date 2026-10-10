@@ -68,18 +68,19 @@ export async function POST(request: Request) {
     }
 
     after(() => dispatchAnalyticsEvent(event).then((result) => {
+      const deliveries = 'deliveries' in result ? result.deliveries : []
       console.log(JSON.stringify({
         level: result.ok ? 'info' : 'warn',
         msg: 'analytics_dispatch_result',
         eventName: event.eventName,
-        destinations: result.deliveries?.map((delivery) => ({
+        destinations: deliveries.map((delivery) => ({
           destination: delivery.destination,
           ok: delivery.ok,
           status: delivery.status ?? null,
           category: delivery.category ?? null,
           latency: delivery.latency,
           attempts: delivery.attempts,
-        })) || [],
+        })),
         skipped: result.skipped,
       }))
     }).catch((error) => {
