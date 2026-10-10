@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- server data is serialized from Supabase relation responses and revalidated by server actions. */
 
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { ClipboardList, Download, MapPin, PackageCheck, Save, ShieldCheck } from 'lucide-react'
 
 import { createPathaoShipmentAction, refreshPathaoShipmentStatusAction, requestManualPathaoReversePickupAction } from '@/lib/admin/delivery-actions'
