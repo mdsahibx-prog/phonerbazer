@@ -25,7 +25,7 @@ async function main() {
     isValidServerGtmEndpoint,
     buildServerGtmEnvelope,
   } = await import('../lib/analytics/server-gtm')
-  const { ANALYTICS_PROVIDER_ADAPTERS, buildGa4MeasurementPayload } = await import('../lib/analytics/provider-adapters')
+  const { ANALYTICS_PROVIDER_ADAPTERS, buildGa4MeasurementPayload, interpretGa4ValidationResponse } = await import('../lib/analytics/provider-adapters')
   const { isAnalyticsDeliveryPermanentlyIneligible } = await import('../lib/analytics/worker')
   const { isBrowserAnalyticsEventEnabled } = await import('../lib/analytics/browser-registry')
   const { ANALYTICS_MAX_DELIVERY_ATTEMPTS } = await import('../lib/analytics/delivery-ledger')
@@ -134,6 +134,32 @@ async function main() {
   const ga4EventParams = ga4Payload.events[0].params as Record<string, unknown>
   assert.match(ga4Payload.client_id, /^\d+\.\d+$/)
   assert.match(String(ga4EventParams.session_id), /^\d+$/)
+
+  // GA4's validation endpoint can return HTTP 200 with validation errors.
+  const validGa4Response = interpretGa4ValidationResponse({
+    ok: true, latency: 8, status: 200,
+    responseBody: '{"validationMessages":[]}', attempts: 1,
+  })
+  assert.equal(validGa4Response.ok, true)
+
+  const invalidGa4Response = interpretGa4ValidationResponse({
+    ok: true, latency: 8, status: 200,
+    responseBody: '{"validationMessages":[{"fieldPath":"events[0].name","description":"Unexpected event"}]}',
+    attempts: 1,
+  })
+  assert.equal(invalidGa4Response.ok, false)
+  assert.equal(invalidGa4Response.category, 'HTTP_ERROR')
+
+  const malformedGa4Response = interpretGa4ValidationResponse({
+    ok: true, latency: 8, status: 200, responseBody: '{}', attempts: 1,
+  })
+  assert.equal(malformedGa4Response.ok, false)
+
+  const failedGa4Response = interpretGa4ValidationResponse({
+    ok: false, latency: 10, status: 500, category: 'HTTP_ERROR',
+    attempts: 1, responseBody: 'server error',
+  })
+  assert.equal(failedGa4Response.ok, false)
 
   assert.equal(isLiveProviderDispatchAllowed(true), false)
   assert.equal(isLiveProviderDispatchAllowed(false), true)
