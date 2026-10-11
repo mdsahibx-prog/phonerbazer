@@ -28,6 +28,7 @@ export function OrderSuccessView() {
     if (!order || order.paymentMethod !== 'COD' || !order.orderId) return
     trackMetaPixelPurchase({
       orderId: order.orderId,
+      currency: 'BDT',
       value: order.grandTotal,
       shipping: order.delivery.charge,
       items: order.items.map((item) => ({
