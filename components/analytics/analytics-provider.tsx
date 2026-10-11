@@ -9,6 +9,15 @@ type Consent = { necessary: true; analytics: boolean; marketing: boolean }
 type RuntimeConfig = { projectKey: string; currency: string; enabled: boolean; marketingEnabled: boolean; ga4MeasurementId: string; gtmContainerId: string; metaPixelId: string; tiktokPixelId: string; ga4ServerDeliveryEnabled?: boolean; eventControls: Record<string, boolean> }
 const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = { ...DEFAULT_ANALYTICS_PROJECT_CONFIG, enabled: false, marketingEnabled: false, ga4MeasurementId: '', gtmContainerId: '', metaPixelId: '', tiktokPixelId: '', ga4ServerDeliveryEnabled: false, eventControls: {} }
 
+function trackPageViewOnce(path: string | null, lastPathRef: { current: string | null }) {
+  if (!path || !isAnalyticsPageViewPathAllowed(path) || !hasAnalyticsConsent()) return
+  const currentConsent = getAnalyticsConsent()
+  if (!currentConsent.analytics && !currentConsent.marketing) return
+  if (lastPathRef.current === path) return
+  trackPageView()
+  lastPathRef.current = path
+}
+
 function runWhenIdle(callback: () => void, timeout = 1500) {
   if (typeof window === 'undefined') return () => undefined
   const idleWindow = window as Window & { requestIdleCallback?: (cb: () => void, options?: { timeout: number }) => number; cancelIdleCallback?: (id: number) => void }
@@ -26,16 +35,6 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
   const pathname = usePathname()
   const currentPathRef = useRef<string | null>(pathname)
   const lastPageViewPathRef = useRef<string | null>(null)
-
-  const trackCurrentPageOnce = (path: string | null) => {
-    if (!path || !isAnalyticsPageViewPathAllowed(path)) return
-    if (!hasAnalyticsConsent()) return
-    const currentConsent = getAnalyticsConsent()
-    if (!currentConsent.analytics && !currentConsent.marketing) return
-    if (lastPageViewPathRef.current === path) return
-    trackPageView()
-    lastPageViewPathRef.current = path
-  }
 
   // Next.js App Router transitions don't reload the document. Track each
   // public route explicitly so Pixel history auto-tracking can stay disabled.
@@ -68,7 +67,7 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
           }
           configureAnalyticsRuntime(config, true)
           initializeGtm()
-          trackCurrentPageOnce(currentPathRef.current)
+          trackPageViewOnce(currentPathRef.current, lastPageViewPathRef)
         })
         .catch(() => { configRequestStarted = false })
     }
