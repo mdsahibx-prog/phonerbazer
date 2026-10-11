@@ -9,19 +9,54 @@ import { clearCartAction, removeCartItemAction, updateCartItemAction } from '@/l
 import { formatPrice } from '@/lib/services/storefront-utils'
 
 type CartItem = { id: string; quantity: number; product?: { name: string; slug: string; image_url: string | null }; variant?: { sku: string; variant_title: string; price: number; is_in_stock: boolean } }
+function analyticsItem(item: CartItem, quantity = item.quantity) {
+  return {
+    item_id: item.variant?.sku || item.id,
+    item_name: item.product?.name || item.variant?.variant_title || 'Product',
+    price: Number(item.variant?.price ?? 0),
+    quantity,
+  }
+}
 export function CartClient({ initialCart }: { initialCart: { items: CartItem[]; subtotal: number; itemCount: number } }) {
   const [cart, setCart] = useState(initialCart)
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const pendingTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const pendingQuantities = useRef<Map<string, number>>(new Map())
-  useEffect(() => { trackClientEvent({ eventName: 'view_cart', commerce: { currency: 'BDT', value: initialCart.subtotal, item_count: initialCart.itemCount } }) }, [initialCart.subtotal, initialCart.itemCount])
+  useEffect(() => {
+    trackClientEvent({
+      eventName: 'view_cart',
+      commerce: {
+        currency: 'BDT',
+        value: initialCart.subtotal,
+        item_count: initialCart.itemCount,
+        items: initialCart.items.map((item) => analyticsItem(item)),
+      },
+    })
+  }, [initialCart.items, initialCart.itemCount, initialCart.subtotal])
   async function run(action: () => Promise<{ ok: boolean; message?: string; data?: typeof initialCart }>, eventName?: 'add_to_cart' | 'remove_from_cart') {
+    const previous = cart
     setBusy(true); setMessage('')
     const result = await action()
     setBusy(false)
     if (!result.ok) { setMessage(result.message ?? 'Unable to update your cart.'); return }
-    if (result.data) { setCart(result.data); if (eventName) trackClientEvent({ eventName, commerce: { currency: 'BDT', value: result.data.subtotal, item_count: result.data.itemCount } }) }
+    if (result.data) {
+      setCart(result.data)
+      if (eventName) {
+        const value = eventName === 'remove_from_cart'
+          ? Math.max(previous.subtotal - result.data.subtotal, 0)
+          : Math.max(result.data.subtotal - previous.subtotal, 0)
+        trackClientEvent({
+          eventName,
+          commerce: {
+            currency: 'BDT',
+            value,
+            item_count: Math.abs(previous.itemCount - result.data.itemCount),
+            items: previous.items.map((item) => analyticsItem(item)),
+          },
+        })
+      }
+    }
   }
 
   async function removeItemFast(item: CartItem) {
@@ -43,7 +78,15 @@ export function CartClient({ initialCart }: { initialCart: { items: CartItem[]; 
       return
     }
     if (result.data) setCart(result.data)
-    trackClientEvent({ eventName: 'remove_from_cart', commerce: { currency: 'BDT', value: result.data?.subtotal ?? 0, item_count: result.data?.itemCount ?? 0 } })
+    trackClientEvent({
+      eventName: 'remove_from_cart',
+      commerce: {
+        currency: 'BDT',
+        value: Number(item.variant?.price ?? 0) * item.quantity,
+        item_count: item.quantity,
+        items: [analyticsItem(item)],
+      },
+    })
   }
 
   function changeQuantity(item: CartItem, nextQuantity: number) {
@@ -76,7 +119,16 @@ export function CartClient({ initialCart }: { initialCart: { items: CartItem[]; 
         return
       }
       if (result.data) setCart(result.data)
-      trackClientEvent({ eventName: target > previousQuantity ? 'add_to_cart' : 'remove_from_cart', commerce: { currency: 'BDT', value: result.data?.subtotal ?? 0, item_count: result.data?.itemCount ?? 0 } })
+      const changedQuantity = Math.abs(target - previousQuantity)
+      trackClientEvent({
+        eventName: target > previousQuantity ? 'add_to_cart' : 'remove_from_cart',
+        commerce: {
+          currency: 'BDT',
+          value: Number(item.variant?.price ?? 0) * changedQuantity,
+          item_count: changedQuantity,
+          items: [analyticsItem(item, changedQuantity)],
+        },
+      })
     }, 250))
   }
   return <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -112,7 +164,7 @@ export function CartClient({ initialCart }: { initialCart: { items: CartItem[]; 
       <h2 className="mt-2 text-2xl font-black tracking-tight">Confirm your details next</h2>
       <p className="mt-2 text-sm leading-6 text-slate-300">Your delivery location and final order total will be confirmed securely at checkout.</p>
       <div className="mt-5 rounded-xl bg-white/5 p-4"><div className="flex justify-between text-sm text-slate-300"><span>{cart.itemCount} item{cart.itemCount === 1 ? '' : 's'}</span><span>{formatPrice(cart.subtotal)}</span></div><div className="mt-3 border-t border-white/10 pt-3 flex justify-between"><span className="font-bold">Subtotal</span><span className="text-xl font-black">{formatPrice(cart.subtotal)}</span></div></div>
-      <Link onClick={() => { if (cart.items.length) trackClientEvent({ eventName: 'begin_checkout', commerce: { currency: 'BDT', value: cart.subtotal, item_count: cart.itemCount } }) }} href={cart.items.length ? '/order?source=cart' : '/products'} className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-orange-400 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-orange-950/20 transition hover:bg-orange-300">Continue & confirm order →</Link>
+      <Link onClick={() => { if (cart.items.length) trackClientEvent({ eventName: 'begin_checkout', commerce: { currency: 'BDT', value: cart.subtotal, item_count: cart.itemCount, items: cart.items.map((item) => analyticsItem(item)) } }) }} href={cart.items.length ? '/order?source=cart' : '/products'} className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-orange-400 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-orange-950/20 transition hover:bg-orange-300">Continue & confirm order →</Link>
       <div className="mt-4 grid grid-cols-2 gap-2 text-[11px] font-bold text-slate-300"><div className="rounded-lg bg-white/5 p-2 text-center">✓ Secure checkout</div><div className="rounded-lg bg-white/5 p-2 text-center">✓ Stock rechecked</div></div>
     </aside>
   </div>}

@@ -26,8 +26,10 @@ async function main() {
     buildServerGtmEnvelope,
   } = await import('../lib/analytics/server-gtm')
   const { ANALYTICS_PROVIDER_ADAPTERS, buildGa4MeasurementPayload, interpretGa4ValidationResponse } = await import('../lib/analytics/provider-adapters')
+  const { safeAnalyticsConfigForEnvironment } = await import('../lib/analytics/server')
   const { isAnalyticsDeliveryPermanentlyIneligible } = await import('../lib/analytics/worker')
-  const { isBrowserAnalyticsEventEnabled, getMetaPixelIds, buildMetaPixelTrackSingleArgs } = await import('../lib/analytics/browser-registry')
+  const { isBrowserAnalyticsEventEnabled, isBrowserProviderEventAllowed, getMetaPixelIds, buildMetaPixelInitArgs, buildMetaPixelEventData, buildMetaPixelTrackSingleArgs } = await import('../lib/analytics/browser-registry')
+  const { isAnalyticsPageViewPathAllowed } = await import('../lib/analytics/client')
   const { ANALYTICS_MAX_DELIVERY_ATTEMPTS } = await import('../lib/analytics/delivery-ledger')
 
   const base = {
@@ -263,10 +265,50 @@ async function main() {
     true,
   )
 
+  const previewConfig = safeAnalyticsConfigForEnvironment({
+    ...adapterConfig,
+    enabled: true,
+    marketingEnabled: true,
+    ga4MeasurementId: 'G-LIVE',
+    gtmContainerId: 'GTM-LIVE',
+    metaPixelId: '2040714466673633,1052046197788557',
+    metaCapiEnabled: true,
+    tiktokPixelId: 'TT-LIVE',
+    tiktokEventsApiEnabled: true,
+    serverGtmEnabled: true,
+    serverGtmEndpoint: 'https://gtm.example.com',
+  }, 'preview')
+  assert.equal(previewConfig.enabled, false)
+  assert.equal(previewConfig.marketingEnabled, false)
+  assert.equal(previewConfig.ga4MeasurementId, '')
+  assert.equal(previewConfig.gtmContainerId, '')
+  assert.equal(previewConfig.metaPixelId, '')
+  assert.equal(previewConfig.metaCapiEnabled, false)
+  assert.equal(previewConfig.tiktokPixelId, '')
+  assert.equal(previewConfig.tiktokEventsApiEnabled, false)
+  assert.equal(previewConfig.serverGtmEnabled, false)
+
+  const productionConfig = safeAnalyticsConfigForEnvironment(adapterConfig, 'production')
+  assert.equal(productionConfig.enabled, true)
+  assert.equal(productionConfig.metaPixelId, '123')
+
   const browserConfig = { ...adapterConfig, eventControls: { add_to_cart: true, purchase: true } }
   assert.equal(isBrowserAnalyticsEventEnabled('add_to_cart', browserConfig), true)
   assert.equal(isBrowserAnalyticsEventEnabled('add_to_cart', { ...browserConfig, eventControls: { add_to_cart: false } }), false)
   assert.equal(isBrowserAnalyticsEventEnabled('purchase', { ...browserConfig, eventControls: { purchase: false } }), true)
+
+  // Browser provider allowlists prevent internal lifecycle events from going to Meta.
+  assert.equal(isBrowserProviderEventAllowed('META_PIXEL', 'add_to_cart'), true)
+  assert.equal(isBrowserProviderEventAllowed('META_PIXEL', 'purchase'), true)
+  assert.equal(isBrowserProviderEventAllowed('META_PIXEL', 'RISK_ASSESSED'), false)
+  assert.equal(isBrowserProviderEventAllowed('GTM', 'RISK_ASSESSED'), true)
+
+  // Never send page views from administration, auth, or tokenized verification routes.
+  assert.equal(isAnalyticsPageViewPathAllowed('/'), true)
+  assert.equal(isAnalyticsPageViewPathAllowed('/products/nokia-2720-flip'), true)
+  assert.equal(isAnalyticsPageViewPathAllowed('/admin/dashboard'), false)
+  assert.equal(isAnalyticsPageViewPathAllowed('/auth/callback'), false)
+  assert.equal(isAnalyticsPageViewPathAllowed('/verify-order/private-token'), false)
 
   // Meta must initialize each configured pixel once and dispatch only once per pixel.
   assert.deepEqual(
@@ -278,15 +320,49 @@ async function main() {
     [],
   )
   assert.deepEqual(
+    buildMetaPixelInitArgs('2040714466673633'),
+    [
+      ['set', 'autoConfig', false, '2040714466673633'],
+      ['init', '2040714466673633'],
+    ],
+  )
+  assert.deepEqual(
+    buildMetaPixelEventData(base),
+    {
+      currency: 'BDT',
+      value: 1200,
+      content_ids: ['SKU-1'],
+      content_type: 'product',
+      contents: [{ id: 'SKU-1', quantity: 1, item_price: 1200 }],
+      num_items: 1,
+      content_name: 'Demo phone',
+    },
+  )
+  assert.deepEqual(
     buildMetaPixelTrackSingleArgs('2040714466673633', 'AddToCart', base),
     [
       'trackSingle',
       '2040714466673633',
       'AddToCart',
-      { ...base.commerce },
+      {
+        currency: 'BDT',
+        value: 1200,
+        content_ids: ['SKU-1'],
+        content_type: 'product',
+        contents: [{ id: 'SKU-1', quantity: 1, item_price: 1200 }],
+        num_items: 1,
+        content_name: 'Demo phone',
+      },
       { eventID: base.eventId },
     ],
   )
+
+  const privateSearch = buildMetaPixelEventData({
+    ...base,
+    eventName: 'search',
+    commerce: { search_term: 'call me on 01712345678', currency: 'BDT' },
+  })
+  assert.equal('search_string' in privateSearch, false)
 
   assert.equal(ANALYTICS_MAX_DELIVERY_ATTEMPTS, 8)
 

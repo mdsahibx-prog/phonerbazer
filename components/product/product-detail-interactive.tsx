@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element -- product image URLs are dynamic Supabase assets and the project does not configure Next remote image optimization. */
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { BatteryCharging, Banknote, CheckCircle2, ChevronLeft, ChevronRight, Minus, Monitor, Palette, Plus, Share2, ShieldCheck, ShoppingCart, Tag, Truck, Zap } from 'lucide-react'
 import { addToCartAction } from '@/lib/commerce/actions'
@@ -35,7 +35,12 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
   const imageCount = displayImages.length
   const activeImage = displayImages[activeImageIndex] || displayImages[0]
   const imageUrl = activeImage?.image_url || getProductImageUrl(product)
-  useEffect(() => { if (selected) trackProductEvent({ eventName: 'view_item', commerce: { currency: 'BDT', value: selected.price, items: [{ item_id: selected.sku || selected.id, item_name: product.name, item_brand: product.brand?.name, item_category: product.category?.name, price: selected.price, quantity: 1 }] } }) }, [product.brand?.name, product.category?.name, product.name, selected])
+  const viewedProductIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!selected || viewedProductIdRef.current === product.id) return
+    viewedProductIdRef.current = product.id
+    trackProductEvent({ eventName: 'view_item', commerce: { currency: 'BDT', value: selected.price, items: [{ item_id: selected.sku || selected.id, item_name: product.name, item_brand: product.brand?.name, item_category: product.category?.name, price: selected.price, quantity: 1 }] } })
+  }, [product.brand?.name, product.category?.name, product.id, product.name, selected])
 
   function selectVariant(id: string) { const variant = product.variants.find((item) => item.id === id); if (variant) { trackProductEvent({ eventName: 'select_item', commerce: { item_list_name: 'product_detail', items: [{ item_id: variant.sku || variant.id, item_name: product.name, price: variant.price, quantity: 1 }] } }); setActiveImageIndex(0); setSelectedId(id) } }
 
@@ -49,7 +54,7 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
     setCartAdded(false)
     setCartMessage('')
     const result = await addToCartAction({ productId: product.id, variantId: selected.id, quantity })
-    if (result.ok) trackProductEvent({ eventName: 'add_to_cart', commerce: { currency: 'BDT', value: selected.price, items: [{ item_id: selected.sku || selected.id, item_name: product.name, price: selected.price, quantity }] } })
+    if (result.ok) trackProductEvent({ eventName: 'add_to_cart', commerce: { currency: 'BDT', value: selected.price * quantity, items: [{ item_id: selected.sku || selected.id, item_name: product.name, item_brand: product.brand?.name, item_category: product.category?.name, price: selected.price, quantity }] } })
     setCartBusy(false)
     setCartAdded(result.ok)
     setCartMessage(result.ok ? 'Added to cart.' : result.message ?? 'Unable to update your cart.')

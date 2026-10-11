@@ -47,11 +47,16 @@ jobs:
         run: >-
           pnpm exec eslint
           app/api/analytics/route.ts
+          components/analytics/analytics-provider.tsx
+          components/cart/cart-client.tsx
+          components/order/order-success.tsx
+          components/product/product-detail-interactive.tsx
           lib/analytics/browser-registry.ts
           lib/analytics/client.ts
           lib/analytics/events.ts
           lib/analytics/ingestion-policy.ts
           lib/analytics/provider-adapters.ts
+          lib/analytics/server.ts
           scripts/analytics-contract-test.ts
 
       - name: Run commerce and analytics contract tests
