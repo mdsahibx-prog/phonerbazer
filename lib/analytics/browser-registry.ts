@@ -34,6 +34,10 @@ export function isBrowserAnalyticsEventEnabled(eventName: CommerceEventName, con
   return Boolean(definition && (definition.required || config.eventControls[eventName] !== false))
 }
 
+export function isBrowserProviderEventAllowed(provider: BrowserProviderId, eventName: CommerceEventName) {
+  return Boolean(ANALYTICS_EVENT_MAP[eventName]?.providers.includes(provider))
+}
+
 function loadScript(src: string, idValue: string) {
   if (document.getElementById(idValue)) return
   const script = document.createElement('script')
@@ -138,7 +142,7 @@ type BrowserProviderAdapter = {
 
 const gtmAdapter: BrowserProviderAdapter = {
   id: 'GTM',
-  canDispatch: (event, config) => Boolean(isBrowserAnalyticsEventEnabled(event.eventName, config) && config.enabled && config.gtmContainerId && (event.consent.analytics || event.consent.marketing) && !event.testMode),
+  canDispatch: (event, config) => Boolean(isBrowserAnalyticsEventEnabled(event.eventName, config) && isBrowserProviderEventAllowed('GTM', event.eventName) && config.enabled && config.gtmContainerId && event.consent.marketing && !event.testMode),
   initialize: (config) => {
     if (typeof window === 'undefined' || !config.enabled || !config.gtmContainerId) return
     const w = getWindow()
@@ -184,7 +188,7 @@ const gtmAdapter: BrowserProviderAdapter = {
 
 const ga4Adapter: BrowserProviderAdapter = {
   id: 'GA4',
-  canDispatch: (event, config) => Boolean(isBrowserAnalyticsEventEnabled(event.eventName, config) && config.enabled && config.ga4MeasurementId && !config.ga4ServerDeliveryEnabled && !config.gtmContainerId && event.consent.analytics && !event.testMode),
+  canDispatch: (event, config) => Boolean(isBrowserAnalyticsEventEnabled(event.eventName, config) && isBrowserProviderEventAllowed('GA4', event.eventName) && config.enabled && config.ga4MeasurementId && !config.ga4ServerDeliveryEnabled && !config.gtmContainerId && event.consent.analytics && !event.testMode),
   dispatch: (event, config) => {
     const idValue = config.ga4MeasurementId
     if (!idValue) return
@@ -207,7 +211,7 @@ const ga4Adapter: BrowserProviderAdapter = {
 
 const metaPixelAdapter: BrowserProviderAdapter = {
   id: 'META_PIXEL',
-  canDispatch: (event, config) => Boolean(isBrowserAnalyticsEventEnabled(event.eventName, config) && config.enabled && config.marketingEnabled && config.metaPixelId && event.consent.marketing && !event.testMode),
+  canDispatch: (event, config) => Boolean(isBrowserAnalyticsEventEnabled(event.eventName, config) && isBrowserProviderEventAllowed('META_PIXEL', event.eventName) && config.enabled && config.marketingEnabled && config.metaPixelId && event.consent.marketing && !event.testMode),
   dispatch: (event, config) => {
     const w = getWindow()
     const pixelIds = getMetaPixelIds(config.metaPixelId)
@@ -252,7 +256,7 @@ const metaPixelAdapter: BrowserProviderAdapter = {
 
 const tiktokPixelAdapter: BrowserProviderAdapter = {
   id: 'TIKTOK_PIXEL',
-  canDispatch: (event, config) => Boolean(isBrowserAnalyticsEventEnabled(event.eventName, config) && config.enabled && config.marketingEnabled && config.tiktokPixelId && event.consent.marketing && !event.testMode),
+  canDispatch: (event, config) => Boolean(isBrowserAnalyticsEventEnabled(event.eventName, config) && isBrowserProviderEventAllowed('TIKTOK_PIXEL', event.eventName) && config.enabled && config.marketingEnabled && config.tiktokPixelId && event.consent.marketing && !event.testMode),
   dispatch: (event, config) => {
     const pixelId = config.tiktokPixelId
     if (!pixelId) return
