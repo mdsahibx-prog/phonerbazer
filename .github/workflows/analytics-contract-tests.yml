@@ -49,6 +49,7 @@ jobs:
           app/api/analytics/route.ts
           components/analytics/analytics-provider.tsx
           components/order/order-success.tsx
+          components/product/product-detail-interactive.tsx
           lib/analytics/browser-registry.ts
           lib/analytics/client.ts
           lib/analytics/events.ts
