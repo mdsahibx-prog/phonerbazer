@@ -26,6 +26,7 @@ async function main() {
     buildServerGtmEnvelope,
   } = await import('../lib/analytics/server-gtm')
   const { ANALYTICS_PROVIDER_ADAPTERS, buildGa4MeasurementPayload, interpretGa4ValidationResponse } = await import('../lib/analytics/provider-adapters')
+  const { safeAnalyticsConfigForEnvironment } = await import('../lib/analytics/server')
   const { isAnalyticsDeliveryPermanentlyIneligible } = await import('../lib/analytics/worker')
   const { isBrowserAnalyticsEventEnabled, isBrowserProviderEventAllowed, getMetaPixelIds, buildMetaPixelInitArgs, buildMetaPixelEventData, buildMetaPixelTrackSingleArgs } = await import('../lib/analytics/browser-registry')
   const { isAnalyticsPageViewPathAllowed } = await import('../lib/analytics/client')
@@ -263,6 +264,33 @@ async function main() {
     ),
     true,
   )
+
+  const previewConfig = safeAnalyticsConfigForEnvironment({
+    ...adapterConfig,
+    enabled: true,
+    marketingEnabled: true,
+    ga4MeasurementId: 'G-LIVE',
+    gtmContainerId: 'GTM-LIVE',
+    metaPixelId: '2040714466673633,1052046197788557',
+    metaCapiEnabled: true,
+    tiktokPixelId: 'TT-LIVE',
+    tiktokEventsApiEnabled: true,
+    serverGtmEnabled: true,
+    serverGtmEndpoint: 'https://gtm.example.com',
+  }, 'preview')
+  assert.equal(previewConfig.enabled, false)
+  assert.equal(previewConfig.marketingEnabled, false)
+  assert.equal(previewConfig.ga4MeasurementId, '')
+  assert.equal(previewConfig.gtmContainerId, '')
+  assert.equal(previewConfig.metaPixelId, '')
+  assert.equal(previewConfig.metaCapiEnabled, false)
+  assert.equal(previewConfig.tiktokPixelId, '')
+  assert.equal(previewConfig.tiktokEventsApiEnabled, false)
+  assert.equal(previewConfig.serverGtmEnabled, false)
+
+  const productionConfig = safeAnalyticsConfigForEnvironment(adapterConfig, 'production')
+  assert.equal(productionConfig.enabled, true)
+  assert.equal(productionConfig.metaPixelId, '123')
 
   const browserConfig = { ...adapterConfig, eventControls: { add_to_cart: true, purchase: true } }
   assert.equal(isBrowserAnalyticsEventEnabled('add_to_cart', browserConfig), true)
