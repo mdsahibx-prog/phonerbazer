@@ -48,6 +48,7 @@ jobs:
           pnpm exec eslint
           app/api/analytics/route.ts
           components/analytics/analytics-provider.tsx
+          components/cart/cart-client.tsx
           components/order/order-success.tsx
           components/product/product-detail-interactive.tsx
           lib/analytics/browser-registry.ts
