@@ -32,27 +32,30 @@ export function safeAnalyticsConfigForEnvironment(config: AnalyticsConfig, envir
   }
 }
 
-const readConfig = unstable_cache(async (): Promise<AnalyticsConfig> => {
-  let candidate = DEFAULT_ANALYTICS_CONFIG
+const readStoredConfig = unstable_cache(async (): Promise<Partial<AnalyticsConfig>> => {
   try {
     const db = createAdminClient()
     const { data } = await db.from('settings').select('value').eq('key', 'analytics_config').maybeSingle()
-    const stored = (data?.value as Partial<AnalyticsConfig> | null) || {}
-    candidate = {
-      ...DEFAULT_ANALYTICS_CONFIG,
-      ...stored,
-      projectKey: normalizeAnalyticsProjectKey(stored.projectKey),
-      currency: normalizeAnalyticsCurrency(stored.currency),
-      eventControls: { ...DEFAULT_ANALYTICS_CONFIG.eventControls, ...(stored.eventControls || {}) },
-      environment: DEFAULT_ANALYTICS_CONFIG.environment,
-    }
+    return (data?.value as Partial<AnalyticsConfig> | null) || {}
   } catch {
-    candidate = DEFAULT_ANALYTICS_CONFIG
+    return {}
   }
-  return safeAnalyticsConfigForEnvironment(candidate, DEFAULT_ANALYTICS_CONFIG.environment)
-}, ['analytics-config-v2'], { revalidate: 60, tags: ['analytics-config'] });
-export async function getAnalyticsConfig() { return readConfig() }
+}, ['analytics-config-stored-v1'], { revalidate: 60, tags: ['analytics-config'] })
 
+export async function getAnalyticsConfig() {
+  const stored = await readStoredConfig()
+  const candidate: AnalyticsConfig = {
+    ...DEFAULT_ANALYTICS_CONFIG,
+    ...stored,
+    projectKey: normalizeAnalyticsProjectKey(stored.projectKey),
+    currency: normalizeAnalyticsCurrency(stored.currency),
+    eventControls: { ...DEFAULT_ANALYTICS_CONFIG.eventControls, ...(stored.eventControls || {}) },
+    environment: DEFAULT_ANALYTICS_CONFIG.environment,
+  }
+  // Apply deployment-specific safety after the shared cached DB read: a Preview
+  // deployment must never inherit a cached Production destination configuration.
+  return safeAnalyticsConfigForEnvironment(candidate, DEFAULT_ANALYTICS_CONFIG.environment)
+}
 export async function dispatchAnalyticsEvent(event: CanonicalCommerceEvent) {
   const config = await readConfig()
   const definition = ANALYTICS_EVENT_MAP[event.eventName]
