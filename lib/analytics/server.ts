@@ -57,7 +57,7 @@ export async function getAnalyticsConfig() {
   return safeAnalyticsConfigForEnvironment(candidate, DEFAULT_ANALYTICS_CONFIG.environment)
 }
 export async function dispatchAnalyticsEvent(event: CanonicalCommerceEvent) {
-  const config = await readConfig()
+  const config = await getAnalyticsConfig()
   const definition = ANALYTICS_EVENT_MAP[event.eventName]
   const allows = (provider: AnalyticsProviderId) => Boolean(definition?.providers.includes(provider))
   const masterAllowed = config.enabled &&
