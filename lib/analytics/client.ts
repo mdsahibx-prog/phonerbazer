@@ -134,6 +134,9 @@ export function setAnalyticsConsent(value: Consent | 'granted' | 'denied') {
 }
 
 export function initializeGtm() {
+  // GTM container contents are managed externally. Until each marketing tag's
+  // consent rules are verified, don't load the container without marketing consent.
+  if (!consent().marketing) return false
   initializeBrowserAnalyticsProviders(runtimeConfig)
   return Boolean(runtimeConfig.enabled && runtimeConfig.gtmContainerId)
 }
@@ -157,7 +160,7 @@ export function configureAnalyticsRuntime(config: { projectKey?: string; currenc
     if (hasConfiguredGoogleTag && (currentConsent.analytics || currentConsent.marketing)) {
       // Queue both states before any Google tag script loads, including returning visitors.
       pushGtmConsent(currentConsent, true)
-      initializeBrowserAnalyticsProviders(runtimeConfig)
+      if (currentConsent.marketing) initializeBrowserAnalyticsProviders(runtimeConfig)
     }
     if (isFinalConfig) {
       analyticsRuntimeConfigured = true
@@ -202,6 +205,7 @@ export function trackClientEvent(input: ClientEventInput) {
  */
 export function trackMetaPixelPurchase(input: {
   orderId: string
+  currency: string
   value: number
   shipping: number
   items: Array<{ item_id: string; item_name: string; price: number; quantity: number }>
@@ -231,7 +235,7 @@ export function trackMetaPixelPurchase(input: {
     device: null,
     consent: currentConsent,
     commerce: {
-      currency: runtimeConfig.currency,
+      currency: /^[A-Za-z]{3}$/.test(input.currency) ? input.currency.toUpperCase() : runtimeConfig.currency,
       value: input.value,
       shipping: Number.isFinite(input.shipping) && input.shipping >= 0 ? input.shipping : 0,
       items: input.items.slice(0, 50).map((item) => ({
