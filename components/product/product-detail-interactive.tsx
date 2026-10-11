@@ -54,7 +54,7 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
     setCartAdded(false)
     setCartMessage('')
     const result = await addToCartAction({ productId: product.id, variantId: selected.id, quantity })
-    if (result.ok) trackProductEvent({ eventName: 'add_to_cart', commerce: { currency: 'BDT', value: selected.price, items: [{ item_id: selected.sku || selected.id, item_name: product.name, price: selected.price, quantity }] } })
+    if (result.ok) trackProductEvent({ eventName: 'add_to_cart', commerce: { currency: 'BDT', value: selected.price * quantity, items: [{ item_id: selected.sku || selected.id, item_name: product.name, item_brand: product.brand?.name, item_category: product.category?.name, price: selected.price, quantity }] } })
     setCartBusy(false)
     setCartAdded(result.ok)
     setCartMessage(result.ok ? 'Added to cart.' : result.message ?? 'Unable to update your cart.')
