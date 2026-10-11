@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { useMemo, useSyncExternalStore } from 'react'
 import { CheckCircle2, ClipboardCheck, PackageCheck, Truck } from 'lucide-react'
+import { useEffect } from 'react'
+import { trackMetaPixelPurchase } from '@/lib/analytics/client'
 
 import type { OrderSuccessSummary } from '@/lib/orders/schema'
 
@@ -21,6 +23,21 @@ export function OrderSuccessView() {
     if (!rawOrder) return null
     try { return JSON.parse(rawOrder) as OrderSuccessSummary } catch { return null }
   }, [rawOrder])
+
+  useEffect(() => {
+    if (!order || order.paymentMethod !== 'COD' || !order.orderId) return
+    trackMetaPixelPurchase({
+      orderId: order.orderId,
+      value: order.grandTotal,
+      shipping: order.delivery.charge,
+      items: order.items.map((item) => ({
+        item_id: item.sku,
+        item_name: item.productName,
+        price: item.unitPrice,
+        quantity: item.quantity,
+      })),
+    })
+  }, [order])
 
   if (!order) {
     return (
