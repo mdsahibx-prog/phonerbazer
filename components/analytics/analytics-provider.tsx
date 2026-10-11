@@ -78,7 +78,7 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
       if (next && (next.analytics || next.marketing)) {
         // Dispatch promptly; browser provider calls are queued until public config
         // has loaded, so first-landing PageView/ViewContent events are not lost.
-        trackCurrentPageOnce(currentPathRef.current)
+        trackPageViewOnce(currentPathRef.current, lastPageViewPathRef)
         const cancelIdle = runWhenIdle(loadRuntimeConfig, 1200)
         if (cancelled) cancelIdle()
       }
