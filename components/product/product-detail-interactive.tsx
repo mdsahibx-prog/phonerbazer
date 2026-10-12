@@ -4,7 +4,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BatteryCharging, Banknote, CheckCircle2, ChevronLeft, ChevronRight, Minus, Monitor, Palette, Plus, Share2, ShieldCheck, ShoppingCart, Tag, Truck, Zap } from 'lucide-react'
+import { BatteryCharging, Banknote, Camera, CheckCircle2, ChevronLeft, ChevronRight, Cpu, HardDrive, Minus, Monitor, Palette, Plus, Radio, Ruler, Share2, ShieldCheck, ShoppingCart, Smartphone, Tag, Truck, Weight, Wifi, Zap } from 'lucide-react'
 import { addToCartAction } from '@/lib/commerce/actions'
 import { prepareGuestCheckoutAction } from '@/lib/commerce/actions'
 
@@ -270,7 +270,7 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
                 {section.paragraphs.length > 0 ? <div className="space-y-2 px-4 py-4">{section.paragraphs.map((paragraph, paragraphIndex) => <p key={paragraphIndex} className="text-sm leading-6 text-slate-600">{paragraph.replace(/^[-*•]\s*/, '')}</p>)}</div> : null}
                 {section.details.length > 0 ? <dl className="divide-y divide-slate-100 px-4">{section.details.map((detail, detailIndex) => {
                   const label = detail.label.toLowerCase()
-                  const SpecIcon = /display|screen/.test(label) ? Monitor : /battery|power/.test(label) ? BatteryCharging : /colour|color/.test(label) ? Palette : /network|gsm|sim/.test(label) ? Zap : /bluetooth|connectivity/.test(label) ? Share2 : /usb|charging|port/.test(label) ? ShoppingCart : /radio|audio|speaker|sound/.test(label) ? CheckCircle2 : /warranty|guarantee|support/.test(label) ? ShieldCheck : /delivery|shipping/.test(label) ? Truck : /price|cost/.test(label) ? Banknote : /ram|memory|storage/.test(label) ? BatteryCharging : /camera|photo/.test(label) ? Monitor : /dimension|size|weight/.test(label) ? ChevronRight : /brand|model|type|name/.test(label) ? Tag : CheckCircle2
+                  const SpecIcon = /display|screen/.test(label) ? Monitor : /battery|power/.test(label) ? BatteryCharging : /colour|color/.test(label) ? Palette : /network|gsm|sim/.test(label) ? Smartphone : /bluetooth|connectivity/.test(label) ? Share2 : /usb|charging|port/.test(label) ? Zap : /radio|audio|speaker|sound/.test(label) ? Radio : /warranty|guarantee|support/.test(label) ? ShieldCheck : /delivery|shipping/.test(label) ? Truck : /price|cost/.test(label) ? Banknote : /ram|processor|chip/.test(label) ? Cpu : /memory|storage|card/.test(label) ? HardDrive : /camera|photo/.test(label) ? Camera : /dimension|size/.test(label) ? Ruler : /weight/.test(label) ? Weight : /wifi|wireless|network/.test(label) ? Wifi : /brand|model|type|name/.test(label) ? Tag : CheckCircle2
                   return <div key={detail.label + detailIndex} className="grid grid-cols-[minmax(0,.85fr)_minmax(0,1.15fr)] gap-3 py-3"><dt className="flex min-w-0 items-start gap-1.5 text-xs font-semibold leading-5 text-slate-500"><SpecIcon aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-orange-600" /><span className="break-words">{detail.label}</span></dt><dd className="break-words text-right text-xs font-bold leading-5 text-slate-900">{detail.value}</dd></div>
                 })}</dl> : null}
               </section>
