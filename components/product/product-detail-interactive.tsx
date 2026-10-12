@@ -125,8 +125,10 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
     return match?.[1]?.trim().replace(/\s+/g, ' ').replace(/[.,;]+$/, '') || ''
   }
   const isNokia2720Flip = /nokia\s*2720\s*flip/i.test(product.name)
-  const displaySpec = readSpec(/(?:display(?:\s*size)?|screen\s*size)\s*[:\-]\s*([^|;\n\r<]{1,70})/i) || (isNokia2720Flip ? '2.8″ + 1.3″ external' : '')
-  const batterySpec = readSpec(/(?:battery(?:\s*capacity)?|battery\s*size)\s*[:\-]\s*([^|;\n\r<]{1,50})/i) || (isNokia2720Flip ? '1,500 mAh' : '')
+  const rawDisplaySpec = readSpec(/(?:display(?:\s*size)?|screen\s*size)\s*[:\-]\s*([^|;\n\r<]{1,100})/i)
+  const displaySpec = (rawDisplaySpec.split(/[,;]|\b(?:aspect ratio|approximately|pixel density)\b/i)[0] || '').trim() || (isNokia2720Flip ? '2.8″ + 1.3″ external' : '')
+  const rawBatterySpec = readSpec(/(?:battery(?:\s*capacity)?|battery\s*size)\s*[:\-]\s*([^|;\n\r<]{1,70})/i)
+  const batterySpec = rawBatterySpec.match(/\b\d[\d,.]*\s*mAh\b/i)?.[0] || (rawBatterySpec.split(/[,;]/)[0] || '').trim() || (isNokia2720Flip ? '1,500 mAh' : '')
   const parsedDescriptionSections = normalizedDescription.split(/(?=^##\s)/m).map((section) => {
     const lines = section.split(/\n/).map((line) => line.trim()).filter(Boolean)
     const firstLine = lines[0] || ''
@@ -197,21 +199,20 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
                 </div>
                 {selected?.compare_at_price && selected.compare_at_price > selected.price ? <span className="mt-2 inline-flex rounded-full bg-orange-50 px-3 py-1.5 text-xs font-black text-orange-700">Save {formatPrice(selected.compare_at_price - selected.price)} · {discount}% off</span> : null}
               </div>
-              <div className="flex min-h-[112px] flex-col justify-center rounded-2xl border border-orange-100 bg-gradient-to-br from-orange-50 via-white to-amber-50 p-3 shadow-sm sm:min-h-[120px] sm:p-4">
-                <span className="mb-2 inline-flex h-8 w-8 items-center justify-center rounded-xl bg-white text-orange-700 shadow-sm ring-1 ring-orange-100"><Banknote className="h-4 w-4" /></span>
-                <p className="text-xs font-black leading-4 text-slate-950 sm:text-sm">Cash on Delivery</p>
-                <p className="mt-1 text-[10px] font-semibold leading-4 text-slate-500 sm:text-xs">Pay when your order arrives</p>
+              <div className="flex min-h-[76px] flex-col justify-center rounded-xl border border-orange-100 bg-orange-50/70 p-2.5 sm:min-h-[80px] sm:p-3">
+                <span className="mb-1.5 inline-flex h-6 w-6 items-center justify-center rounded-lg bg-white text-orange-700 ring-1 ring-orange-100"><Banknote className="h-3.5 w-3.5" /></span>
+                <p className="text-xs font-black leading-4 text-slate-950">Cash on Delivery</p>
               </div>
             </div>
 
             {(product.brand || product.category || product.product_type || colourValues || ramValues || storageValues) ? (
-              <div className="mt-6 border-t border-slate-100 pt-5">
-                <div className="flex items-center justify-between gap-3"><p className="text-sm font-black text-slate-950">Key highlights</p><span className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Product overview</span></div>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  {product.brand ? <div className="min-h-[92px] rounded-xl border border-slate-100 bg-slate-50/70 p-3"><Tag className="h-4 w-4 text-orange-600" /><p className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Brand</p><p className="mt-0.5 break-words text-xs font-bold text-slate-950">{product.brand.name}</p></div> : null}
-                  <div className="min-h-[92px] rounded-xl border border-slate-100 bg-slate-50/70 p-3"><Monitor className="h-4 w-4 text-orange-600" /><p className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Display</p><p className="mt-0.5 break-words text-xs font-bold text-slate-950">{displaySpec || 'See full specifications'}</p></div>
-                  {colourValues ? <div className="min-h-[92px] rounded-xl border border-slate-100 bg-slate-50/70 p-3"><Palette className="h-4 w-4 text-orange-600" /><p className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Colour</p><p className="mt-0.5 break-words text-xs font-bold text-slate-950">{colourValues}</p></div> : null}
-                  <div className="min-h-[92px] rounded-xl border border-slate-100 bg-slate-50/70 p-3"><BatteryCharging className="h-4 w-4 text-orange-600" /><p className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Battery</p><p className="mt-0.5 break-words text-xs font-bold text-slate-950">{batterySpec || 'See full specifications'}</p></div>
+              <div className="mt-4 border-t border-slate-100 pt-3">
+                <p className="text-sm font-black text-slate-950">মূল তথ্য</p>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {product.brand ? <div className="flex min-h-[60px] items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/70 p-2.5"><Tag aria-hidden="true" className="h-4 w-4 shrink-0 text-orange-600" /><div className="min-w-0"><p className="text-[10px] font-semibold text-slate-500">Brand</p><p className="break-words text-xs font-bold text-slate-950">{product.brand.name}</p></div></div> : null}
+                  <div className="flex min-h-[60px] items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/70 p-2.5"><Monitor aria-hidden="true" className="h-4 w-4 shrink-0 text-orange-600" /><div className="min-w-0"><p className="text-[10px] font-semibold text-slate-500">Display</p><p className="break-words text-xs font-bold text-slate-950">{displaySpec || 'Details below'}</p></div></div>
+                  {colourValues ? <div className="flex min-h-[60px] items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/70 p-2.5"><Palette aria-hidden="true" className="h-4 w-4 shrink-0 text-orange-600" /><div className="min-w-0"><p className="text-[10px] font-semibold text-slate-500">Colour</p><p className="break-words text-xs font-bold text-slate-950">{colourValues}</p></div></div> : null}
+                  <div className="flex min-h-[60px] items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/70 p-2.5"><BatteryCharging aria-hidden="true" className="h-4 w-4 shrink-0 text-orange-600" /><div className="min-w-0"><p className="text-[10px] font-semibold text-slate-500">Battery</p><p className="break-words text-xs font-bold text-slate-950">{batterySpec || 'Details below'}</p></div></div>
                 </div>
               </div>
             ) : null}
@@ -246,10 +247,10 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
                   <button type="button" disabled={cartBusy || buyBusy} onClick={buySelectedNow} className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-orange-600 hover:text-slate-950 hover:shadow-lg active:translate-y-0 active:scale-[.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-200 disabled:cursor-not-allowed disabled:opacity-60"><Zap className="h-4 w-4 transition-transform duration-150 group-hover:scale-110 group-active:scale-90" />{buyBusy ? 'Preparing…' : 'Buy Now'}</button>
                 </div>
                 {cartMessage && cartMessage !== 'Added to cart.' ? <p role="status" className={"text-sm font-bold " + (cartMessage === 'Product link copied.' ? 'text-orange-700' : 'text-rose-600')}>{cartMessage}</p> : null}
-                <div className="grid gap-2 pt-1 sm:grid-cols-3">
-                  <Link href="/shipping" className="group flex min-w-0 items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 transition duration-200 hover:-translate-y-0.5 hover:border-orange-200 hover:bg-white hover:shadow-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100"><span className="purchase-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-orange-600 shadow-sm transition-transform duration-150 group-hover:scale-105 group-active:scale-90"><Banknote className="h-4 w-4" /></span><span className="min-w-0"><span className="block text-xs font-black text-slate-950">Cash on Delivery</span><span className="mt-1 block text-[11px] leading-5 text-slate-500">Place your order through the existing guest checkout and pay according to the available COD flow.</span></span></Link>
-                  <Link href="/shipping" className="group flex min-w-0 items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 transition duration-200 hover:-translate-y-0.5 hover:border-orange-200 hover:bg-white hover:shadow-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100"><span className="purchase-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-orange-600 shadow-sm transition-transform duration-150 group-hover:scale-105 group-active:scale-90"><Truck className="h-4 w-4" /></span><span className="min-w-0"><span className="block text-xs font-black text-slate-950">Delivery across Bangladesh</span><span className="mt-1 block text-[11px] font-semibold leading-5 text-slate-600">Dhaka ৳80 · Outside Dhaka ৳130.</span></span></Link>
-                  <Link href="/warranty" className="group flex min-w-0 items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 transition duration-200 hover:-translate-y-0.5 hover:border-orange-200 hover:bg-white hover:shadow-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100"><span className="purchase-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-orange-600 shadow-sm transition-transform duration-150 group-hover:scale-105 group-active:scale-90"><ShieldCheck className="h-4 w-4" /></span><span className="min-w-0"><span className="block text-xs font-black text-slate-950">Warranty & support</span><span className="mt-1 block text-[11px] leading-5 text-slate-500">7 Days Guarantee & 1 Year Service Warranty. Manufacturer warranty terms apply where applicable.</span></span></Link>
+                <div className="mt-1 grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+                  <Link href="/shipping" className="group flex min-w-0 items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 transition-colors hover:border-orange-200 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-100"><span className="purchase-icon flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white text-orange-600"><Banknote className="h-3.5 w-3.5" /></span><span className="min-w-0"><span className="block text-xs font-black text-slate-950">ক্যাশ অন ডেলিভারি</span></span></Link>
+                  <Link href="/shipping" className="group flex min-w-0 items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 transition-colors hover:border-orange-200 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-100"><span className="purchase-icon flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white text-orange-600"><Truck className="h-3.5 w-3.5" /></span><span className="min-w-0"><span className="block text-xs font-black text-slate-950">ডেলিভারি</span><span className="block text-[11px] font-semibold leading-4 text-slate-600">ঢাকা ৳80 · বাইরে ৳130</span></span></Link>
+                  <Link href="/warranty" className="group flex min-w-0 items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/60 px-2.5 py-2 transition-colors hover:border-orange-200 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-100"><span className="purchase-icon flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white text-orange-600"><ShieldCheck className="h-3.5 w-3.5" /></span><span className="min-w-0"><span className="block text-xs font-black text-slate-950">ওয়ারেন্টি</span><span className="block text-[11px] leading-4 text-slate-500">৭ দিন গ্যারান্টি · ১ বছর সার্ভিস</span></span></Link>
                 </div>
               </div> : <p className="text-sm font-bold text-slate-500">This selected variant is unavailable to order.</p>}
             </div>
@@ -258,20 +259,18 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
       </div>
 
       {descriptionSections.length > 0 ? (
-        <section className="mt-8 space-y-4 border-t border-slate-100 pt-7 sm:mt-10 sm:pt-9" aria-labelledby="product-details-heading">
+        <section className="mt-5 space-y-3 border-t border-slate-100 pt-5 sm:mt-7 sm:pt-6" aria-labelledby="product-details-heading">
           <div className="max-w-2xl">
-            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-orange-600">Know your phone</p>
-            <h2 id="product-details-heading" className="mt-1 text-xl font-black tracking-tight text-slate-950 sm:text-2xl">Product details & specifications</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-500">The essential details, organised for quick reading on any screen.</p>
+            <h2 id="product-details-heading" className="text-lg font-black tracking-tight text-slate-950 sm:text-xl">প্রোডাক্টের বিস্তারিত</h2>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-2 sm:grid-cols-2">
             {descriptionSections.map((section, index) => (
-              <section key={section.title + index} className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <h3 className="border-b border-slate-100 bg-slate-50/80 px-4 py-3 text-sm font-black text-slate-900">{section.title}</h3>
+              <section key={section.title + index} className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                <h3 className="border-b border-slate-100 bg-slate-50/80 px-3 py-2.5 text-sm font-black text-slate-900">{section.title}</h3>
                 {section.paragraphs.length > 0 ? <div className="space-y-2 px-4 py-4">{section.paragraphs.map((paragraph, paragraphIndex) => <p key={paragraphIndex} className="text-sm leading-6 text-slate-600">{paragraph.replace(/^[-*•]\s*/, '')}</p>)}</div> : null}
                 {section.details.length > 0 ? <dl className="divide-y divide-slate-100 px-4">{section.details.map((detail, detailIndex) => {
                   const label = detail.label.toLowerCase()
-                  const SpecIcon = /display|screen/.test(label) ? Monitor : /battery|power/.test(label) ? BatteryCharging : /colour|color/.test(label) ? Palette : /network|gsm|sim|bluetooth|connectivity|usb|radio/.test(label) ? Zap : /warranty|guarantee|support/.test(label) ? ShieldCheck : /delivery|shipping/.test(label) ? Truck : /price|cost/.test(label) ? Banknote : Tag
+                  const SpecIcon = /display|screen/.test(label) ? Monitor : /battery|power/.test(label) ? BatteryCharging : /colour|color/.test(label) ? Palette : /network|gsm|sim/.test(label) ? Zap : /bluetooth|connectivity/.test(label) ? Share2 : /usb|charging|port/.test(label) ? ShoppingCart : /radio|audio|speaker|sound/.test(label) ? CheckCircle2 : /warranty|guarantee|support/.test(label) ? ShieldCheck : /delivery|shipping/.test(label) ? Truck : /price|cost/.test(label) ? Banknote : /ram|memory|storage/.test(label) ? BatteryCharging : /camera|photo/.test(label) ? Monitor : /dimension|size|weight/.test(label) ? ChevronRight : /brand|model|type|name/.test(label) ? Tag : CheckCircle2
                   return <div key={detail.label + detailIndex} className="grid grid-cols-[minmax(0,.85fr)_minmax(0,1.15fr)] gap-3 py-3"><dt className="flex min-w-0 items-start gap-1.5 text-xs font-semibold leading-5 text-slate-500"><SpecIcon aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-orange-600" /><span className="break-words">{detail.label}</span></dt><dd className="break-words text-right text-xs font-bold leading-5 text-slate-900">{detail.value}</dd></div>
                 })}</dl> : null}
               </section>
