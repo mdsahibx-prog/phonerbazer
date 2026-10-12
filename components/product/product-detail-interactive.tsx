@@ -102,7 +102,24 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
   const ramValues = Array.from(new Set(product.variants.map((variant) => variant.ram).filter(Boolean))).join(' · ')
   const storageValues = Array.from(new Set(product.variants.map((variant) => variant.storage).filter(Boolean))).join(' · ')
   const colourValues = Array.from(new Set(product.variants.map((variant) => variant.color).filter(Boolean))).join(' · ')
-  const productSpecText = [product.short_description, product.description].filter(Boolean).join(' ').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ')
+  // Product descriptions have historically been entered as plain text, Markdown, or HTML.
+  // Normalize those formats once so every product uses the same specification layout.
+  const normalizedDescription = (product.description || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<li\b[^>]*>/gi, '- ')
+    .replace(/<\/(?:p|div|li|tr|h[1-6]|section|article)>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\r/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+  const productSpecText = [product.short_description, normalizedDescription].filter(Boolean).join(' ').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ')
   const readSpec = (pattern: RegExp) => {
     const match = productSpecText.match(pattern)
     return match?.[1]?.trim().replace(/\s+/g, ' ').replace(/[.,;]+$/, '') || ''
@@ -110,8 +127,8 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
   const isNokia2720Flip = /nokia\s*2720\s*flip/i.test(product.name)
   const displaySpec = readSpec(/(?:display(?:\s*size)?|screen\s*size)\s*[:\-]\s*([^|;\n\r<]{1,70})/i) || (isNokia2720Flip ? '2.8″ + 1.3″ external' : '')
   const batterySpec = readSpec(/(?:battery(?:\s*capacity)?|battery\s*size)\s*[:\-]\s*([^|;\n\r<]{1,50})/i) || (isNokia2720Flip ? '1,500 mAh' : '')
-  const descriptionSections = (product.description || '').split(/\n(?=##\s)/).map((section) => {
-    const lines = section.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+  const descriptionSections = normalizedDescription.split(/(?=^##\s)/m).map((section) => {
+    const lines = section.split(/\n/).map((line) => line.trim()).filter(Boolean)
     const firstLine = lines[0] || ''
     const title = firstLine.startsWith('## ') ? firstLine.replace(/^##\s*/, '') : 'About this phone'
     const bodyLines = firstLine.startsWith('## ') ? lines.slice(1) : lines
