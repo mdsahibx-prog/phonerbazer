@@ -38,12 +38,30 @@ export function isBrowserProviderEventAllowed(provider: BrowserProviderId, event
   return Boolean(ANALYTICS_EVENT_MAP[eventName]?.providers.includes(provider))
 }
 
+/** Reuse an in-flight or successfully loaded script, but retry a failed request. */
+export function shouldReuseAnalyticsScript(existingStatus: string | undefined) {
+  return existingStatus !== 'error'
+}
+
 function loadScript(src: string, idValue: string) {
-  if (document.getElementById(idValue)) return
+  const existing = document.getElementById(idValue) as HTMLScriptElement | null
+  if (existing && shouldReuseAnalyticsScript(existing.dataset.analyticsLoadState)) return
+  existing?.remove()
+
   const script = document.createElement('script')
   script.id = idValue
   script.async = true
+  script.dataset.analyticsLoadState = 'loading'
   script.src = src
+  script.onload = () => {
+    script.dataset.analyticsLoadState = 'loaded'
+  }
+  script.onerror = () => {
+    // Remove a failed element so a later event can retry instead of becoming
+    // permanently stuck behind the element-exists guard.
+    script.dataset.analyticsLoadState = 'error'
+    script.remove()
+  }
   document.head.appendChild(script)
 }
 
@@ -171,6 +189,8 @@ const gtmAdapter: BrowserProviderAdapter = {
         w.__COMMERCE_ANALYTICS_GTM__.status = 'error'
         w.__COMMERCE_ANALYTICS_GTM__.errorAt = Date.now()
       }
+      // Allow a later consented event to retry the GTM request.
+      script.remove()
       window.dispatchEvent(new CustomEvent('commerce-analytics-gtm-error'))
     }
     document.head.appendChild(script)
