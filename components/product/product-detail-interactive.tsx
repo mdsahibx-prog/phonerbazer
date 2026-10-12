@@ -256,7 +256,11 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
               <section key={section.title + index} className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <h3 className="border-b border-slate-100 bg-slate-50/80 px-4 py-3 text-sm font-black text-slate-900">{section.title}</h3>
                 {section.paragraphs.length > 0 ? <div className="space-y-2 px-4 py-4">{section.paragraphs.map((paragraph, paragraphIndex) => <p key={paragraphIndex} className="text-sm leading-6 text-slate-600">{paragraph.replace(/^[-*•]\s*/, '')}</p>)}</div> : null}
-                {section.details.length > 0 ? <dl className="divide-y divide-slate-100 px-4">{section.details.map((detail, detailIndex) => <div key={detail.label + detailIndex} className="grid grid-cols-[minmax(0,.85fr)_minmax(0,1.15fr)] gap-3 py-3"><dt className="text-xs font-semibold leading-5 text-slate-500">{detail.label}</dt><dd className="break-words text-right text-xs font-bold leading-5 text-slate-900">{detail.value}</dd></div>)}</dl> : null}
+                {section.details.length > 0 ? <dl className="divide-y divide-slate-100 px-4">{section.details.map((detail, detailIndex) => {
+                  const label = detail.label.toLowerCase()
+                  const SpecIcon = /display|screen/.test(label) ? Monitor : /battery|power/.test(label) ? BatteryCharging : /colour|color/.test(label) ? Palette : /network|gsm|sim|bluetooth|connectivity|usb|radio/.test(label) ? Zap : /warranty|guarantee|support/.test(label) ? ShieldCheck : /delivery|shipping/.test(label) ? Truck : /price|cost/.test(label) ? Banknote : Tag
+                  return <div key={detail.label + detailIndex} className="grid grid-cols-[minmax(0,.85fr)_minmax(0,1.15fr)] gap-3 py-3"><dt className="flex min-w-0 items-start gap-1.5 text-xs font-semibold leading-5 text-slate-500"><SpecIcon aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-orange-600" /><span className="break-words">{detail.label}</span></dt><dd className="break-words text-right text-xs font-bold leading-5 text-slate-900">{detail.value}</dd></div>
+                })}</dl> : null}
               </section>
             ))}
           </div>
