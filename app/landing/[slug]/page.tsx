@@ -11,9 +11,9 @@ type Props = { params: Promise<{ slug: string }> }
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const page = await getPublicLandingPage(slug)
-  if (!page) return { title: 'Landing Page Not Found | SahiGadget' }
+  if (!page) return { title: `Landing Page Not Found | ${siteConfig.name}` }
   const title = page.seo_title || page.internal_name
-  const description = page.seo_description || `Explore ${page.internal_name} at SahiGadget.`
+  const description = page.seo_description || `Explore ${page.internal_name} at ${siteConfig.name}.`
   const canonical = `${siteConfig.url}/landing/${page.slug}`
   return { title, description, alternates: { canonical }, robots: page.noindex ? { index: false, follow: false } : { index: true, follow: true }, openGraph: { title, description, url: canonical, type: 'website', images: page.og_image_url ? [{ url: page.og_image_url, alt: title }] : undefined }, twitter: { card: 'summary_large_image', title, description, images: page.og_image_url ? [page.og_image_url] : undefined } }
 }
