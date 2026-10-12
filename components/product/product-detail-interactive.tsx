@@ -102,7 +102,24 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
   const ramValues = Array.from(new Set(product.variants.map((variant) => variant.ram).filter(Boolean))).join(' · ')
   const storageValues = Array.from(new Set(product.variants.map((variant) => variant.storage).filter(Boolean))).join(' · ')
   const colourValues = Array.from(new Set(product.variants.map((variant) => variant.color).filter(Boolean))).join(' · ')
-  const productSpecText = [product.short_description, product.description].filter(Boolean).join(' ').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ')
+  // Product descriptions have historically been entered as plain text, Markdown, or HTML.
+  // Normalize those formats once so every product uses the same specification layout.
+  const normalizedDescription = (product.description || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<li\b[^>]*>/gi, '- ')
+    .replace(/<\/(?:p|div|li|tr|h[1-6]|section|article)>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\r/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+  const productSpecText = [product.short_description, normalizedDescription].filter(Boolean).join(' ').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ')
   const readSpec = (pattern: RegExp) => {
     const match = productSpecText.match(pattern)
     return match?.[1]?.trim().replace(/\s+/g, ' ').replace(/[.,;]+$/, '') || ''
@@ -110,8 +127,8 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
   const isNokia2720Flip = /nokia\s*2720\s*flip/i.test(product.name)
   const displaySpec = readSpec(/(?:display(?:\s*size)?|screen\s*size)\s*[:\-]\s*([^|;\n\r<]{1,70})/i) || (isNokia2720Flip ? '2.8″ + 1.3″ external' : '')
   const batterySpec = readSpec(/(?:battery(?:\s*capacity)?|battery\s*size)\s*[:\-]\s*([^|;\n\r<]{1,50})/i) || (isNokia2720Flip ? '1,500 mAh' : '')
-  const descriptionSections = (product.description || '').split(/\n(?=##\s)/).map((section) => {
-    const lines = section.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+  const parsedDescriptionSections = normalizedDescription.split(/(?=^##\s)/m).map((section) => {
+    const lines = section.split(/\n/).map((line) => line.trim()).filter(Boolean)
     const firstLine = lines[0] || ''
     const title = firstLine.startsWith('## ') ? firstLine.replace(/^##\s*/, '') : 'About this phone'
     const bodyLines = firstLine.startsWith('## ') ? lines.slice(1) : lines
@@ -122,6 +139,19 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
     const paragraphs = bodyLines.filter((line) => !line.replace(/^[-*•]\s*/, '').match(/^[^:]{2,48}:\s*\S/))
     return { title, details, paragraphs }
   }).filter((section) => section.details.length || section.paragraphs.length)
+  const descriptionSections = parsedDescriptionSections.length ? parsedDescriptionSections : [{
+    title: 'Product overview',
+    details: [
+      ...(product.brand?.name ? [{ label: 'Brand', value: product.brand.name }] : []),
+      ...(product.category?.name ? [{ label: 'Category', value: product.category.name }] : []),
+      ...(product.product_type ? [{ label: 'Product type', value: getProductTypeLabel(product.product_type) }] : []),
+      ...(colourValues ? [{ label: 'Available colour', value: colourValues }] : []),
+      ...(ramValues ? [{ label: 'RAM', value: ramValues }] : []),
+      ...(storageValues ? [{ label: 'Storage', value: storageValues }] : []),
+      ...(product.warranty_policy ? [{ label: 'Warranty', value: product.warranty_policy }] : []),
+    ],
+    paragraphs: product.short_description ? [product.short_description] : [],
+  }]
 
 
   function selectImage(index: number) {
@@ -239,7 +269,11 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
               <section key={section.title + index} className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <h3 className="border-b border-slate-100 bg-slate-50/80 px-4 py-3 text-sm font-black text-slate-900">{section.title}</h3>
                 {section.paragraphs.length > 0 ? <div className="space-y-2 px-4 py-4">{section.paragraphs.map((paragraph, paragraphIndex) => <p key={paragraphIndex} className="text-sm leading-6 text-slate-600">{paragraph.replace(/^[-*•]\s*/, '')}</p>)}</div> : null}
-                {section.details.length > 0 ? <dl className="divide-y divide-slate-100 px-4">{section.details.map((detail, detailIndex) => <div key={detail.label + detailIndex} className="grid grid-cols-[minmax(0,.85fr)_minmax(0,1.15fr)] gap-3 py-3"><dt className="text-xs font-semibold leading-5 text-slate-500">{detail.label}</dt><dd className="break-words text-right text-xs font-bold leading-5 text-slate-900">{detail.value}</dd></div>)}</dl> : null}
+                {section.details.length > 0 ? <dl className="divide-y divide-slate-100 px-4">{section.details.map((detail, detailIndex) => {
+                  const label = detail.label.toLowerCase()
+                  const SpecIcon = /display|screen/.test(label) ? Monitor : /battery|power/.test(label) ? BatteryCharging : /colour|color/.test(label) ? Palette : /network|gsm|sim|bluetooth|connectivity|usb|radio/.test(label) ? Zap : /warranty|guarantee|support/.test(label) ? ShieldCheck : /delivery|shipping/.test(label) ? Truck : /price|cost/.test(label) ? Banknote : Tag
+                  return <div key={detail.label + detailIndex} className="grid grid-cols-[minmax(0,.85fr)_minmax(0,1.15fr)] gap-3 py-3"><dt className="flex min-w-0 items-start gap-1.5 text-xs font-semibold leading-5 text-slate-500"><SpecIcon aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-orange-600" /><span className="break-words">{detail.label}</span></dt><dd className="break-words text-right text-xs font-bold leading-5 text-slate-900">{detail.value}</dd></div>
+                })}</dl> : null}
               </section>
             ))}
           </div>

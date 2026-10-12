@@ -374,43 +374,53 @@ export async function getSearchSuggestions(query: string, limit = 6): Promise<St
   return getProductCards({ query, pageSize: Math.min(Math.max(limit, 1), 12) })
 }
 
-export async function getRelatedProducts(product: StorefrontProduct, limit = 4) {
-  // Prefer the same category. This is both more relevant to shoppers and cheaper
-  // than loading three full product pools on every product-page request.
-  if (product.category) {
-    const categoryResult = await getProductCards({ category: product.category.slug, pageSize: Math.min(12, Math.max(limit + 1, 6)) })
-    const categoryProducts = categoryResult.filter((candidate: StorefrontProduct) => candidate.id !== product.id)
-    if (categoryProducts.length >= limit) return categoryProducts.slice(0, limit)
-
-    const fallbackResults = await Promise.all([
-      product.product_type ? getProductCards({ productType: product.product_type, pageSize: 12 }) : Promise.resolve([] as StorefrontProduct[]),
-      product.brand ? getProductCards({ brand: product.brand.slug, pageSize: 12 }) : Promise.resolve([] as StorefrontProduct[]),
-    ])
-    const candidates = new Map<string, { product: StorefrontProduct; score: number }>()
-    const tokens = product.name.toLowerCase().split(/[^a-z0-9]+/).filter((token) => token.length > 2)
-    const addCandidates = (items: StorefrontProduct[], baseScore: number) => {
-      for (const candidate of items) {
-        if (candidate.id === product.id) continue
+const getCachedRelatedProducts = unstable_cache(
+  async (productId: string, categoryId: string | null, productType: string | null, brandId: string | null, productName: string, limit: number) => {
+    const supabase = createPublicClient()
+    const filters = [
+      categoryId ? `category_id.eq.${categoryId}` : null,
+      productType ? `product_type.eq.${productType}` : null,
+      brandId ? `brand_id.eq.${brandId}` : null,
+    ].filter((value): value is string => Boolean(value))
+    if (!filters.length) return []
+    const { data, error } = await supabase
+      .from('products')
+      .select(PRODUCT_CARD_SELECT)
+      .eq('is_published', true)
+      .neq('id', productId)
+      .or(filters.join(','))
+      .order('created_at', { ascending: false })
+      .limit(Math.min(24, Math.max(limit * 3, 12)))
+    if (error) throw new Error('Unable to load related products.')
+    const rows = (data ?? []) as unknown as RawProduct[]
+    const variantsByProduct = await getVariantsByProductId(supabase, rows.map((row) => row.id))
+    const products = rows.map((row) => normalizeProduct(row, variantsByProduct.get(row.id) ?? []))
+    const tokens = productName.toLowerCase().split(/[^a-z0-9]+/).filter((token) => token.length > 2)
+    return products
+      .map((candidate) => {
+        const categoryScore = categoryId && candidate.category?.id === categoryId ? 100 : 0
+        const typeScore = productType && candidate.product_type === productType ? 50 : 0
+        const brandScore = brandId && candidate.brand?.id === brandId ? 35 : 0
         const nameScore = tokens.reduce((score, token) => score + (candidate.name.toLowerCase().includes(token) ? 8 : 0), 0)
-        const categoryScore = candidate.category?.id === product.category?.id ? 100 : 0
-        const typeScore = candidate.product_type === product.product_type ? 50 : 0
-        const brandScore = product.brand && candidate.brand?.id === product.brand.id ? 35 : 0
-        const existing = candidates.get(candidate.id)
-        const score = baseScore + nameScore + categoryScore + typeScore + brandScore
-        candidates.set(candidate.id, { product: candidate, score: Math.max(existing?.score ?? 0, score) })
-      }
-    }
-    addCandidates(categoryProducts, 100)
-    addCandidates(fallbackResults[0], 50)
-    addCandidates(fallbackResults[1], 35)
-    return Array.from(candidates.values()).sort((a, b) => b.score - a.score || a.product.name.localeCompare(b.product.name)).slice(0, limit).map(({ product: candidate }) => candidate)
-  }
+        return { candidate, score: categoryScore + typeScore + brandScore + nameScore }
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, Math.min(8, Math.max(1, limit)))
+      .map(({ candidate }) => candidate)
+  },
+  ['related-products-v1'],
+  { revalidate: 60, tags: ['storefront:related-products'] },
+)
 
-  const fallback = await Promise.all([
-    product.product_type ? getProductCards({ productType: product.product_type, pageSize: 12 }) : Promise.resolve([] as StorefrontProduct[]),
-    product.brand ? getProductCards({ brand: product.brand.slug, pageSize: 12 }) : Promise.resolve([] as StorefrontProduct[]),
-  ])
-  return Array.from(new Map([...fallback[0], ...fallback[1]].filter((candidate) => candidate.id !== product.id).map((candidate) => [candidate.id, candidate])).values()).slice(0, limit)
+export async function getRelatedProducts(product: StorefrontProduct, limit = 4) {
+  return getCachedRelatedProducts(
+    product.id,
+    product.category?.id ?? null,
+    product.product_type ?? null,
+    product.brand?.id ?? null,
+    product.name,
+    Math.min(8, Math.max(1, limit)),
+  )
 }
 
 export async function getBrands() {
