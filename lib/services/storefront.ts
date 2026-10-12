@@ -325,8 +325,8 @@ const getCachedProductBySlug = unstable_cache(
     const variantsByProduct = await getVariantsByProductId(supabase, [row.id])
     return normalizeProduct(row, variantsByProduct.get(row.id) ?? [])
   },
-  ['product-by-slug'],
-  { revalidate: 60 }
+  ['product-by-slug-v2'],
+  { revalidate: 60, tags: ['storefront:product-detail'] }
 )
 
 export async function getProductBySlug(slug: string) {
