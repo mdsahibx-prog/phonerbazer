@@ -30,8 +30,24 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
   const selected = useMemo(() => product.variants.find((variant) => variant.id === selectedId) || product.variants[0] || null, [product.variants, selectedId])
   const status = selected ? getPublicAvailability([selected]) : { label: 'Price on request', tone: 'out' as const }
   const discount = selected && selected.compare_at_price && selected.compare_at_price > selected.price ? Math.round(((selected.compare_at_price - selected.price) / selected.compare_at_price) * 100) : null
-  const variantImages = selected ? product.images.filter((image) => image.variant_id === selected.id).sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.sort_order - b.sort_order) : []
-  const displayImages = variantImages.length ? variantImages : product.images
+  // Keep every product image in the gallery. Some legacy image rows are linked to old variant IDs,
+  // so filtering strictly by variant_id can hide every other colour when one colour is selected.
+  // Prefer images linked to the selected variant, then legacy images whose alt text matches its colour,
+  // then the generic primary image, followed by the remaining colour images.
+  const displayImages = useMemo(() => {
+    const selectedColor = selected?.color?.trim().toLocaleLowerCase() || ''
+    const imagePriority = (image: (typeof product.images)[number]) => {
+      if (selected && image.variant_id === selected.id) return 0
+      if (selectedColor && image.alt_text?.toLocaleLowerCase().includes(selectedColor)) return 1
+      if (!image.variant_id) return 2
+      return 3
+    }
+    return [...product.images].sort((a, b) =>
+      imagePriority(a) - imagePriority(b) ||
+      Number(b.is_primary) - Number(a.is_primary) ||
+      a.sort_order - b.sort_order,
+    )
+  }, [product.images, selected?.color, selected?.id])
   const imageCount = displayImages.length
   const activeImage = displayImages[activeImageIndex] || displayImages[0]
   const imageUrl = activeImage?.image_url || getProductImageUrl(product)
