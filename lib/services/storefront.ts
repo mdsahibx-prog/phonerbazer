@@ -259,17 +259,23 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Product
   const pageSize = Math.min(Math.max(filters.pageSize ?? 12, 1), 48)
   const page = Math.max(filters.page ?? 1, 1)
   const offset = (page - 1) * pageSize
-  let categoryId: string | null = null
-  let brandId: string | null = null
-  if (filters.category) {
+  // Resolve independent filter inputs concurrently to avoid serial database round trips.
+  const resolveCategoryId = async (): Promise<string | null> => {
+    if (!filters.category) return null
     const { data } = await supabase.from('categories').select('id').eq('slug', filters.category).eq('is_active', true).maybeSingle()
-    categoryId = data?.id ?? '__missing__'
+    return data?.id ?? '__missing__'
   }
-  if (filters.brand) {
+  const resolveBrandId = async (): Promise<string | null> => {
+    if (!filters.brand) return null
     const { data } = await supabase.from('brands').select('id').eq('slug', filters.brand).eq('is_active', true).maybeSingle()
-    brandId = data?.id ?? '__missing__'
+    return data?.id ?? '__missing__'
   }
-  const [searchIds, variantIds] = await Promise.all([filters.query ? resolveProductIdsForSearch(supabase, filters.query) : Promise.resolve(null), resolveVariantIds(supabase, filters)])
+  const [categoryId, brandId, searchIds, variantIds] = await Promise.all([
+    resolveCategoryId(),
+    resolveBrandId(),
+    filters.query ? resolveProductIdsForSearch(supabase, filters.query) : Promise.resolve(null),
+    resolveVariantIds(supabase, filters),
+  ])
   let query = supabase.from('products').select(PRODUCT_LIST_SELECT, { count: 'exact' }).eq('is_published', true)
   if (categoryId) query = query.eq('category_id', categoryId)
   if (brandId) query = query.eq('brand_id', brandId)
