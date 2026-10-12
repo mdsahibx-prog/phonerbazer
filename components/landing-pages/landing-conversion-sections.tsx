@@ -63,6 +63,8 @@ function primaryImage(product: StorefrontProduct) {
 function imageForVariant(product: StorefrontProduct, variant?: StorefrontVariant, overrideUrl?: string) {
   if (overrideUrl) return { image_url: overrideUrl, alt_text: product.name, is_primary: false } as StorefrontProduct['images'][number]
   if (!variant) return primaryImage(product)
+  const linkedImage = product.images.find((image) => image.variant_id === variant.id)
+  if (linkedImage) return linkedImage
   const tokens = [variant.color, variant.variant_title].filter(Boolean).join(' ').toLowerCase().split(/\s+|\//).filter((token) => token.length > 2)
   return product.images.find((image) => tokens.some((token) => `${image.alt_text ?? ''} ${image.image_url}`.toLowerCase().includes(token))) ?? primaryImage(product)
 }
@@ -113,7 +115,7 @@ function ProductHero({ section, product, variant, fixedImageUrl }: { section?: E
   </section>
 }
 
-function ProductVisualGallery({ product, selectedVariantId }: { product: StorefrontProduct; selectedVariantId: string }) {
+function ProductVisualGallery({ product }: { product: StorefrontProduct }) {
   const images = product.images.filter((image) => image.image_url).slice(0, 6)
   if (images.length < 2) return null
   return <section aria-label="পণ্যের ছবির গ্যালারি" className="mx-auto max-w-5xl px-4 pb-7 pt-2 sm:px-6 sm:pb-10">
@@ -191,7 +193,7 @@ export function LandingConversionSections({ sections, products, fixedImageUrl }:
   }, [sections])
   useEffect(() => { const onScroll = () => setShowSticky(window.scrollY > 420); window.addEventListener('scroll', onScroll, { passive: true }); return () => window.removeEventListener('scroll', onScroll) }, [])
   if (!selectedProduct || !selectedVariant) return <div className="mx-auto max-w-2xl px-4 py-16 text-center text-slate-600">এই পণ্যটি বর্তমানে পাওয়া যাচ্ছে না।</div>
-  return <div className="min-h-screen overflow-x-clip bg-white pb-24 text-slate-950"><ProductHero section={hero} product={selectedProduct} variant={selectedVariant} fixedImageUrl={fixedImageUrl} /><ProductVisualGallery product={selectedProduct} selectedVariantId={selectedVariant.id} />
+  return <div className="min-h-screen overflow-x-clip bg-white pb-24 text-slate-950"><ProductHero section={hero} product={selectedProduct} variant={selectedVariant} fixedImageUrl={fixedImageUrl} /><ProductVisualGallery product={selectedProduct} />
     {renderSections.map((section) => {
       if (section.enabled === false || section.type === 'hero' || section.type === 'product' || section.type === 'announcement' || section.type === 'offer' || section.type === 'countdown' || section.type === 'product_gallery' || section.type === 'related_products' || section.type === 'sticky_mobile_cta') return null
       if (section.type === 'variant_selector') { const quantitySection = sections.find((candidate): candidate is Extract<LandingSection, { type: 'quantity_selector' }> => candidate.type === 'quantity_selector'); return <VariantSelector key={section.id} section={section} product={selectedProduct} selectedVariantId={selectedVariantId} onSelect={setSelectedVariantId} quantity={quantity} onChange={setQuantity} maxQuantity={quantitySection?.maxQuantity ?? 10} /> }
