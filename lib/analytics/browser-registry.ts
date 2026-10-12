@@ -23,7 +23,7 @@ type BrowserWindow = Window & {
   fbq?: ((...args: unknown[]) => void) & { callMethod?: (...args: unknown[]) => void; queue?: unknown[]; push?: (...args: unknown[]) => void; loaded?: boolean; version?: string; disablePushState?: boolean }
   _fbq?: unknown
   ttq?: { load?: (id: string) => void; page?: () => void; track?: (name: string, properties?: Record<string, unknown>) => void; _i?: Record<string, unknown> }
-  __COMMERCE_ANALYTICS_GTM__?: { id: string; status: 'loading' | 'ready' | 'error'; startedAt?: number; readyAt?: number; errorAt?: number }
+  __COMMERCE_ANALYTICS_GTM__?: { id: string; status: 'loading' | 'ready' | 'error'; startedAt?: number; readyAt?: number; errorAt?: number; startEventQueued?: boolean }
 }
 
 function getWindow() { return window as BrowserWindow }
@@ -38,12 +38,35 @@ export function isBrowserProviderEventAllowed(provider: BrowserProviderId, event
   return Boolean(ANALYTICS_EVENT_MAP[eventName]?.providers.includes(provider))
 }
 
+/** Reuse an in-flight or successfully loaded script, but retry a failed request. */
+export function shouldReuseAnalyticsScript(existingStatus: string | undefined) {
+  return existingStatus !== 'error'
+}
+
+/** Standard GTM bootstrap event required before the container script is requested. */
+export function buildGtmStartEvent(timestamp: number) {
+  return { 'gtm.start': timestamp, event: 'gtm.js' } as const
+}
+
 function loadScript(src: string, idValue: string) {
-  if (document.getElementById(idValue)) return
+  const existing = document.getElementById(idValue) as HTMLScriptElement | null
+  if (existing && shouldReuseAnalyticsScript(existing.dataset.analyticsLoadState)) return
+  existing?.remove()
+
   const script = document.createElement('script')
   script.id = idValue
   script.async = true
+  script.dataset.analyticsLoadState = 'loading'
   script.src = src
+  script.onload = () => {
+    script.dataset.analyticsLoadState = 'loaded'
+  }
+  script.onerror = () => {
+    // Remove a failed element so a later event can retry instead of becoming
+    // permanently stuck behind the element-exists guard.
+    script.dataset.analyticsLoadState = 'error'
+    script.remove()
+  }
   document.head.appendChild(script)
 }
 
@@ -149,16 +172,33 @@ const gtmAdapter: BrowserProviderAdapter = {
     w.dataLayer = w.dataLayer || []
     const existing = w.__COMMERCE_ANALYTICS_GTM__
     if (existing?.id === config.gtmContainerId && (existing.status === 'loading' || existing.status === 'ready')) return
+
     const scriptId = 'commerce-analytics-gtm'
-    if (document.getElementById(scriptId)) {
-      if (!w.__COMMERCE_ANALYTICS_GTM__) w.__COMMERCE_ANALYTICS_GTM__ = { id: config.gtmContainerId, status: 'loading', startedAt: Date.now() }
-      return
+    const currentScript = document.getElementById(scriptId) as HTMLScriptElement | null
+    if (currentScript && (existing?.status === 'error' || (existing?.id && existing.id !== config.gtmContainerId))) {
+      currentScript.remove()
     }
+
+    // Queue GTM's canonical bootstrap event once per container, before the
+    // script request. Consent defaults/updates were already queued earlier.
+    const startEventAlreadyQueued = existing?.id === config.gtmContainerId && existing.startEventQueued === true
+    if (!startEventAlreadyQueued) w.dataLayer.push(buildGtmStartEvent(Date.now()))
+
+    const scriptAlreadyPresent = document.getElementById(scriptId)
+    w.__COMMERCE_ANALYTICS_GTM__ = {
+      id: config.gtmContainerId,
+      status: scriptAlreadyPresent && existing?.status === 'ready' ? 'ready' : 'loading',
+      startedAt: existing?.id === config.gtmContainerId && existing.startedAt ? existing.startedAt : Date.now(),
+      readyAt: existing?.id === config.gtmContainerId ? existing.readyAt : undefined,
+      errorAt: undefined,
+      startEventQueued: true,
+    }
+    if (scriptAlreadyPresent) return
+
     const script = document.createElement('script')
     script.id = scriptId
     script.async = true
     script.src = 'https://www.googletagmanager.com/gtm.js?id=' + encodeURIComponent(config.gtmContainerId)
-    w.__COMMERCE_ANALYTICS_GTM__ = { id: config.gtmContainerId, status: 'loading', startedAt: Date.now() }
     script.onload = () => {
       if (w.__COMMERCE_ANALYTICS_GTM__) {
         w.__COMMERCE_ANALYTICS_GTM__.status = 'ready'
@@ -171,6 +211,8 @@ const gtmAdapter: BrowserProviderAdapter = {
         w.__COMMERCE_ANALYTICS_GTM__.status = 'error'
         w.__COMMERCE_ANALYTICS_GTM__.errorAt = Date.now()
       }
+      // Allow a later consented event to retry the GTM request.
+      script.remove()
       window.dispatchEvent(new CustomEvent('commerce-analytics-gtm-error'))
     }
     document.head.appendChild(script)
