@@ -127,7 +127,7 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
   const isNokia2720Flip = /nokia\s*2720\s*flip/i.test(product.name)
   const displaySpec = readSpec(/(?:display(?:\s*size)?|screen\s*size)\s*[:\-]\s*([^|;\n\r<]{1,70})/i) || (isNokia2720Flip ? '2.8″ + 1.3″ external' : '')
   const batterySpec = readSpec(/(?:battery(?:\s*capacity)?|battery\s*size)\s*[:\-]\s*([^|;\n\r<]{1,50})/i) || (isNokia2720Flip ? '1,500 mAh' : '')
-  const descriptionSections = normalizedDescription.split(/(?=^##\s)/m).map((section) => {
+  const parsedDescriptionSections = normalizedDescription.split(/(?=^##\s)/m).map((section) => {
     const lines = section.split(/\n/).map((line) => line.trim()).filter(Boolean)
     const firstLine = lines[0] || ''
     const title = firstLine.startsWith('## ') ? firstLine.replace(/^##\s*/, '') : 'About this phone'
@@ -139,6 +139,19 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
     const paragraphs = bodyLines.filter((line) => !line.replace(/^[-*•]\s*/, '').match(/^[^:]{2,48}:\s*\S/))
     return { title, details, paragraphs }
   }).filter((section) => section.details.length || section.paragraphs.length)
+  const descriptionSections = parsedDescriptionSections.length ? parsedDescriptionSections : [{
+    title: 'Product overview',
+    details: [
+      ...(product.brand?.name ? [{ label: 'Brand', value: product.brand.name }] : []),
+      ...(product.category?.name ? [{ label: 'Category', value: product.category.name }] : []),
+      ...(product.product_type ? [{ label: 'Product type', value: getProductTypeLabel(product.product_type) }] : []),
+      ...(colourValues ? [{ label: 'Available colour', value: colourValues }] : []),
+      ...(ramValues ? [{ label: 'RAM', value: ramValues }] : []),
+      ...(storageValues ? [{ label: 'Storage', value: storageValues }] : []),
+      ...(product.warranty_policy ? [{ label: 'Warranty', value: product.warranty_policy }] : []),
+    ],
+    paragraphs: product.short_description ? [product.short_description] : [],
+  }]
 
 
   function selectImage(index: number) {
