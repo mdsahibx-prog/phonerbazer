@@ -136,7 +136,6 @@ function ProductVisualGallery({ product, selectedVariantId, onSelect }: { produc
         <span className="flex items-center justify-between gap-2 px-2 pb-2 pt-3"><span className="min-w-0 truncate text-sm font-black text-slate-900">{variantLabel(variant)}</span><span className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-black ${selected ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'}`}>{selected ? 'নির্বাচিত' : 'বেছে নিন'}</span></span>
       </button>
     })}</div>
-    <p className="mt-3 text-xs text-slate-500">এখানে রং বেছে নিলে নিচের অর্ডার অপশনেও একই রং নির্বাচিত হবে।</p>
   </section>
 }
 
@@ -162,7 +161,24 @@ function VariantSelector({ section, product, selectedVariantId, onSelect, quanti
 }
 
 function TextSection({ section, title, tone = 'plain' }: { section: Extract<LandingSection, { type: 'delivery_info' | 'warranty' | 'trust' | 'social_proof' }>; title?: string; tone?: 'plain' | 'green' }) {
-  return <section className={`mx-auto max-w-5xl px-4 py-5 sm:px-6 ${visibility(section)}`}><div className={`border-b border-slate-100 py-4 ${tone === 'green' ? 'bg-emerald-50 px-5' : ''}`}><h2 className="text-xl font-black tracking-tight text-slate-950">{customerText(title || section.title)}</h2>{'body' in section ? <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">{customerText(section.body)}</p> : null}{'items' in section ? <ul className="mt-4 grid gap-2 sm:grid-cols-2">{section.items.map((item) => <li key={item} className="text-sm font-semibold text-slate-700">✓ {customerText(item)}</li>)}</ul> : null}{'disclaimer' in section && section.disclaimer ? <p className="mt-4 text-xs font-semibold text-slate-500">{customerText(section.disclaimer)}</p> : null}</div></section>
+  const isWarranty = section.type === 'warranty'
+  const isTrust = section.type === 'trust'
+  const sectionTitle = title || (isWarranty ? 'কেনাকাটায় নিশ্চিন্ত থাকুন' : isTrust ? 'অর্ডার করার আগে যা জানবেন' : section.title)
+  return <section className={`mx-auto max-w-5xl px-4 py-5 sm:px-6 ${visibility(section)}`}>
+    <div className={`rounded-2xl border border-slate-200 p-4 sm:p-5 ${isWarranty || isTrust ? 'bg-gradient-to-br from-emerald-50 via-white to-white shadow-sm' : tone === 'green' ? 'border-emerald-100 bg-emerald-50/80' : 'bg-white'}`}>
+      <h2 className="text-xl font-black tracking-tight text-slate-950 sm:text-2xl">{customerText(sectionTitle)}</h2>
+      {'body' in section ? <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">{customerText(section.body)}</p> : null}
+      {'items' in section ? <ul className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">{section.items.map((item) => {
+        const label = customerText(item) || ''
+        const Icon = /ডেলিভারি|বাংলাদেশজুড়ে|সারা দেশে/.test(label) ? Truck : /মূল্য|স্টক|ভ্যারিয়েন্ট|খরচ|রিভিউ|অর্ডার নিশ্চিত|ক্যাশ অন ডেলিভারি/.test(label) ? CircleCheck : ShieldCheck
+        return <li key={item} className="flex min-w-0 items-start gap-3 rounded-xl border border-emerald-100/90 bg-white/90 px-3.5 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700"><Icon className="h-4 w-4" aria-hidden="true" /></span>
+          <span className="text-sm font-semibold leading-6 text-slate-700">{label.replace(/^✓\s*/, '')}</span>
+        </li>
+      })}</ul> : null}
+      {'disclaimer' in section && section.disclaimer ? <p className="mt-4 text-xs font-semibold text-slate-500">{customerText(section.disclaimer)}</p> : null}
+    </div>
+  </section>
 }
 
 function ReviewSection({ section }: { section: Extract<LandingSection, { type: 'social_proof' }> }) {
