@@ -1,1 +1,1 @@
-export const publicRoutes = ['/', '/products', '/search', '/categories', '/brands'] as const
+export const publicRoutes = ['/', '/products', '/search', '/categories', '/brands', '/landing/nokia-6310-classic-phone'] as const
