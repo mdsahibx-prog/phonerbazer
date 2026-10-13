@@ -103,8 +103,8 @@ function ProductHero({ section, product, variant, fixedImageUrl }: { section?: E
       </div>
       <div className="min-w-0 lg:py-5">
         <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-800">{product.brand?.name || 'PhonerBazar'}</span><span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200"><CircleCheck className="h-3.5 w-3.5 text-emerald-600" /> ক্যাশ অন ডেলিভারি</span></div>
-        <h1 className="mt-3 text-3xl font-black leading-tight tracking-tight text-slate-950 sm:text-5xl">{title}</h1>
-        {body ? <p className="mt-4 max-w-xl text-base leading-7 text-slate-600">{body}</p> : null}
+        <h1 className="mt-2 text-2xl font-black leading-tight tracking-tight text-slate-950 sm:mt-3 sm:text-5xl">{title}</h1>
+        {body ? <p className="mt-2 line-clamp-2 max-w-xl text-sm leading-5 text-slate-600 sm:mt-4 sm:line-clamp-none sm:text-base sm:leading-7">{body}</p> : null}
         <div className="mt-5 flex flex-wrap items-end gap-x-3 gap-y-1">
           <span className="text-3xl font-black text-emerald-700">{money(variant?.price)}</span>
           {compareAt ? <span className="text-base font-semibold text-slate-400 line-through">{money(compareAt)}</span> : null}
