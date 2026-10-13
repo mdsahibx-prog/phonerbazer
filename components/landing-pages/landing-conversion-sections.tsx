@@ -173,7 +173,7 @@ function TextSection({ section, title, tone = 'plain' }: { section: Extract<Land
         const Icon = /ডেলিভারি|বাংলাদেশজুড়ে|সারা দেশে/.test(label) ? Truck : /মূল্য|স্টক|ভ্যারিয়েন্ট|খরচ|রিভিউ|অর্ডার নিশ্চিত|ক্যাশ অন ডেলিভারি/.test(label) ? CircleCheck : ShieldCheck
         return <li key={item} className="flex min-w-0 items-start gap-3 rounded-xl border border-emerald-100/90 bg-white/90 px-3.5 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
           <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700"><Icon className="h-4 w-4" aria-hidden="true" /></span>
-          <span className="text-sm font-semibold leading-6 text-slate-700">{label.replace(/^✓\\s*/, '')}</span>
+          <span className="text-sm font-semibold leading-6 text-slate-700">{label.replace(/^✓\s*/, '')}</span>
         </li>
       })}</ul> : null}
       {'disclaimer' in section && section.disclaimer ? <p className="mt-4 text-xs font-semibold text-slate-500">{customerText(section.disclaimer)}</p> : null}
