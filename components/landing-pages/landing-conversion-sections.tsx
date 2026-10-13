@@ -170,7 +170,6 @@ function TextSection({ section, title, tone = 'plain' }: { section: Extract<Land
       {'body' in section ? <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">{customerText(section.body)}</p> : null}
       {'items' in section ? <ul className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">{section.items.map((item) => {
         const label = customerText(item) || ''
-        const lower = label.toLowerCase()
         const Icon = /ডেলিভারি|বাংলাদেশজুড়ে|সারা দেশে/.test(label) ? Truck : /মূল্য|স্টক|ভ্যারিয়েন্ট|খরচ|রিভিউ|অর্ডার নিশ্চিত|ক্যাশ অন ডেলিভারি/.test(label) ? CircleCheck : ShieldCheck
         return <li key={item} className="flex min-w-0 items-start gap-3 rounded-xl border border-emerald-100/90 bg-white/90 px-3.5 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
           <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700"><Icon className="h-4 w-4" aria-hidden="true" /></span>
