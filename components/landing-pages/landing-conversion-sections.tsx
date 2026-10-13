@@ -118,7 +118,7 @@ function ProductHero({ section, product, variant, fixedImageUrl }: { section?: E
 function ProductVisualGallery({ product, selectedVariantId, onSelect }: { product: StorefrontProduct; selectedVariantId: string; onSelect: (id: string) => void }) {
   const primaryUrl = primaryImage(product)?.image_url
   const images = product.variants.map((variant) => {
-    const tokens = [variant.color, variant.variant_title].filter(Boolean).join(' ').toLowerCase().split(/\\s+|\\//).filter((token) => token.length > 2)
+    const tokens = [variant.color, variant.variant_title].filter(Boolean).join(' ').toLowerCase().split(/\s+|\//).filter((token) => token.length > 2)
     const image = product.images.find((candidate) => candidate.variant_id === variant.id)
       ?? product.images.find((candidate) => candidate.image_url !== primaryUrl && tokens.some((token) => `${candidate.alt_text ?? ''} ${candidate.image_url}`.toLowerCase().includes(token)))
     return image && image.image_url !== primaryUrl ? { variant, image } : null
@@ -143,7 +143,7 @@ function VariantSelector({ section, product, selectedVariantId, onSelect, quanti
   if (!product?.variants.length) return null
   const max = Math.min(maxQuantity, 10)
   return <section aria-labelledby={`${section.id}-title`} className={`mx-auto max-w-5xl px-4 py-7 sm:px-6 sm:py-10 ${visibility(section)}`}>
-    <h2 id={`${section.id}-title`} className="text-2xl font-black tracking-tight text-slate-950">{customerText(section.title) || 'পছন্দের রংটি বেছে নিন'}</h2>
+    <h2 id={`${section.id}-title`} className="text-2xl font-black tracking-tight text-slate-950">পছন্দের রংটি বেছে নিন</h2>
     <div className="mt-4 grid gap-3 sm:grid-cols-2">
       {product.variants.map((variant) => {
         const image = imageForVariant(product, variant, section.variantImages?.[variant.id])
