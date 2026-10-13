@@ -32,9 +32,25 @@ function runWhenIdle(callback: () => void, timeout = 1500) {
 export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { runtimeConfig?: RuntimeConfig }) {
   const [consent, setConsent] = useState<Consent | null>(null)
   const [showPreferences, setShowPreferences] = useState(false)
+  // Dismissing the prompt is not consent: optional analytics/marketing stay disabled until a choice is saved.
+  const [bannerDismissed, setBannerDismissed] = useState(true)
   const pathname = usePathname()
   const currentPathRef = useRef<string | null>(pathname)
   const lastPageViewPathRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    const dismissedKey = 'phonerbazar-privacy-banner-dismissed-v1'
+    if (window.localStorage.getItem(dismissedKey) === '1' || hasAnalyticsConsent()) return
+
+    setBannerDismissed(false)
+    const timeoutId = window.setTimeout(() => {
+      // Close the prompt after two seconds, but never turn silence into tracking consent.
+      window.localStorage.setItem(dismissedKey, '1')
+      setBannerDismissed(true)
+    }, 2000)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [])
 
   // Next.js App Router transitions don't reload the document. Track each
   // public route explicitly so Pixel history auto-tracking can stay disabled.
@@ -102,8 +118,8 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
   }
 
   return <>
-    {consent === null || showPreferences ? <div role="dialog" aria-label="Privacy choices" aria-modal="false" className="fixed bottom-4 left-4 z-50 max-w-sm rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-600 shadow-2xl">
-      <div className="flex items-start justify-between gap-3"><p className="font-bold text-slate-900">Privacy choices</p>{consent !== null ? <button type="button" onClick={() => setShowPreferences(false)} aria-label="Close privacy settings" className="rounded-full px-2 py-1 text-slate-500 hover:bg-slate-100">Close</button> : null}</div>
+    {(consent === null && !bannerDismissed) || showPreferences ? <div role="dialog" aria-label="Privacy choices" aria-modal="false" className="fixed bottom-4 left-4 z-50 max-w-sm rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-600 shadow-2xl">
+      <div className="flex items-start justify-between gap-3"><p className="font-bold text-slate-900">Privacy choices</p>{showPreferences ? <button type="button" onClick={() => setShowPreferences(false)} aria-label="Close privacy settings" className="rounded-full px-2 py-1 text-slate-500 hover:bg-slate-100">Close</button> : null}</div>
       <p className="mt-1 leading-5">Necessary commerce storage always remains active. Choose analytics and marketing separately. You can update your choice later.</p>
       <div className="mt-3 flex flex-wrap gap-2">
         <button type="button" onClick={() => saveConsent({ necessary: true, analytics: false, marketing: false })} className="rounded-full border border-slate-300 px-3 py-2 font-bold">Essential only</button>
