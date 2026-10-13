@@ -32,24 +32,14 @@ function runWhenIdle(callback: () => void, timeout = 1500) {
 export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { runtimeConfig?: RuntimeConfig }) {
   const [consent, setConsent] = useState<Consent | null>(null)
   const [showPreferences, setShowPreferences] = useState(false)
-  // Dismissing the prompt is not consent: optional analytics/marketing stay disabled until a choice is saved.
-  const [bannerDismissed, setBannerDismissed] = useState(true)
+  const [isLeaving, setIsLeaving] = useState(false)
   const pathname = usePathname()
   const currentPathRef = useRef<string | null>(pathname)
   const lastPageViewPathRef = useRef<string | null>(null)
 
+  // Keep the first-visit prompt visible until the visitor makes a choice.
   useEffect(() => {
-    const dismissedKey = 'phonerbazar-privacy-banner-dismissed-v1'
-    if (window.localStorage.getItem(dismissedKey) === '1' || hasAnalyticsConsent()) return
-
-    setBannerDismissed(false)
-    const timeoutId = window.setTimeout(() => {
-      // Close the prompt after two seconds, but never turn silence into tracking consent.
-      window.localStorage.setItem(dismissedKey, '1')
-      setBannerDismissed(true)
-    }, 2000)
-
-    return () => window.clearTimeout(timeoutId)
+    if (hasAnalyticsConsent()) setConsent(getAnalyticsConsent())
   }, [])
 
   // Next.js App Router transitions don't reload the document. Track each
@@ -114,18 +104,81 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
 
   const saveConsent = (next: Consent) => {
     setAnalyticsConsent(next)
+    setConsent(next)
     setShowPreferences(false)
+    setIsLeaving(true)
+    window.setTimeout(() => setIsLeaving(false), 240)
   }
 
+  const showBanner = consent === null || showPreferences || isLeaving
+
   return <>
-    {(consent === null && !bannerDismissed) || showPreferences ? <div role="dialog" aria-label="Privacy choices" aria-modal="false" className="fixed bottom-4 left-4 z-50 max-w-sm rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-600 shadow-2xl">
-      <div className="flex items-start justify-between gap-3"><p className="font-bold text-slate-900">Privacy choices</p>{showPreferences ? <button type="button" onClick={() => setShowPreferences(false)} aria-label="Close privacy settings" className="rounded-full px-2 py-1 text-slate-500 hover:bg-slate-100">Close</button> : null}</div>
-      <p className="mt-1 leading-5">Necessary commerce storage always remains active. Choose analytics and marketing separately. You can update your choice later.</p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" onClick={() => saveConsent({ necessary: true, analytics: false, marketing: false })} className="rounded-full border border-slate-300 px-3 py-2 font-bold">Essential only</button>
-        <button type="button" onClick={() => saveConsent({ necessary: true, analytics: true, marketing: false })} className="rounded-full border border-slate-300 px-3 py-2 font-bold">Analytics only</button>
-        <button type="button" onClick={() => saveConsent({ necessary: true, analytics: true, marketing: true })} className="rounded-full bg-slate-950 px-3 py-2 font-bold text-white">Allow all</button>
+    {showBanner ? <section
+      role="dialog"
+      aria-label="কুকি ও গোপনীয়তা পছন্দ"
+      aria-modal="false"
+      className={`fixed inset-x-3 bottom-3 z-50 mx-auto w-auto max-w-md overflow-hidden rounded-2xl border border-emerald-100 bg-white text-slate-700 shadow-[0_18px_60px_-18px_rgba(15,23,42,0.35)] sm:inset-x-auto sm:bottom-5 sm:left-5 sm:w-[min(25rem,calc(100vw-2rem))] ${isLeaving ? "privacy-banner-exit" : ""}`}
+    >
+      <div className="h-1 w-full bg-gradient-to-r from-emerald-500 via-teal-400 to-lime-300" />
+      <div className="privacy-banner-enter p-4 sm:p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700" aria-hidden="true">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5c0-.6-.4-1-1-1h-1.2a2.3 2.3 0 0 1-2.3-2.3V7.5A4 4 0 0 0 12 3.5Z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M7.8 11h.1m3.1-3.2h.1m2.2 7.1h.1m3.1-3.3h.1" />
+            </svg>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] font-extrabold leading-6 tracking-tight text-slate-950 sm:text-base">আপনার কেনাকাটা আরও সহজ ও ব্যক্তিগত করি</p>
+            <p className="mt-1.5 text-xs leading-5 text-slate-600 sm:text-[13px]">
+              সাইটের অভিজ্ঞতা উন্নত করতে, কোন পণ্য জনপ্রিয় তা বুঝতে এবং বিজ্ঞাপনের কার্যকারিতা মাপতে আমরা কুকিজ ব্যবহার করি। আপনার পছন্দ যেকোনো সময় বদলাতে পারবেন।
+            </p>
+          </div>
+          {showPreferences ? <button type="button" onClick={() => setShowPreferences(false)} aria-label="গোপনীয়তা সেটিংস বন্ধ করুন" className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+            <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" d="m5 5 10 10M15 5 5 15" /></svg>
+          </button> : null}
+        </div>
+
+        {showPreferences ? <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2.5 text-xs leading-5 text-slate-600">
+          <p className="font-bold text-slate-800">আপনার পছন্দ বেছে নিন</p>
+          <p className="mt-1">প্রয়োজনীয় কুকিজ কেনাকাটা ও নিরাপত্তার জন্য চালু থাকে। Analytics ব্যবহার বুঝতে এবং Marketing প্রাসঙ্গিক প্রচার ও বিজ্ঞাপনের ফলাফল মাপতে সাহায্য করে।</p>
+        </div> : null}
+
+        <div className="mt-4 grid grid-cols-1 gap-2">
+          <button type="button" onClick={() => saveConsent({ necessary: true, analytics: true, marketing: true })} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-emerald-800 hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2">
+            <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="m4 10 4 4 8-8" /></svg>
+            সব কুকিজ অনুমতি দিন
+          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => saveConsent({ necessary: true, analytics: true, marketing: false })} className="min-h-10 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+              শুধু Analytics
+            </button>
+            <button type="button" onClick={() => saveConsent({ necessary: true, analytics: false, marketing: false })} className="min-h-10 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">
+              শুধু প্রয়োজনীয়
+            </button>
+          </div>
+          {!showPreferences ? <button type="button" onClick={() => setShowPreferences(true)} className="mt-0.5 min-h-8 text-xs font-medium text-slate-500 underline decoration-slate-300 underline-offset-4 transition hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+            কুকিজ কীভাবে ব্যবহার হয় জানুন
+          </button> : null}
+        </div>
+        <p className="mt-3 text-[10px] leading-4 text-slate-400">
+          আপনার পছন্দ আমাদের <a href="/privacy-policy" className="font-semibold text-slate-500 underline underline-offset-2 hover:text-emerald-700">প্রাইভেসি পলিসি</a> অনুযায়ী সংরক্ষিত হবে।
+        </p>
       </div>
-    </div> : <button type="button" onClick={() => setShowPreferences(true)} aria-label="Update privacy settings" className="fixed bottom-4 left-4 z-40 rounded-full border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-600 shadow-sm hover:border-slate-400 hover:text-slate-900">Privacy settings</button>}
+      <style jsx>{`
+        .privacy-banner-enter { animation: privacyBannerEnter 420ms cubic-bezier(.2,.8,.2,1) both; }
+        @keyframes privacyBannerEnter {
+          from { opacity: 0; transform: translate3d(0, 12px, 0) scale(.985); }
+          to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+        }
+        .privacy-banner-exit { animation: privacyBannerExit 220ms ease-in forwards; pointer-events: none; }
+        @keyframes privacyBannerExit {
+          to { opacity: 0; transform: translate3d(0, 10px, 0) scale(.985); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .privacy-banner-enter, .privacy-banner-exit { animation: none; }
+        }
+      `}</style>
+    </section> : <button type="button" onClick={() => setShowPreferences(true)} aria-label="কুকি পছন্দ পরিবর্তন করুন" className="fixed bottom-4 left-4 z-40 rounded-full border border-emerald-100 bg-white px-3 py-2 text-[11px] font-bold text-emerald-800 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">কুকি পছন্দ</button>}
   </>
 }
