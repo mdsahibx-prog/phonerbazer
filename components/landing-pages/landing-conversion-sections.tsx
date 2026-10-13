@@ -119,7 +119,7 @@ function ProductVisualGallery({ product }: { product: StorefrontProduct }) {
   const images = product.images.filter((image) => image.image_url).slice(0, 6)
   if (images.length < 2) return null
   return <section aria-label="পণ্যের ছবির গ্যালারি" className="mx-auto max-w-5xl px-4 pb-7 pt-2 sm:px-6 sm:pb-10">
-    <div className="mb-4 flex items-end justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">এক নজরে দেখুন</p><h2 className="mt-1 text-xl font-black tracking-tight text-slate-950 sm:text-2xl">Nokia 6310-এর ছবি</h2></div><span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600">{images.length}টি ছবি</span></div>
+    <div className="mb-4 flex items-end justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">এক নজরে দেখুন</p><h2 className="mt-1 text-xl font-black tracking-tight text-slate-950 sm:text-2xl">{product.name}-এর ছবি</h2></div><span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600">{images.length}টি ছবি</span></div>
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">{images.map((image, index) => <figure key={image.id || image.image_url} className={`group relative overflow-hidden rounded-2xl border bg-white p-2 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md ${index === 0 ? 'border-emerald-200 ring-1 ring-emerald-100' : 'border-slate-200'}`}><div className="relative aspect-square overflow-hidden rounded-xl bg-gradient-to-br from-slate-50 to-emerald-50/60"><Image src={image.image_url} alt={image.alt_text || `${product.name} পণ্যের ছবি ${index + 1}`} fill loading="lazy" className="object-contain p-1 transition-transform duration-300 group-hover:scale-105" sizes="(max-width: 640px) 44vw, (max-width: 1024px) 28vw, 160px" /></div><figcaption className="px-1 pb-1 pt-2 text-center text-xs font-bold text-slate-600">{index === 0 ? 'পণ্যের ডিজাইন' : (image.alt_text || `ছবি ${index + 1}`).slice(0, 30)}</figcaption></figure>)}</div>
     <p className="mt-3 text-center text-xs text-slate-500">ছবি দেখে পছন্দের রং নির্বাচন করুন, তারপর অর্ডার করুন।</p>
   </section>
@@ -182,14 +182,38 @@ export function LandingConversionSections({ sections, products, fixedImageUrl }:
   const [showSticky, setShowSticky] = useState(false)
   const selectedVariant = useMemo(() => selectedProduct?.variants.find((variant) => variant.id === selectedVariantId) ?? firstAvailable, [selectedProduct, selectedVariantId, firstAvailable])
   const renderSections = useMemo(() => {
-    const withoutOrders: LandingSection[] = sections.filter((section) => section.type !== 'order' && section.type !== 'quantity_selector')
+    const sectionOrder: Record<string, number> = {
+      hero: 0,
+      announcement: 5,
+      features: 10,
+      benefits: 10,
+      variant_selector: 20,
+      order: 30,
+      delivery_info: 40,
+      specifications: 50,
+      warranty: 60,
+      trust: 65,
+      social_proof: 70,
+      faq: 80,
+      rich_text: 85,
+      cta: 90,
+      quantity_selector: 95,
+    }
+    const orderedSections: LandingSection[] = sections
+      .filter((section) => section.type !== 'order' && section.type !== 'quantity_selector')
+      .sort((a, b) => (sectionOrder[a.type] ?? 55) - (sectionOrder[b.type] ?? 55))
     const orders = sections.filter((section): section is Extract<LandingSection, { type: 'order' }> => section.type === 'order' && section.enabled !== false)
-    if (!orders.length) return withoutOrders
-    const anchorIndexes = withoutOrders.map((section, index) => (section.type === 'variant_selector' ? index : -1)).filter((index) => index >= 0)
-    const heroIndex = withoutOrders.findIndex((section) => section.type === 'hero')
-    const insertAt = (anchorIndexes.length ? Math.max(...anchorIndexes) : heroIndex) + 1
-    withoutOrders.splice(Math.max(0, insertAt), 0, ...orders)
-    return withoutOrders
+    if (!orders.length) return orderedSections
+    const variantIndex = orderedSections.findIndex((section) => section.type === 'variant_selector')
+    const featureIndexes = orderedSections.map((section, index) => (section.type === 'features' || section.type === 'benefits' ? index : -1)).filter((index) => index >= 0)
+    const heroIndex = orderedSections.findIndex((section) => section.type === 'hero')
+    const insertAt = variantIndex >= 0
+      ? variantIndex + 1
+      : featureIndexes.length
+        ? Math.max(...featureIndexes) + 1
+        : Math.max(0, heroIndex + 1)
+    orderedSections.splice(insertAt, 0, ...orders)
+    return orderedSections
   }, [sections])
   useEffect(() => { const onScroll = () => setShowSticky(window.scrollY > 420); window.addEventListener('scroll', onScroll, { passive: true }); return () => window.removeEventListener('scroll', onScroll) }, [])
   if (!selectedProduct || !selectedVariant) return <div className="mx-auto max-w-2xl px-4 py-16 text-center text-slate-600">এই পণ্যটি বর্তমানে পাওয়া যাচ্ছে না।</div>
