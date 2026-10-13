@@ -179,6 +179,6 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
           .privacy-banner-enter, .privacy-banner-exit { animation: none; }
         }
       `}</style>
-    </section> : <button type="button" onClick={() => setShowPreferences(true)} aria-label="কুকি পছন্দ পরিবর্তন করুন" className="fixed bottom-4 left-4 z-40 rounded-full border border-emerald-100 bg-white px-3 py-2 text-[11px] font-bold text-emerald-800 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">কুকি পছন্দ</button>}
+    </section> : <div className="w-full px-4 py-3 text-center"><button type="button" onClick={() => setShowPreferences(true)} aria-label="কুকি ও গোপনীয়তা পছন্দ পরিবর্তন করুন" className="inline-flex min-h-8 items-center rounded-lg px-3 py-1.5 text-[11px] font-medium text-slate-400 underline decoration-slate-200 underline-offset-4 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">কুকি ও গোপনীয়তা পছন্দ</button></div>}
   </>
 }

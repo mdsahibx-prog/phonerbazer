@@ -122,7 +122,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             }),
           }}
         />
-        <AnalyticsRuntime />{children}
+        {children}<AnalyticsRuntime />
       </body>
     </html>
   )

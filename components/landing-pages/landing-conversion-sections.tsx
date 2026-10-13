@@ -15,6 +15,8 @@ function money(value: number | null | undefined) {
 function customerText(value: string | undefined) {
   if (!value) return value
   return value
+    .replace(/^\s*#{1,6}\s*/gm, '')
+    .replace(/^\s*[—–]\s*/gm, '')
     .replace(/server[- ]authoritative/gi, 'নিরাপদ')
     .replace(/live catalogue/gi, 'বর্তমান পণ্যের')
     .replace(/catalogue/gi, 'পণ্যের')
@@ -93,16 +95,16 @@ function ProductHero({ section, product, variant, fixedImageUrl }: { section?: E
   const compareAt = variant?.compare_at_price && variant.price < variant.compare_at_price ? variant.compare_at_price : null
   return <section className="overflow-hidden border-b border-emerald-100 bg-gradient-to-b from-emerald-50 via-white to-white">
     <div className="mx-auto grid max-w-5xl items-center gap-6 px-4 py-5 sm:px-6 sm:py-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-12 lg:py-14">
-      <div className="relative mx-auto aspect-square w-full max-w-[30rem] overflow-hidden rounded-[1.75rem] border border-white bg-white shadow-[0_24px_70px_rgba(16,185,129,0.13)] ring-1 ring-emerald-100">
+      <div className="relative mx-auto aspect-[5/4] w-full max-w-[23rem] overflow-hidden rounded-2xl border border-white bg-white shadow-[0_16px_44px_rgba(16,185,129,0.11)] ring-1 ring-emerald-100 sm:aspect-square sm:max-w-[30rem] sm:rounded-[1.75rem] sm:shadow-[0_24px_70px_rgba(16,185,129,0.13)]">
         <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(167,243,208,0.45),transparent_60%)]" />
-        {image ? <Image src={image.image_url} alt={image.alt_text || product.name} fill priority className="object-contain p-3 sm:p-6" sizes="(max-width: 1024px) 92vw, 42vw" /> : null}
+        {image ? <Image src={image.image_url} alt={image.alt_text || product.name} fill priority className="object-contain p-2 sm:p-6" sizes="(max-width: 640px) 88vw, (max-width: 1024px) 92vw, 42vw" /> : null}
         <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full border border-emerald-100 bg-white/95 px-3 py-2 text-xs font-black text-emerald-800 shadow-sm"><Sparkles className="h-3.5 w-3.5" /> ক্লাসিক ডিজাইন</div>
         <div className="absolute bottom-3 right-3 rounded-2xl bg-slate-950 px-3.5 py-2.5 text-white shadow-lg"><p className="text-[10px] font-bold text-emerald-200">বর্তমান মূল্য</p><p className="text-lg font-black">{money(variant?.price)}</p></div>
       </div>
       <div className="min-w-0 lg:py-5">
         <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-800">{product.brand?.name || 'PhonerBazar'}</span><span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200"><CircleCheck className="h-3.5 w-3.5 text-emerald-600" /> ক্যাশ অন ডেলিভারি</span></div>
-        <h1 className="mt-3 text-3xl font-black leading-tight tracking-tight text-slate-950 sm:text-5xl">{title}</h1>
-        {body ? <p className="mt-4 max-w-xl text-base leading-7 text-slate-600">{body}</p> : null}
+        <h1 className="mt-2 text-2xl font-black leading-tight tracking-tight text-slate-950 sm:mt-3 sm:text-5xl">{title}</h1>
+        {body ? <p className="mt-2 line-clamp-2 max-w-xl text-sm leading-5 text-slate-600 sm:mt-4 sm:line-clamp-none sm:text-base sm:leading-7">{body}</p> : null}
         <div className="mt-5 flex flex-wrap items-end gap-x-3 gap-y-1">
           <span className="text-3xl font-black text-emerald-700">{money(variant?.price)}</span>
           {compareAt ? <span className="text-base font-semibold text-slate-400 line-through">{money(compareAt)}</span> : null}
