@@ -15,6 +15,8 @@ function money(value: number | null | undefined) {
 function customerText(value: string | undefined) {
   if (!value) return value
   return value
+    .replace(/^\s*#{1,6}\s*/gm, '')
+    .replace(/^\s*[—–]\s*/gm, '')
     .replace(/server[- ]authoritative/gi, 'নিরাপদ')
     .replace(/live catalogue/gi, 'বর্তমান পণ্যের')
     .replace(/catalogue/gi, 'পণ্যের')
