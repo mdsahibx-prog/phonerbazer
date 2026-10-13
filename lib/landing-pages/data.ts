@@ -19,10 +19,24 @@ export async function getPublicLandingPage(slug: string) {
   if (error) throw new Error('Unable to load this landing page.')
   if (!data) return null
   const page = mapPage(data)
-  const { data: links } = await supabase.from('landing_page_products').select('product_id,sort_order').eq('landing_page_id', page.id).order('sort_order').limit(48)
-  const linkedIds = Array.from(new Set([page.linked_product_id, ...(links ?? []).map((link) => link.product_id)].filter((id): id is string => Boolean(id))))
-  const resolvedProducts = (await Promise.all(linkedIds.map((id) => getProductById(id)))).filter((product): product is NonNullable<typeof product> => Boolean(product))
-  return { ...page, linked_products: links ?? [], linked_product: page.linked_product_id ? resolvedProducts.find((product) => product?.id === page.linked_product_id) ?? null : null, resolved_products: resolvedProducts }
+
+  // Public renderer displays one product. Avoid loading up to 48 linked products
+  // and their full detail payload when only the primary product is rendered.
+  let selectedProductId = page.linked_product_id
+  let links: Array<{ product_id: string; sort_order: number }> = []
+  if (!selectedProductId) {
+    const result = await supabase.from('landing_page_products').select('product_id,sort_order').eq('landing_page_id', page.id).order('sort_order').limit(1)
+    links = result.data ?? []
+    selectedProductId = links[0]?.product_id ?? null
+  }
+
+  const selectedProduct = selectedProductId ? await getProductById(selectedProductId) : null
+  return {
+    ...page,
+    linked_products: links,
+    linked_product: page.linked_product_id ? selectedProduct : null,
+    resolved_products: selectedProduct ? [selectedProduct] : [],
+  }
 }
 
 export async function getPublicLandingPageEntries() {
