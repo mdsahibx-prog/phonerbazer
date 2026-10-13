@@ -32,6 +32,7 @@ function runWhenIdle(callback: () => void, timeout = 1500) {
 export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { runtimeConfig?: RuntimeConfig }) {
   const [consent, setConsent] = useState<Consent | null>(null)
   const [showPreferences, setShowPreferences] = useState(false)
+  const [isLeaving, setIsLeaving] = useState(false)
   const pathname = usePathname()
   const currentPathRef = useRef<string | null>(pathname)
   const lastPageViewPathRef = useRef<string | null>(null)
@@ -105,16 +106,18 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
     setAnalyticsConsent(next)
     setConsent(next)
     setShowPreferences(false)
+    setIsLeaving(true)
+    window.setTimeout(() => setIsLeaving(false), 240)
   }
 
-  const showBanner = consent === null || showPreferences
+  const showBanner = consent === null || showPreferences || isLeaving
 
   return <>
     {showBanner ? <section
       role="dialog"
       aria-label="কুকি ও গোপনীয়তা পছন্দ"
       aria-modal="false"
-      className="fixed inset-x-3 bottom-3 z-50 mx-auto w-auto max-w-md overflow-hidden rounded-2xl border border-emerald-100 bg-white text-slate-700 shadow-[0_18px_60px_-18px_rgba(15,23,42,0.35)] sm:inset-x-auto sm:bottom-5 sm:left-5 sm:w-[min(25rem,calc(100vw-2rem))]"
+      className={`fixed inset-x-3 bottom-3 z-50 mx-auto w-auto max-w-md overflow-hidden rounded-2xl border border-emerald-100 bg-white text-slate-700 shadow-[0_18px_60px_-18px_rgba(15,23,42,0.35)] sm:inset-x-auto sm:bottom-5 sm:left-5 sm:w-[min(25rem,calc(100vw-2rem))] ${isLeaving ? "privacy-banner-exit" : ""}`}
     >
       <div className="h-1 w-full bg-gradient-to-r from-emerald-500 via-teal-400 to-lime-300" />
       <div className="privacy-banner-enter p-4 sm:p-5">
@@ -168,8 +171,12 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
           from { opacity: 0; transform: translate3d(0, 12px, 0) scale(.985); }
           to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
         }
+        .privacy-banner-exit { animation: privacyBannerExit 220ms ease-in forwards; pointer-events: none; }
+        @keyframes privacyBannerExit {
+          to { opacity: 0; transform: translate3d(0, 10px, 0) scale(.985); }
+        }
         @media (prefers-reduced-motion: reduce) {
-          .privacy-banner-enter { animation: none; }
+          .privacy-banner-enter, .privacy-banner-exit { animation: none; }
         }
       `}</style>
     </section> : <button type="button" onClick={() => setShowPreferences(true)} aria-label="কুকি পছন্দ পরিবর্তন করুন" className="fixed bottom-4 left-4 z-40 rounded-full border border-emerald-100 bg-white px-3 py-2 text-[11px] font-bold text-emerald-800 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">কুকি পছন্দ</button>}
