@@ -183,7 +183,7 @@ function DeferredOrderForm({ product, variant, quantity }: { product: Storefront
     if (!target || loadForm) return
     const observer = new IntersectionObserver((entries) => {
       if (entries.some((entry) => entry.isIntersecting)) { setLoadForm(true); observer.disconnect() }
-    }, { rootMargin: '300px 0px' })
+    }, { rootMargin: '0px' })
     observer.observe(target)
     return () => observer.disconnect()
   }, [loadForm])
