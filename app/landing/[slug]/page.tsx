@@ -7,6 +7,7 @@ import { getPublicLandingPage } from '@/lib/landing-pages/data'
 import { LandingPageRenderer } from '@/components/landing-pages/landing-page-renderer'
 
 export const revalidate = 60
+export const dynamic = 'force-static'
 
 type Props = { params: Promise<{ slug: string }> }
 
