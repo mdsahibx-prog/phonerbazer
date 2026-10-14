@@ -16,6 +16,7 @@ Target: `/landing/nokia-6310-classic-phone`, mobile Lighthouse (Moto G Power / S
 ## Change in this PR
 
 - Public landing-page data now uses the Supabase anon client and a 60-second Next.js `unstable_cache` entry instead of request-cookie-aware server client reads.
+- The route explicitly uses `dynamic = 'force-static'` with `revalidate = 60`, so the public route can be statically rendered/cached rather than relying only on a cached data function.
 - Public product-by-ID lookup used by landing pages is also cached for 60 seconds and uses the public anon client. Product visibility remains constrained to `is_published = true`; admin-only data paths continue using the session-aware server client.
 - This is intended to make the public landing data render cacheable and reduce repeat server work before the hero preload can be emitted. It does not change image URLs, CSS, page content, order form logic, or analytics.
 
