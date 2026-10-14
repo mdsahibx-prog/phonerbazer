@@ -23,7 +23,7 @@ function getInitialHeroImage(product: NonNullable<Awaited<ReturnType<typeof getP
     .filter(Boolean)
     .join(' ')
     .toLowerCase()
-    .split(/\\s+|\\//)
+    .split(/\s+|\//)
     .filter((token) => token.length > 2)
   return product.images.find((image) => tokens.some((token) => `${image.alt_text ?? ''} ${image.image_url}`.toLowerCase().includes(token))) ?? primaryImage ?? null
 }
