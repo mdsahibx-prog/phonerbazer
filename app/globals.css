@@ -134,7 +134,7 @@ button, a, input, select { -webkit-tap-highlight-color: transparent; }
 
 
 /* Landing-page Lighthouse contrast fixes: keep secondary copy readable on white and dark surfaces. */
-.privacy-banner-enter p.text-slate-400 {
+section[role="dialog"] p.text-slate-400 {
   color: #475569 !important;
 }
 
