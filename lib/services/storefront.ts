@@ -315,6 +315,29 @@ export async function getProductById(id: string) {
   return normalizeProduct(row, variantsByProduct.get(row.id) ?? [])
 }
 
+const getCachedProductById = unstable_cache(
+  async (id: string) => {
+    const supabase = createPublicClient()
+    const { data, error } = await supabase
+      .from('products')
+      .select(PRODUCT_DETAIL_SELECT)
+      .eq('id', id)
+      .eq('is_published', true)
+      .maybeSingle()
+    if (error) throw new Error('Unable to load this product.')
+    if (!data) return null
+    const row = data as unknown as RawProduct
+    const variantsByProduct = await getVariantsByProductId(supabase, [row.id])
+    return normalizeProduct(row, variantsByProduct.get(row.id) ?? [])
+  },
+  ['public-product-by-id-v1'],
+  { revalidate: 60, tags: ['storefront:product-detail'] }
+)
+
+export async function getPublicProductById(id: string) {
+  return getCachedProductById(id)
+}
+
 const getCachedProductBySlug = unstable_cache(
   async (slug: string) => {
     const supabase = createPublicClient()
