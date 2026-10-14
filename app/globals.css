@@ -131,3 +131,22 @@ button, a, input, select { -webkit-tap-highlight-color: transparent; }
     page-break-inside: avoid;
   }
 }
+
+
+/* Landing-page Lighthouse contrast fixes: keep secondary copy readable on white and dark surfaces. */
+.privacy-banner-enter p.text-slate-400 {
+  color: #475569 !important;
+}
+
+footer .text-slate-500 {
+  color: #cbd5e1 !important;
+}
+
+/* Emerald-600 with white small text misses WCAG AA contrast on landing CTAs. */
+main[data-landing-page] button.bg-emerald-600.text-white {
+  background-color: #047857;
+}
+
+main[data-landing-page] button.bg-emerald-600.text-white:hover {
+  background-color: #065f46;
+}
