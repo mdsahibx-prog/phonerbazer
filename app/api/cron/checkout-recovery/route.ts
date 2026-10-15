@@ -36,6 +36,6 @@ export async function GET(request: NextRequest) {
     marked += 1
     await recordCommerceEvent({ eventId: session.checkout_request_id + ':abandoned', eventName: 'CHECKOUT_ABANDONED', sessionId: session.checkout_request_id, cartId: session.cart_id, metadata: { source: session.source, status: 'ABANDONED' } }).catch(() => undefined)
   }
-  const { error: expiredError } = await db.from('checkout_sessions').update({ status: 'ABANDONED', recovery_consent_withdrawn_at: now, updated_at: now }).lt('expires_at', now).in('status', ['STARTED','DETAILS_ENTERED','QUOTED','ABANDONED'])
+  const { error: expiredError } = await db.from('checkout_sessions').update({ status: 'ABANDONED', updated_at: now }).lt('expires_at', now).in('status', ['STARTED','DETAILS_ENTERED','QUOTED','ABANDONED'])
   return NextResponse.json({ ok: !expiredError, scanned: rows?.length ?? 0, markedAbandoned: marked })
 }
