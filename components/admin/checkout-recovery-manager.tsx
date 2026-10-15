@@ -8,6 +8,7 @@ type RecoveryRow = {
   customer_phone: string | null; quote_snapshot: Record<string, unknown> | null; delivery_snapshot: Record<string, unknown> | null;
   last_activity_at: string; expires_at: string; recovery_consent_at: string | null; recovery_consent_withdrawn_at: string | null;
   recovery_contact_count: number; recovery_last_contacted_at: string | null; recovery_outcome: string | null; completed_order_id: string | null;
+  history?: Array<{ id: string; action: string; notes: string | null; created_at: string; linked_order_id: string | null }>
 }
 function formatDate(value: string) { return new Date(value).toLocaleString('en-BD', { dateStyle: 'medium', timeStyle: 'short' }) }
 function phoneForWhatsApp(value: string) { const digits = value.replace(/\D/g, ''); return digits.startsWith('880') ? digits : digits.startsWith('0') ? '88' + digits : '880' + digits }
@@ -61,6 +62,8 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
             </div>
           </div>
           {row.recovery_last_contacted_at && <p className="mt-2 text-xs text-slate-500">Last WhatsApp link opened: {formatDate(row.recovery_last_contacted_at)} (not delivery confirmation)</p>}
+          {row.completed_order_id && <p className="mt-2 text-xs font-semibold text-emerald-700">Linked order: {row.completed_order_id}</p>}
+          {row.history && row.history.length > 0 && <details className="mt-3 border-t border-slate-100 pt-3"><summary className="cursor-pointer text-xs font-semibold text-slate-600">Contact & outcome history ({row.history.length})</summary><ul className="mt-2 space-y-2">{row.history.map((item) => <li key={item.id} className="text-xs text-slate-600"><span className="font-semibold">{item.action.replaceAll('_',' ')}</span> · {formatDate(item.created_at)}{item.notes ? <p className="mt-0.5">{item.notes}</p> : null}{item.linked_order_id ? <p>Order: {item.linked_order_id}</p> : null}</li>)}</ul></details>}
         </article>
       })}
       {!rows.length && <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">No checkout sessions match these filters.</div>}
