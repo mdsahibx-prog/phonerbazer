@@ -84,5 +84,5 @@ export async function normalizeSteadfastWebhook(payload: Json, headers: Headers)
   const expected = `Bearer ${decryptSecret(data.encrypted_webhook_token)}`
   if (auth !== expected) throw new Error('Invalid Steadfast webhook authorization.')
   const providerEventId = `${event.notification_type ?? 'event'}:${event.consignment_id ?? event.invoice ?? event.updated_at ?? crypto.randomUUID()}`
-  return { provider: 'STEADFAST' as const, providerEventId, providerShipmentId: event.consignment_id ? String(payload.consignment_id) : null, trackingNumber: event.tracking_code ? String(payload.tracking_code) : null, status: mapStatus(event.status), occurredAt: event.updated_at ? String(payload.updated_at) : null, payload }
+  return { provider: 'STEADFAST' as const, providerEventId, providerShipmentId: event.consignment_id ? String(event.consignment_id) : null, trackingNumber: event.tracking_code ? String(event.tracking_code) : null, status: mapStatus(event.status), occurredAt: event.updated_at ? String(event.updated_at) : null, payload }
 }
