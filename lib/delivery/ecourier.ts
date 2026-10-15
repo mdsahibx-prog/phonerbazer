@@ -30,8 +30,11 @@ async function request(path: string, body: Record<string, unknown>) {
     signal: AbortSignal.timeout(15000),
   })
   const text = await response.text()
-  let data: any = null
-  try { data = text ? JSON.parse(text) : null } catch { data = { raw: text } }
+  let data: Record<string, unknown> | null = null
+  try {
+    const parsed: unknown = text ? JSON.parse(text) : null
+    data = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null
+  } catch { data = { raw: text } }
   if (!response.ok || Number(data?.response_code ?? response.status) >= 400) throw new Error(`eCourier API ${response.status}: ${Array.isArray(data?.errors) ? data.errors.join(' ') : data?.message ?? 'Request failed'}`)
   return data
 }
