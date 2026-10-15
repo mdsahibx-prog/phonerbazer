@@ -172,10 +172,11 @@ export async function updateCheckoutRecoveryOutcome(raw: unknown) {
     if (updateError) throw new Error('Unable to link the recovered order.')
     if (!updated) return { ok: false as const, message: 'This checkout is already completed or has changed. Refresh and verify its linked order.' }
   } else {
-    const { error: updateError } = await db.from('checkout_sessions')
+    const { data: updated, error: updateError } = await db.from('checkout_sessions')
       .update({ recovery_outcome: action, recovery_outcome_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-      .eq('id', session.id).neq('status', 'COMPLETED')
+      .eq('id', session.id).neq('status', 'COMPLETED').select('id').maybeSingle()
     if (updateError) throw new Error('Unable to update recovery outcome.')
+    if (!updated) return { ok: false as const, message: 'This checkout is already completed or has changed. Refresh and verify its current status.' }
   }
   const { error: historyError } = await db.from('checkout_recovery_history').insert({ checkout_session_id: session.id, actor_admin_user_id: admin.id, action: action === 'CONTACTED' ? 'WHATSAPP_OPENED' : action, notes: parsed.data.notes ?? null, linked_order_id: parsed.data.orderId ?? null })
   if (historyError) throw new Error('Recovery outcome could not be recorded.')
