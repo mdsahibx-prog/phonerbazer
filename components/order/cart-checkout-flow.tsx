@@ -61,8 +61,8 @@ export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
   const [step, setStep] = useState<Step>('contact')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
-  const [checkoutRequestId] = useState(() => crypto.randomUUID())
-  const [recoveryToken] = useState(() => crypto.randomUUID() + crypto.randomUUID())
+  const [checkoutRequestId] = useState(() => { if (typeof window === 'undefined') return crypto.randomUUID(); const key = 'phonerbazar-cart-checkout-request'; const saved = window.sessionStorage.getItem(key); if (saved) return saved; const id = crypto.randomUUID(); window.sessionStorage.setItem(key, id); return id })
+  const [recoveryToken] = useState(() => { if (typeof window === 'undefined') return crypto.randomUUID() + crypto.randomUUID(); const key = 'phonerbazar-recovery-token:' + checkoutRequestId; const saved = window.sessionStorage.getItem(key); if (saved) return saved; const token = crypto.randomUUID() + crypto.randomUUID(); window.sessionStorage.setItem(key, token); return token })
   const [recoveryConsent, setRecoveryConsent] = useState(false)
 
   useEffect(() => {
