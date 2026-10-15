@@ -85,7 +85,7 @@ export async function signInAdmin(input: unknown): Promise<AdminActionResult> {
 
   if (adminError || !adminRecord) {
     await client.auth.signOut()
-    return { ok: false, message: 'This account is not approved for SahiGadget administration.' }
+    return { ok: false, message: 'This account is not approved for Phonerbazar administration.' }
   }
 
   return { ok: true, message: 'Signed in successfully.' }
@@ -98,7 +98,7 @@ export async function requestPasswordReset(input: unknown): Promise<AdminActionR
   }
 
   const client = await createClient()
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sahigadget.shop'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.phonerbazar.store'
 
   await client.auth.resetPasswordForEmail(parsed.data.email, {
     redirectTo: `${siteUrl}/auth/reset-password`,
