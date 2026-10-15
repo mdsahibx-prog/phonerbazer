@@ -7,6 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAdmin } from '@/lib/admin/auth'
 import { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
 import { recordCommerceEvent } from '@/lib/analytics/events'
+import { getCart } from '@/lib/commerce/cart'
 
 const draftSchema = z.object({
   checkoutRequestId: z.string().uuid(),
@@ -34,7 +35,10 @@ function safeEqualHex(a: string, b: string) {
 function cleanText(value: string | undefined, max: number) { return value?.trim().slice(0, max) || null }
 
 async function authoritativeItems(db: ReturnType<typeof createAdminClient>, input: z.infer<typeof draftSchema>) {
-  const requested = input.source === 'CART' ? (input.cartItems ?? []) : input.productId && input.variantId ? [{ productId: input.productId, variantId: input.variantId, quantity: input.quantity ?? 1 }] : []
+  const cart = input.source === 'CART' ? await getCart() : null
+  const requested = input.source === 'CART'
+    ? (cart?.items ?? []).map((item) => ({ productId: item.product_id, variantId: item.variant_id, quantity: item.quantity }))
+    : input.productId && input.variantId ? [{ productId: input.productId, variantId: input.variantId, quantity: input.quantity ?? 1 }] : []
   if (!requested.length) return []
   const productIds = [...new Set(requested.map((item) => item.productId))]
   const variantIds = [...new Set(requested.map((item) => item.variantId))]
@@ -59,6 +63,7 @@ export async function saveCheckoutRecoveryDraft(raw: unknown) {
   const db = createAdminClient()
   try {
     const items = await authoritativeItems(db, input)
+    const cart = input.source === 'CART' ? await getCart() : null
     const phone = input.phone && isValidBangladeshMobile(input.phone) ? normalizePhone(input.phone) : null
     const name = cleanText(input.fullName, 120)
     const now = new Date().toISOString()
@@ -74,11 +79,11 @@ export async function saveCheckoutRecoveryDraft(raw: unknown) {
     }
     const consentAt = input.recoveryConsent ? (existing?.recovery_consent_at ?? now) : existing?.recovery_consent_at ?? null
     const payload = {
-      checkout_request_id: input.checkoutRequestId, source: input.source,
+      checkout_request_id: input.checkoutRequestId, source: input.source, cart_id: cart?.id || undefined,
       status: Object.keys(delivery).some((key) => delivery[key as keyof typeof delivery]) ? 'DETAILS_ENTERED' : (existing?.status === 'ABANDONED' ? 'STARTED' : existing?.status ?? 'STARTED'),
       customer_name: name, customer_phone: phone, customer_email: cleanText(input.email, 254),
       recovery_token_hash: tokenHash, recovery_consent_at: consentAt,
-      recovery_consent_withdrawn_at: input.recoveryConsent ? null : existing?.recovery_consent_withdrawn_at ?? null,
+      recovery_consent_withdrawn_at: input.recoveryConsent ? null : (existing?.recovery_consent_at ? now : existing?.recovery_consent_withdrawn_at ?? null),
       quote_snapshot: { ...priorQuote, items, item_count: items.reduce((sum, item) => sum + item.quantity, 0), draft_saved_at: now },
       delivery_snapshot: delivery, last_activity_at: now, expires_at: new Date(Date.now() + 30 * 86400000).toISOString(), updated_at: now,
     }
@@ -129,7 +134,7 @@ export async function updateCheckoutRecoveryOutcome(raw: unknown) {
   if (action === 'CONTACTED') {
     if (!session.customer_phone || !session.recovery_consent_at || session.recovery_consent_withdrawn_at || session.status !== 'ABANDONED' || session.completed_order_id || Number(session.recovery_contact_count) >= 2) return { ok: false as const, message: 'This checkout is not eligible for recovery contact.' }
     const { data: orders } = await db.from('orders').select('id,payment_status,order_status').eq('checkout_request_id', (await db.from('checkout_sessions').select('checkout_request_id').eq('id', session.id).single()).data?.checkout_request_id ?? '').limit(1)
-    if (orders?.some((o) => ['paid','processing','success'].includes(String(o.payment_status).toLowerCase()) || ['PROCESSING','COMPLETED','DELIVERED'].includes(String(o.order_status).toUpperCase()))) return { ok: false as const, message: 'An existing order makes this checkout ineligible.' }
+    if (orders?.length) return { ok: false as const, message: 'An existing order makes this checkout ineligible.' }
     const { error: updateError } = await db.from('checkout_sessions').update({ recovery_contact_count: Number(session.recovery_contact_count) + 1, recovery_last_contacted_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', session.id).eq('status', 'ABANDONED').lt('recovery_contact_count', 2)
     if (updateError) throw new Error('Unable to update recovery contact history.')
   } else if (action === 'RECOVERED') {
