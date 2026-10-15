@@ -27,7 +27,7 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
   const [cartAdded, setCartAdded] = useState(false)
   const [buyBusy, setBuyBusy] = useState(false)
   const router = useRouter()
-  const selected = useMemo(() => product.variants.find((variant) => variant.id === selectedId) || product.variants[0] || null, [product, selected, selectedId])
+  const selected = useMemo(() => product.variants.find((variant) => variant.id === selectedId) || product.variants[0] || null, [product.variants, selectedId])
   const status = selected ? getPublicAvailability([selected]) : { label: 'Price on request', tone: 'out' as const }
   const discount = selected && selected.compare_at_price && selected.compare_at_price > selected.price ? Math.round(((selected.compare_at_price - selected.price) / selected.compare_at_price) * 100) : null
   // Keep every product image in the gallery. Some legacy image rows are linked to old variant IDs,
@@ -47,7 +47,7 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
       Number(b.is_primary) - Number(a.is_primary) ||
       a.sort_order - b.sort_order,
     )
-  }, [product.images, selected?.color, selected?.id])
+  }, [product, selected])
   const imageCount = displayImages.length
   const activeImage = displayImages[activeImageIndex] || displayImages[0]
   const imageUrl = activeImage?.image_url || getProductImageUrl(product)
