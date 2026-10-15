@@ -29,8 +29,9 @@ export async function GET(request: NextRequest) {
   let marked = 0
   for (const session of rows ?? []) {
     if (session.completed_order_id) continue
-    const { data: orders } = await db.from('orders').select('id,payment_status,order_status').eq('checkout_request_id', session.checkout_request_id).limit(1)
-    if (orders?.some((order) => ['paid','processing','success'].includes(String(order.payment_status).toLowerCase()) || ['PROCESSING','COMPLETED','DELIVERED'].includes(String(order.order_status).toUpperCase()))) continue
+    const { data: orders, error: orderLookupError } = await db.from('orders').select('id').eq('checkout_request_id', session.checkout_request_id).limit(1)
+    // Fail closed: any existing order, including pending-payment orders, blocks abandonment and recovery contact.
+    if (orderLookupError || orders?.length) continue
     const { data: updated, error: updateError } = await db.from('checkout_sessions').update({ status: 'ABANDONED', updated_at: now }).eq('id', session.id).in('status', ['STARTED','DETAILS_ENTERED','QUOTED']).lt('last_activity_at', cutoff).select('id').maybeSingle()
     if (updateError || !updated) continue
     marked += 1
