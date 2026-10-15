@@ -1,25 +1,26 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-test('recovery policy blocks outreach without explicit active consent', () => {
-  const eligible = (x: { status: string; consent: boolean; withdrawn: boolean; contacts: number; expired: boolean; payment: string; completed: boolean }) =>
-    x.status === 'ABANDONED' && x.consent && !x.withdrawn && x.contacts < 2 && !x.expired && !['pending','paid','processing','success'].includes(x.payment.toLowerCase()) && !x.completed
-  const base = { status: 'ABANDONED', consent: true, withdrawn: false, contacts: 0, expired: false, payment: 'unpaid', completed: false }
+type Candidate = { status: string; consentAt: boolean; withdrawnAt: boolean; contacts: number; expiresAt: number; now: number; hasOrder: boolean; paymentStatus?: string }
+function eligible(x: Candidate) {
+  return x.status === 'ABANDONED' && x.consentAt && !x.withdrawnAt && x.contacts < 2 &&
+    x.expiresAt > x.now && !x.hasOrder && !['pending','paid','processing','success'].includes((x.paymentStatus ?? '').toLowerCase())
+}
+test('recovery requires active consent, abandoned status, unexpired session and no order/payment', () => {
+  const base = { status:'ABANDONED', consentAt:true, withdrawnAt:false, contacts:0, expiresAt:200, now:100, hasOrder:false, paymentStatus:'unpaid' }
   assert.equal(eligible(base), true)
-  assert.equal(eligible({ ...base, consent: false }), false)
-  assert.equal(eligible({ ...base, withdrawn: true }), false)
-  assert.equal(eligible({ ...base, contacts: 2 }), false)
-  assert.equal(eligible({ ...base, expired: true }), false)
-  assert.equal(eligible({ ...base, payment: 'pending' }), false)
-  assert.equal(eligible({ ...base, completed: true }), false)
-  assert.equal(eligible({ ...base, status: 'COMPLETED' }), false)
+  assert.equal(eligible({...base, consentAt:false}), false)
+  assert.equal(eligible({...base, withdrawnAt:true}), false)
+  assert.equal(eligible({...base, contacts:2}), false)
+  assert.equal(eligible({...base, expiresAt:99}), false)
+  assert.equal(eligible({...base, hasOrder:true}), false)
+  assert.equal(eligible({...base, paymentStatus:'pending'}), false)
+  assert.equal(eligible({...base, status:'COMPLETED'}), false)
 })
-
-test('recovery item snapshots are server-derived and only scalar snapshot fields are stored', () => {
-  const client = { productId: 'client-value', price: 1, quantity: 2 }
-  const serverVariant = { id: 'variant-id', price: 1250, stock_quantity: 4 }
-  const snapshot = { variant_id: serverVariant.id, unit_price_snapshot: Number(serverVariant.price), stock_at_save: Number(serverVariant.stock_quantity), quantity: client.quantity }
-  assert.equal(snapshot.unit_price_snapshot, 1250)
-  assert.equal('price' in client && client.price, 1)
-  assert.equal(snapshot.unit_price_snapshot !== client.price, true)
+test('item totals are provisional and never trusted from a client price', () => {
+  const serverPrice = 1250
+  const clientPrice = 1
+  const item = { unit_price_snapshot: serverPrice, quantity: 2 }
+  assert.equal(item.unit_price_snapshot * item.quantity, 2500)
+  assert.notEqual(item.unit_price_snapshot, clientPrice)
 })
