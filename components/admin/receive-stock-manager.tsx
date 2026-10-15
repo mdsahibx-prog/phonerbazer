@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { Save } from 'lucide-react'
 import { receiveStock, initializeCost } from '@/lib/admin/actions'
 
@@ -18,7 +18,7 @@ export function ReceiveStockManager({ variants, receipts, costs }: { variants: S
   const [message, setMessage] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const form = useForm<StockFormValues>({ defaultValues: { variantId: variants[0]?.id ?? '', quantity: 1, unitCost: 0, supplierName: '', supplierReference: '', receivedAt: new Date().toISOString().slice(0,16), note: '' } })
-  const variantId = form.watch('variantId')
+  const variantId = useWatch({ control: form.control, name: 'variantId' })
   const selected = variants.find((v) => v.id === variantId)
   const cost = costs.find((v) => v.variant_id === variantId)
 
