@@ -377,8 +377,8 @@ export async function createGuestOrderWithRisk(input: unknown): Promise<ActionRe
       const summary = await loadOrderSuccessById(String(data[0].order_id))
       after(async () => {
         await Promise.allSettled([
-          markCheckoutSession({ checkoutRequestId: payload.checkoutRequestId, source: 'QUICK_ORDER', status: 'COMPLETED', customerPhone: payload.phone, customerEmail: payload.email || null, completedOrderId: summary.orderId }),
-          recordCommerceEvent({ eventId: `${payload.checkoutRequestId}:completed`, eventName: 'ORDER_COMPLETED', sessionId: payload.checkoutRequestId, orderId: summary.orderId, metadata: { source: 'QUICK_ORDER', order_number: summary.orderNumber } }),
+          markCheckoutSession({ checkoutRequestId: payload.checkoutRequestId, source: payload.checkoutSource, status: 'COMPLETED', customerPhone: payload.phone, customerEmail: payload.email || null, completedOrderId: summary.orderId }),
+          recordCommerceEvent({ eventId: `${payload.checkoutRequestId}:completed`, eventName: 'ORDER_COMPLETED', sessionId: payload.checkoutRequestId, orderId: summary.orderId, metadata: { source: payload.checkoutSource, order_number: summary.orderNumber } }),
           recordPurchaseOnce({ orderId: summary.orderId, orderNumber: summary.orderNumber, value: summary.grandTotal, sessionId: payload.checkoutRequestId, consent: { analytics: payload.analyticsConsent, marketing: payload.marketingConsent }, items: summary.items.map((item) => ({ item_id: item.sku, item_name: item.productName, price: item.unitPrice, quantity: item.quantity })) }),
           queueOrderConfirmationEmails(summary),
         ])
@@ -423,8 +423,8 @@ export async function createGuestOrderWithRisk(input: unknown): Promise<ActionRe
       return { ok: false, message: 'Secure online payment could not be started. No payment was collected. Please try again.' }
     }
     if (!payment.paymentUrl) return { ok: false, message: 'Secure online payment could not be started. No payment was collected. Please try again.' }
-    await markCheckoutSession({ checkoutRequestId: payload.checkoutRequestId, source: 'QUICK_ORDER', status: 'PAYMENT_INITIATED', customerPhone: payload.phone, customerEmail: payload.email || null, completedOrderId: null })
-    await recordCommerceEvent({ eventId: `${payload.checkoutRequestId}:payment-initiated`, eventName: 'PAYMENT_INITIATED', sessionId: payload.checkoutRequestId, orderId: row.order_id, metadata: { source: 'QUICK_ORDER', provider: 'BDGATE' } })
+    await markCheckoutSession({ checkoutRequestId: payload.checkoutRequestId, source: payload.checkoutSource, status: 'PAYMENT_INITIATED', customerPhone: payload.phone, customerEmail: payload.email || null, completedOrderId: null })
+    await recordCommerceEvent({ eventId: `${payload.checkoutRequestId}:payment-initiated`, eventName: 'PAYMENT_INITIATED', sessionId: payload.checkoutRequestId, orderId: row.order_id, metadata: { source: payload.checkoutSource, provider: 'BDGATE' } })
     return { ok: true, data: { paymentRequired: true, orderId: row.order_id, orderNumber: row.order_number, paymentId: payment.id, redirectUrl: payment.paymentUrl } }
   } catch (error) {
     return { ok: false, message: error instanceof Error && error.message.includes('available') ? error.message : 'We could not prepare your order securely. No payment was collected. Please try again.' }
