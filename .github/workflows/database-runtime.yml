@@ -71,9 +71,11 @@ jobs:
         run: pnpm lint
 
       - name: Build
+        if: always() && !cancelled()
         run: pnpm build
 
       - name: Performance audit
+        if: always() && steps.build.outcome == 'success'
         run: pnpm performance:audit
 
       - name: Stop isolated Supabase stack
