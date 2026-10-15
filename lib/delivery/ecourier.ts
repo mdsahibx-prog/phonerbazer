@@ -2,6 +2,7 @@ import 'server-only'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptSecret } from './secrets'
+import type { Json } from '@/lib/types/database'
 import type { CreateShipmentInput, CreateShipmentResult, ShipmentStatus, TrackingResult } from './contracts'
 
 export const ECOURIER_BASE_URL = 'https://backoffice.ecourier.com.bd/api'
@@ -15,7 +16,11 @@ async function getCredentials(): Promise<Credentials> {
   return { apiKey: decryptSecret(data.encrypted_api_key), apiSecret: decryptSecret(data.encrypted_secret_key), userId: decryptSecret(data.encrypted_user_id), baseUrl: data.base_url || ECOURIER_BASE_URL }
 }
 
-async function request(path: string, body: Record<string, unknown>) {
+function asRecord(value: Json | undefined): Record<string, Json | undefined> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : {}
+}
+
+async function request(path: string, body: Record<string, unknown>): Promise<Json> {
   const credentials = await getCredentials()
   const response = await fetch(`${credentials.baseUrl}${path}`, {
     method: 'POST',
@@ -30,15 +35,19 @@ async function request(path: string, body: Record<string, unknown>) {
     signal: AbortSignal.timeout(15000),
   })
   const text = await response.text()
-  let data: any = null
-  try { data = text ? JSON.parse(text) : null } catch { data = { raw: text } }
-  if (!response.ok || Number(data?.response_code ?? response.status) >= 400) throw new Error(`eCourier API ${response.status}: ${Array.isArray(data?.errors) ? data.errors.join(' ') : data?.message ?? 'Request failed'}`)
+  let data: Json = null
+  try { data = text ? JSON.parse(text) as Json : null } catch { data = { raw: text } }
+  const record = asRecord(data)
+  const message = Array.isArray(record.errors) ? record.errors.map((error) => String(error)).join(' ') : String(record.message ?? 'Request failed')
+  if (!response.ok || Number(record.response_code ?? response.status) >= 400) throw new Error(`eCourier API ${response.status}: ${message}`)
   return data
 }
 
 export async function testECourierConnection() {
   const data = await request('/packages', {})
-  return { ok: Array.isArray(data) || Array.isArray(data?.message), packageCount: Array.isArray(data) ? data.length : Array.isArray(data?.message) ? data.message.length : 0 }
+  const record = asRecord(data)
+  const packages = record.message
+  return { ok: Array.isArray(data) || Array.isArray(packages), packageCount: Array.isArray(data) ? data.length : Array.isArray(packages) ? packages.length : 0 }
 }
 
 function mapStatus(value: unknown): ShipmentStatus {
@@ -75,15 +84,27 @@ export async function createECourierOrder(input: CreateShipmentInput): Promise<C
     number_of_item: items,
     actual_product_price: Math.round(Number(input.order.totalAmount ?? codAmount)),
   })
-  const id = result?.ID ?? result?.id
+  const resultRecord = asRecord(result)
+  const id = resultRecord.ID ?? resultRecord.id
   if (!id) throw new Error('eCourier did not return an eCourier tracking ID.')
   return { providerShipmentId: String(id), trackingNumber: String(id), labelReference: null, status: 'CREATED', raw: result }
 }
 
 export async function trackECourierShipment(trackingNumber: string): Promise<TrackingResult> {
   const result = await request('/track', { ecr: trackingNumber })
-  const row = Array.isArray(result?.query_data) ? result.query_data[0] : null
-  const statuses = Array.isArray(row?.status) ? row.status : []
-  const latest = statuses[0]
-  return { providerShipmentId: String(row?.REFID ?? trackingNumber), trackingNumber, status: mapStatus(latest?.[0]), statusText: latest?.[0] ? String(latest[0]) : null, occurredAt: latest?.[2] ? String(latest[2]) : null, raw: result }
+  const resultRecord = asRecord(result)
+  const queryData = resultRecord.query_data
+  const row = Array.isArray(queryData) ? asRecord(queryData[0] as Json) : {}
+  const statusHistory = Array.isArray(row.status) ? row.status as Json[] : []
+  const latest = Array.isArray(statusHistory[0]) ? statusHistory[0] as Json[] : []
+  const statusValue = latest[0]
+  const occurredAt = latest[2]
+  return {
+    providerShipmentId: String(row.REFID ?? trackingNumber),
+    trackingNumber,
+    status: mapStatus(statusValue),
+    statusText: statusValue ? String(statusValue) : null,
+    occurredAt: occurredAt ? String(occurredAt) : null,
+    raw: result,
+  }
 }
