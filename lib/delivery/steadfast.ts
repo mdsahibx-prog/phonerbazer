@@ -3,6 +3,7 @@ import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptSecret } from './secrets'
 import type { CreateShipmentInput, CreateShipmentResult, ShipmentStatus, TrackingResult } from './contracts'
+import type { Json } from '@/lib/types/database'
 
 export const STEADFAST_BASE_URL = 'https://portal.packzy.com/api/v1'
 
@@ -15,7 +16,7 @@ async function getCredentials(): Promise<Credentials> {
   return { apiKey: decryptSecret(data.encrypted_api_key), secretKey: decryptSecret(data.encrypted_secret_key), baseUrl: data.base_url || STEADFAST_BASE_URL }
 }
 
-type SteadfastResponse = Record<string, unknown> & { consignment?: Record<string, unknown> }
+type SteadfastResponse = Record<string, Json | undefined> & { consignment?: Record<string, Json | undefined> }
 
 async function steadfastRequest(path: string, init: RequestInit = {}): Promise<SteadfastResponse> {
   const credentials = await getCredentials()
@@ -71,7 +72,7 @@ export async function trackSteadfastShipment(trackingNumber: string): Promise<Tr
   return { providerShipmentId: String(result?.consignment_id ?? trackingNumber), trackingNumber, status: mapStatus(result?.delivery_status), statusText: result?.delivery_status ?? null, raw: result }
 }
 
-export async function normalizeSteadfastWebhook(payload: unknown, headers: Headers) {
+export async function normalizeSteadfastWebhook(payload: Json, headers: Headers) {
   const event = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload as Record<string, unknown> : {}
   const auth = headers.get('authorization') ?? ''
   const db = createAdminClient()
