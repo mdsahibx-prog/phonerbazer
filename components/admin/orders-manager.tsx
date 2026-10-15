@@ -23,7 +23,7 @@ export function OrdersManager({ orders, invoiceGenerationEnabled }: { orders: an
   const [detailError, setDetailError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!selectedId) { setSelected(null); return }
+    if (!selectedId) return
     let active = true
     setDetailLoading(true)
     setDetailError(null)
