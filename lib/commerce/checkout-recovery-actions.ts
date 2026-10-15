@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAdmin } from '@/lib/admin/auth'
 import { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
+import { getStorefrontSettings } from '@/lib/services/storefront'
 import { getCart } from '@/lib/commerce/cart'
 
 const draftSchema = z.object({
@@ -72,19 +73,29 @@ export async function saveCheckoutRecoveryDraft(raw: unknown) {
     const tokenHash = hashToken(input.recoveryToken)
     if (existing?.recovery_token_hash && !safeEqualHex(existing.recovery_token_hash, tokenHash)) return { ok: false as const, message: 'Checkout draft session has changed. Continue checkout to refresh it.' }
     if (existing && ['COMPLETED', 'PAYMENT_INITIATED'].includes(existing.status)) return { ok: true as const, saved: false as const }
+    const { data: linkedOrders, error: orderLookupError } = await db.from('orders').select('id').eq('checkout_request_id', input.checkoutRequestId).limit(1)
+    if (orderLookupError) throw orderLookupError
+    if (linkedOrders?.length) return { ok: true as const, saved: false as const }
     const priorQuote = (existing?.quote_snapshot && typeof existing.quote_snapshot === 'object') ? existing.quote_snapshot as Record<string, unknown> : {}
     const delivery = {
       division: cleanText(input.division, 80), district: cleanText(input.district, 80),
       area: cleanText(input.area, 100), address: cleanText(input.address, 500),
     }
     const consentAt = input.recoveryConsent ? (existing?.recovery_consent_at ?? now) : existing?.recovery_consent_at ?? null
+    const settings = input.division ? await getStorefrontSettings() : null
+    const deliveryZone = input.division ? (input.division.toLowerCase() === 'dhaka' ? 'dhaka' : 'outside_dhaka') : null
+    const deliveryCharge = settings && deliveryZone
+      ? Number(deliveryZone === 'dhaka' ? settings.delivery.dhakaCharge : settings.delivery.outsideDhakaCharge)
+      : null
+    const subtotalSnapshot = items.reduce((sum, item) => sum + item.unit_price_snapshot * item.quantity, 0)
+    const discountSnapshot = items.reduce((sum, item) => sum + Math.max((item.compare_at_price_snapshot ?? item.unit_price_snapshot) - item.unit_price_snapshot, 0) * item.quantity, 0)
     const payload = {
       checkout_request_id: input.checkoutRequestId, source: input.source, cart_id: cart?.id || undefined,
       status: existing?.status === 'QUOTED' ? 'QUOTED' : (Object.keys(delivery).some((key) => delivery[key as keyof typeof delivery]) ? 'DETAILS_ENTERED' : (existing?.status === 'ABANDONED' ? 'STARTED' : existing?.status ?? 'STARTED')),
       customer_name: name, customer_phone: phone, customer_email: cleanText(input.email, 254),
       recovery_token_hash: tokenHash, recovery_consent_at: consentAt,
       recovery_consent_withdrawn_at: input.recoveryConsent ? null : (existing?.recovery_consent_at ? now : existing?.recovery_consent_withdrawn_at ?? null),
-      quote_snapshot: { ...priorQuote, items, item_count: items.reduce((sum, item) => sum + item.quantity, 0), draft_saved_at: now },
+      quote_snapshot: { ...priorQuote, items, item_count: items.reduce((sum, item) => sum + item.quantity, 0), subtotal_snapshot: subtotalSnapshot, discount_snapshot: discountSnapshot, delivery_zone: deliveryZone, delivery_charge_snapshot: Number.isFinite(deliveryCharge) ? deliveryCharge : null, grand_total_snapshot: Number.isFinite(deliveryCharge) ? subtotalSnapshot + deliveryCharge! : null, draft_saved_at: now },
       delivery_snapshot: delivery, last_activity_at: now, expires_at: new Date(Date.now() + 30 * 86400000).toISOString(), updated_at: now,
     }
     if (existing) {
