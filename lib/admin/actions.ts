@@ -85,7 +85,7 @@ export async function signInAdmin(input: unknown): Promise<AdminActionResult> {
 
   if (adminError || !adminRecord) {
     await client.auth.signOut()
-    return { ok: false, message: 'This account is not approved for SahiGadget administration.' }
+    return { ok: false, message: 'This account is not approved for Phonerbazar administration.' }
   }
 
   return { ok: true, message: 'Signed in successfully.' }
@@ -98,7 +98,7 @@ export async function requestPasswordReset(input: unknown): Promise<AdminActionR
   }
 
   const client = await createClient()
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sahigadget.shop'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.phonerbazar.store'
 
   await client.auth.resetPasswordForEmail(parsed.data.email, {
     redirectTo: `${siteUrl}/auth/reset-password`,
@@ -613,7 +613,9 @@ export async function saveAdminUser(input: unknown): Promise<AdminActionResult> 
   }
 }
 
-export async function getProductImagesForAdmin(): Promise<any[]> {
+type AdminProductImage = { id: string; product_id: string; variant_id: string | null; storage_path: string; image_url: string; alt_text: string | null; sort_order: number; is_primary: boolean }
+
+export async function getProductImagesForAdmin(): Promise<AdminProductImage[]> {
   try {
     await requireAdmin(['OWNER', 'ADMIN'])
     const db = createAdminClient()

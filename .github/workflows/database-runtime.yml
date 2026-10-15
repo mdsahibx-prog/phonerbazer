@@ -43,6 +43,15 @@ jobs:
       - name: Start isolated Supabase stack
         run: supabase start
 
+      - name: Configure local Supabase public environment for build
+        shell: bash
+        run: |
+          # Derive only local, ephemeral credentials from the Supabase stack started above.
+          # Never read or inject production credentials into this workflow.
+          supabase status -o env | sed -n 's/^API_URL="\(.*\)"/NEXT_PUBLIC_SUPABASE_URL=\1/p; s/^ANON_KEY="\(.*\)"/NEXT_PUBLIC_SUPABASE_ANON_KEY=\1/p' >> "$GITHUB_ENV"
+          grep -q '^NEXT_PUBLIC_SUPABASE_URL=.' "$GITHUB_ENV"
+          grep -q '^NEXT_PUBLIC_SUPABASE_ANON_KEY=.' "$GITHUB_ENV"
+
       - name: Reset isolated database and apply every migration
         run: supabase db reset --local
 
@@ -71,9 +80,14 @@ jobs:
         run: pnpm lint
 
       - name: Build
+        id: build
+        if: always() && !cancelled()
         run: pnpm build
 
       - name: Performance audit
+        if: always() && steps.build.outcome == 'success'
+        env:
+          PERFORMANCE_BASE_URL: https://phonerbazer-git-audit-system-engineering-har-45b067-phonerbazer.vercel.app
         run: pnpm performance:audit
 
       - name: Stop isolated Supabase stack

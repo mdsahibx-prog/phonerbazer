@@ -3,6 +3,7 @@ import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptSecret } from './secrets'
 import type { CreateShipmentInput, CreateShipmentResult, ShipmentStatus, TrackingResult } from './contracts'
+import type { Json } from '@/lib/types/database'
 
 export const ECOURIER_BASE_URL = 'https://backoffice.ecourier.com.bd/api'
 
@@ -30,8 +31,11 @@ async function request(path: string, body: Record<string, unknown>) {
     signal: AbortSignal.timeout(15000),
   })
   const text = await response.text()
-  let data: any = null
-  try { data = text ? JSON.parse(text) : null } catch { data = { raw: text } }
+  let data: Record<string, Json | undefined> | null = null
+  try {
+    const parsed: unknown = text ? JSON.parse(text) : null
+    data = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, Json | undefined> : null
+  } catch { data = { raw: text } }
   if (!response.ok || Number(data?.response_code ?? response.status) >= 400) throw new Error(`eCourier API ${response.status}: ${Array.isArray(data?.errors) ? data.errors.join(' ') : data?.message ?? 'Request failed'}`)
   return data
 }
@@ -82,8 +86,10 @@ export async function createECourierOrder(input: CreateShipmentInput): Promise<C
 
 export async function trackECourierShipment(trackingNumber: string): Promise<TrackingResult> {
   const result = await request('/track', { ecr: trackingNumber })
-  const row = Array.isArray(result?.query_data) ? result.query_data[0] : null
+  const rowValue = Array.isArray(result?.query_data) ? result.query_data[0] : null
+  const row = rowValue && typeof rowValue === 'object' && !Array.isArray(rowValue) ? rowValue as Record<string, Json | undefined> : null
   const statuses = Array.isArray(row?.status) ? row.status : []
-  const latest = statuses[0]
+  const latestValue = statuses[0]
+  const latest = Array.isArray(latestValue) ? latestValue : []
   return { providerShipmentId: String(row?.REFID ?? trackingNumber), trackingNumber, status: mapStatus(latest?.[0]), statusText: latest?.[0] ? String(latest[0]) : null, occurredAt: latest?.[2] ? String(latest[2]) : null, raw: result }
 }

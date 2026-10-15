@@ -3,10 +3,14 @@ import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptSecret } from './secrets'
 import type { CreateShipmentInput, CreateShipmentResult, ShipmentStatus, TrackingResult } from './contracts'
+import type { Json } from '@/lib/types/database'
 
 export const REDX_BASE_URL = 'https://openapi.redx.com.bd/v1.0.0-beta'
 
 type Credentials = { token: string; webhookToken?: string | null; baseUrl: string }
+type RedxArea = { id?: string | number; name?: string; [key: string]: Json | undefined }
+type RedxStore = { id?: string | number; [key: string]: Json | undefined }
+type RedxResponse = Record<string, Json | undefined> & { areas?: RedxArea[]; pickup_stores?: RedxStore[]; pickup_store?: Record<string, Json | undefined>; consignment?: Record<string, Json | undefined>; tracking?: Array<{ status?: string; message_en?: string; message_bn?: string; time?: string }> }
 
 async function getCredentials(): Promise<Credentials> {
   const db = createAdminClient()
@@ -15,7 +19,7 @@ async function getCredentials(): Promise<Credentials> {
   return { token: decryptSecret(data.encrypted_api_key).replace(/^Bearer\s+/i, '').trim(), webhookToken: data.encrypted_webhook_token ? decryptSecret(data.encrypted_webhook_token) : null, baseUrl: data.base_url || REDX_BASE_URL }
 }
 
-async function redxRequest(path: string, init: RequestInit = {}) {
+async function redxRequest(path: string, init: RequestInit = {}): Promise<RedxResponse> {
   const credentials = await getCredentials()
   const headers = new Headers(init.headers)
   headers.set('API-ACCESS-TOKEN', `Bearer ${credentials.token}`)
@@ -28,18 +32,18 @@ async function redxRequest(path: string, init: RequestInit = {}) {
     const message = typeof body === 'object' && body && 'message' in body ? String((body as { message?: unknown }).message) : `HTTP ${response.status}`
     throw new Error(`REDX API ${response.status}: ${message}`)
   }
-  return body as any
+  return body && typeof body === 'object' && !Array.isArray(body) ? body as RedxResponse : {}
 }
 
 export async function listRedxAreas(postCode?: string, districtName?: string) {
   const query = postCode ? `?post_code=${encodeURIComponent(postCode)}` : districtName ? `?district_name=${encodeURIComponent(districtName)}` : ''
   const result = await redxRequest(`/areas${query}`)
-  return Array.isArray(result?.areas) ? result.areas : []
+  return Array.isArray(result.areas) ? result.areas : []
 }
 
 export async function listRedxPickupStores() {
   const result = await redxRequest('/pickup/stores')
-  return Array.isArray(result?.pickup_stores) ? result.pickup_stores : []
+  return Array.isArray(result.pickup_stores) ? result.pickup_stores : []
 }
 
 export async function getRedxPickupStoreInfo(pickupStoreId: number) {
@@ -74,16 +78,16 @@ function mapStatus(value: unknown): ShipmentStatus {
 export async function resolveRedxDeliveryArea(customer: CreateShipmentInput['order']['customer']) {
   const areas = await listRedxAreas(customer.postalCode || undefined, customer.district || undefined)
   const normalizedArea = customer.area.trim().toLowerCase()
-  const exact = areas.find((area: any) => String(area.name ?? '').trim().toLowerCase() === normalizedArea)
+  const exact = areas.find((area) => String(area.name ?? '').trim().toLowerCase() === normalizedArea)
   if (exact) return exact
-  const partial = areas.find((area: any) => String(area.name ?? '').trim().toLowerCase().includes(normalizedArea) || normalizedArea.includes(String(area.name ?? '').trim().toLowerCase()))
+  const partial = areas.find((area) => String(area.name ?? '').trim().toLowerCase().includes(normalizedArea) || normalizedArea.includes(String(area.name ?? '').trim().toLowerCase()))
   if (partial) return partial
   throw new Error(`REDX delivery area could not be resolved for ${customer.area}.`)
 }
 
 export async function createRedxParcel(input: CreateShipmentInput & { deliveryArea: string; deliveryAreaId: number; pickupStoreId?: number | null; declaredValue?: number }): Promise<CreateShipmentResult> {
   const stores = await listRedxPickupStores()
-  const pickupStore = input.pickupStoreId ? stores.find((store: any) => Number(store.id) === Number(input.pickupStoreId)) : stores[0]
+  const pickupStore = input.pickupStoreId ? stores.find((store) => Number(store.id) === Number(input.pickupStoreId)) : stores[0]
   const payload: Record<string, unknown> = {
     customer_name: input.order.customer.name,
     customer_phone: input.order.customer.phone,
@@ -117,12 +121,13 @@ export async function getRedxParcelInfo(trackingNumber: string) {
   return result?.parcel ?? null
 }
 
-export async function normalizeRedxWebhook(payload: any, requestUrl: string) {
+export async function normalizeRedxWebhook(payload: Json, requestUrl: string) {
+  const event = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload as Record<string, unknown> : {}
   const credentials = await getCredentials()
   if (!credentials.webhookToken) throw new Error('REDX webhook token is not configured.')
   const supplied = new URL(requestUrl).searchParams.get('token') ?? ''
   if (!supplied || supplied !== credentials.webhookToken) throw new Error('Invalid REDX webhook token.')
-  const providerShipmentId = payload?.tracking_number ? String(payload.tracking_number) : null
-  const providerEventId = `redx:${providerShipmentId ?? payload?.invoice_number ?? 'event'}:${payload?.timestamp ?? payload?.status ?? crypto.randomUUID()}`
-  return { provider: 'REDX' as const, providerEventId, providerShipmentId, trackingNumber: providerShipmentId, status: mapStatus(payload?.status), occurredAt: payload?.timestamp ? String(payload.timestamp) : null, payload }
+  const providerShipmentId = event.tracking_number ? String(event.tracking_number) : null
+  const providerEventId = `redx:${providerShipmentId ?? event.invoice_number ?? 'event'}:${event.timestamp ?? event.status ?? crypto.randomUUID()}`
+  return { provider: 'REDX' as const, providerEventId, providerShipmentId, trackingNumber: providerShipmentId, status: mapStatus(event.status), occurredAt: event.timestamp ? String(event.timestamp) : null, payload }
 }

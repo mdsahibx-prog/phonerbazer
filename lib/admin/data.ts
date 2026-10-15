@@ -103,13 +103,13 @@ export async function getInventoryData() {
 
   ;[variants, costs, receipts, movements, imei, costItems, orderStatuses].forEach((result) => assertNoError(result.error))
   const lowStock = (variants.data ?? []).filter((variant) => Number(variant.stock_quantity) <= Number(variant.low_stock_threshold))
-  const inventoryValue = (costs.data ?? []).reduce((sum: number, row: any) => sum + Number(row.inventory_value ?? 0), 0)
-  const unitsInStock = (variants.data ?? []).reduce((sum: number, row: any) => sum + Number(row.stock_quantity ?? 0), 0)
-  const orderStatusById = new Map((orderStatuses.data ?? []).map((row: any) => [row.id, row.order_status]))
-  const costRows = (costItems.data ?? []).filter((row: any) => row.cost_total != null && orderStatusById.get(row.order_id) !== 'CANCELLED')
-  const revenue = costRows.reduce((sum: number, row: any) => sum + Number(row.line_total ?? 0), 0)
-  const cogs = costRows.reduce((sum: number, row: any) => sum + Number(row.cost_total ?? 0), 0)
-  const grossProfit = costRows.reduce((sum: number, row: any) => sum + Number(row.gross_profit ?? 0), 0)
+  const inventoryValue = (costs.data ?? []).reduce((sum, row) => sum + Number(row.inventory_value ?? 0), 0)
+  const unitsInStock = (variants.data ?? []).reduce((sum, row) => sum + Number(row.stock_quantity ?? 0), 0)
+  const orderStatusById = new Map((orderStatuses.data ?? []).map((row) => [row.id, row.order_status]))
+  const costRows = (costItems.data ?? []).filter((row) => row.cost_total != null && orderStatusById.get(row.order_id) !== 'CANCELLED')
+  const revenue = costRows.reduce((sum, row) => sum + Number(row.line_total ?? 0), 0)
+  const cogs = costRows.reduce((sum, row) => sum + Number(row.cost_total ?? 0), 0)
+  const grossProfit = costRows.reduce((sum, row) => sum + Number(row.gross_profit ?? 0), 0)
   const metrics = canManageCosts ? { unitsInStock, inventoryValue, revenue, cogs, grossProfit } : null
   return { variants: variants.data ?? [], costs: costs.data ?? [], receipts: receipts.data ?? [], movements: movements.data ?? [], imei: imei.data ?? [], lowStock, canManageImei: canManageCosts, canManageCosts, metrics }
 }

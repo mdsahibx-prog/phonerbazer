@@ -23,8 +23,10 @@ export function OrdersManager({ orders, invoiceGenerationEnabled }: { orders: an
   const [detailError, setDetailError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!selectedId) { setSelected(null); return }
+    if (!selectedId) return
     let active = true
+    // This effect starts an async detail request when selection changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDetailLoading(true)
     setDetailError(null)
     getAdminOrderDetail(selectedId).then((detail) => {

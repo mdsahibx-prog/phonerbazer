@@ -39,6 +39,8 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
 
   // Keep the first-visit prompt visible until the visitor makes a choice.
   useEffect(() => {
+    // This effect hydrates persisted browser consent after SSR; it must not run during render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (hasAnalyticsConsent()) setConsent(getAnalyticsConsent())
   }, [])
 
