@@ -2,7 +2,8 @@
 
 ## Behavior and safeguards
 
-- Draft autosave is debounced in both Buy Now and cart checkout; draft-save errors do not block normal checkout.
+- Draft autosave is debounced in Buy Now, cart checkout, and Landing Page Order; draft-save errors do not block normal checkout.
+- Landing Page Order uses the same risk-aware guest-order action as the standard guest checkout, including the existing COD/advance-payment decision, order idempotency, inventory validation, and canonical purchase-event flow. The source is preserved as `LANDING_PAGE` in the existing `checkout_sessions` row and commerce-event metadata.
 - Product, variant, price and stock snapshot fields are re-read server-side. Cart item membership and quantities are read from the server-side cart cookie, not trusted from the browser.
 - A random per-checkout capability is held in `sessionStorage` and only its SHA-256 hash is stored in `checkout_sessions`. It is not sent to analytics.
 - Recovery contact is a separate optional consent from analytics/marketing consent. Unchecking after granting consent records a withdrawal timestamp.
@@ -27,11 +28,12 @@ Open Admin → Checkout Recovery. Filter and search the bounded list. WhatsApp i
 ## Verification
 
 1. Run `pnpm test`, `pnpm exec eslint app/api/cron/checkout-recovery/route.ts 'app/admin/(operations)/checkout-recovery/page.tsx' components/admin/checkout-recovery-manager.tsx components/order/checkout-flow.tsx components/order/cart-checkout-flow.tsx lib/commerce/checkout-recovery-actions.ts scripts/checkout-recovery-policy-test.ts`, and `pnpm exec tsc --noEmit`.
-2. In a non-production environment with the additive migration applied, test Buy Now and cart checkout autosave, tab refresh, consent grant/withdrawal, and save failures.
-3. Call the cron route without a bearer token and confirm `401`; with a non-production `CRON_SECRET`, confirm bounded processing and idempotent repeated runs.
-4. Confirm payment-pending/any existing order, completed, expired, withdrawn-consent and contact-limit cases never offer WhatsApp.
-5. Confirm WhatsApp opening does not claim delivery and no recovery token/contact/address reaches analytics.
-6. Verify COD and advance payment, stock reservation/release, idempotent order retry, fraud/risk behavior and canonical purchase event behavior before any production release.
+2. In a non-production environment with the additive migration applied, test Buy Now, cart checkout, and Landing Page Order autosave, tab refresh, consent grant/withdrawal, and save failures.
+3. Confirm Landing Page Order and standard guest checkout share the same risk-aware order action; test COD and advance-payment routing without creating real customer orders.
+4. Call the cron route without a bearer token and confirm `401`; with a non-production `CRON_SECRET`, confirm bounded processing and idempotent repeated runs.
+5. Confirm any existing order (including payment-pending), completed, expired, withdrawn-consent and contact-limit cases never offer WhatsApp.
+6. Confirm WhatsApp opening does not claim delivery and no recovery token/contact/address reaches analytics.
+7. Verify stock reservation/release, idempotent order retry, fraud/risk behavior and canonical purchase event behavior before any production release.
 
 ## Limitations / release gate
 
