@@ -151,9 +151,10 @@ export async function updateCheckoutRecoveryOutcome(raw: unknown) {
   const parsed = outcomeSchema.safeParse(raw)
   if (!parsed.success) return { ok: false as const, message: 'Invalid recovery update.' }
   const db = createAdminClient()
-  const { data: session, error } = await db.from('checkout_sessions').select('id,checkout_request_id,status,customer_phone,recovery_consent_at,recovery_consent_withdrawn_at,recovery_contact_count,recovery_last_contacted_at,completed_order_id,expires_at').eq('id', parsed.data.sessionId).maybeSingle()
-  const sessionLookup = checkoutRecoveryLookupResult(error, session, 'Unable to load checkout session. Refresh and try again.', 'Checkout session not found.')
+  const { data: sessionData, error } = await db.from('checkout_sessions').select('id,checkout_request_id,status,customer_phone,recovery_consent_at,recovery_consent_withdrawn_at,recovery_contact_count,recovery_last_contacted_at,completed_order_id,expires_at').eq('id', parsed.data.sessionId).maybeSingle()
+  const sessionLookup = checkoutRecoveryLookupResult(error, sessionData, 'Unable to load checkout session. Refresh and try again.', 'Checkout session not found.')
   if (!sessionLookup.ok) return sessionLookup
+  const session = sessionLookup.data
   const action = parsed.data.outcome
   if (action === 'CONTACTED') {
     if (!session.customer_phone || !session.recovery_consent_at || session.recovery_consent_withdrawn_at || session.status !== 'ABANDONED' || session.completed_order_id || new Date(session.expires_at).getTime() <= Date.now() || Number(session.recovery_contact_count) >= 2) return { ok: false as const, message: 'This checkout is not eligible for recovery contact.' }
@@ -166,8 +167,8 @@ export async function updateCheckoutRecoveryOutcome(raw: unknown) {
     if (!contactWrite.ok) return contactWrite
   } else if (action === 'RECOVERED') {
     if (!parsed.data.orderId) return { ok: false as const, message: 'Link the recovered order before marking recovered.' }
-    const { data: order, error: orderError } = await db.from('orders').select('id,checkout_request_id').eq('id', parsed.data.orderId).maybeSingle()
-    const linkedOrderLookup = checkoutRecoveryLookupResult(orderError, order, 'Unable to verify the linked order. Refresh and try again.', 'Order does not belong to this checkout.')
+    const { data: linkedOrder, error: orderError } = await db.from('orders').select('id,checkout_request_id').eq('id', parsed.data.orderId).maybeSingle()
+    const linkedOrderLookup = checkoutRecoveryLookupResult(orderError, linkedOrder, 'Unable to verify the linked order. Refresh and try again.', 'Order does not belong to this checkout.')
     if (!linkedOrderLookup.ok) return linkedOrderLookup
     if (linkedOrderLookup.data.checkout_request_id !== session.checkout_request_id) return { ok: false as const, message: 'Order does not belong to this checkout.' }
     const order = linkedOrderLookup.data
