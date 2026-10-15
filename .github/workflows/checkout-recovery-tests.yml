@@ -8,6 +8,9 @@ on:
       - 'components/admin/checkout-recovery-manager.tsx'
       - 'components/order/checkout-flow.tsx'
       - 'components/order/cart-checkout-flow.tsx'
+      - 'components/landing-pages/landing-order-form.tsx'
+      - 'lib/orders/actions.ts'
+      - 'lib/orders/schema.ts'
       - 'lib/commerce/checkout-recovery-actions.ts'
       - 'scripts/checkout-recovery-policy-test.ts'
       - 'supabase/migrations/*checkout_recovery_engine.sql'
@@ -49,6 +52,9 @@ jobs:
           components/admin/checkout-recovery-manager.tsx
           components/order/checkout-flow.tsx
           components/order/cart-checkout-flow.tsx
+          components/landing-pages/landing-order-form.tsx
+          lib/orders/actions.ts
+          lib/orders/schema.ts
           lib/commerce/checkout-recovery-actions.ts
           scripts/checkout-recovery-policy-test.ts
       - name: Type-check
