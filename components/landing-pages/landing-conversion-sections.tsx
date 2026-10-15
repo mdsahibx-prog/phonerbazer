@@ -86,18 +86,12 @@ function ProductHero({ section, product, variant, fixedImageUrl, onSelect }: { s
       return { variant: candidate, image }
     }).filter((entry): entry is { variant: StorefrontVariant; image: StorefrontProduct['images'][number] } => Boolean(entry))
   }, [product, fixedImageUrl, section?.imageUrl])
-  const [galleryIndex, setGalleryIndex] = useState(() => {
-    const selectedIndex = gallery.findIndex((entry) => entry.variant.id === variant?.id)
-    return selectedIndex >= 0 ? selectedIndex : 0
-  })
+  const [fallbackGalleryIndex, setFallbackGalleryIndex] = useState(0)
+  const selectedGalleryIndex = gallery.findIndex((entry) => entry.variant.id === variant?.id)
+  const activeGalleryIndex = selectedGalleryIndex >= 0 ? selectedGalleryIndex : fallbackGalleryIndex
   const touchStartXRef = useRef(0)
-  useEffect(() => {
-    if (gallery.length < 2) return
-    const timer = window.setInterval(() => setGalleryIndex((index) => (index + 1) % gallery.length), 3600)
-    return () => window.clearInterval(timer)
-  }, [gallery.length])
   if (!product) return null
-  const active = gallery[galleryIndex] ?? gallery.find((entry) => entry.variant.id === variant?.id)
+  const active = gallery[activeGalleryIndex] ?? gallery.find((entry) => entry.variant.id === variant?.id)
   const image = active?.image ?? imageForVariant(product, variant) ?? imageForVariant(product, undefined, fixedImageUrl || section?.imageUrl) ?? primaryImage(product)
   const compareAt = variant?.compare_at_price && variant.price < variant.compare_at_price ? variant.compare_at_price : null
   const colorDot = (color?: string | null) => {
@@ -113,8 +107,8 @@ function ProductHero({ section, product, variant, fixedImageUrl, onSelect }: { s
   }
   const moveGallery = (direction: number) => {
     if (gallery.length < 2) return
-    const next = (galleryIndex + direction + gallery.length) % gallery.length
-    setGalleryIndex(next)
+    const next = (activeGalleryIndex + direction + gallery.length) % gallery.length
+    setFallbackGalleryIndex(next)
     onSelect(gallery[next].variant.id)
   }
   return <section className="overflow-hidden border-b border-emerald-100 bg-gradient-to-b from-emerald-50 via-white to-white">
@@ -130,8 +124,24 @@ function ProductHero({ section, product, variant, fixedImageUrl, onSelect }: { s
           <div className="absolute bottom-3 right-3 rounded-2xl bg-slate-950 px-3.5 py-2.5 text-white shadow-lg"><p className="text-[10px] font-bold text-emerald-200">বর্তমান মূল্য</p><p className="text-lg font-black">{money(variant?.price)}</p></div>
           {gallery.length > 1 ? <><button type="button" onClick={() => moveGallery(-1)} aria-label="আগের রং দেখুন" className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-lg font-black text-slate-800 shadow-md">‹</button><button type="button" onClick={() => moveGallery(1)} aria-label="পরের রং দেখুন" className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-lg font-black text-slate-800 shadow-md">›</button></> : null}
         </div>
-        {gallery.length > 1 ? <div className="mt-3 flex items-center justify-center gap-3" aria-label="রং নির্বাচন করুন">{gallery.map(({ variant: candidate }, index) => <button key={candidate.id} type="button" onClick={() => { setGalleryIndex(index); onSelect(candidate.id) }} aria-label={`${candidate.color || candidate.variant_title || 'রং'} নির্বাচন করুন`} aria-pressed={galleryIndex === index} title={candidate.color || candidate.variant_title} className={`flex h-8 w-8 items-center justify-center rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${galleryIndex === index ? 'ring-2 ring-emerald-600 ring-offset-2' : ''}`}><span className="h-4 w-4 rounded-full border border-black/15 shadow-sm" style={{ backgroundColor: colorDot(candidate.color) }} /></button>)}</div> : null}
-        {active?.variant.color ? <p className="mt-1 text-center text-xs font-bold text-slate-600">{active.variant.color}</p> : null}
+        {gallery.length > 1 ? <div className="mx-auto mt-3 flex w-full max-w-[23rem] items-center justify-between gap-3 rounded-2xl border border-emerald-100 bg-white px-3.5 py-3 shadow-[0_4px_16px_rgba(15,23,42,0.04)] sm:max-w-[30rem] sm:px-5">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold text-slate-500">রং নির্বাচন</p>
+            <p aria-live="polite" aria-atomic="true" className="truncate text-sm font-black text-slate-900">{variant?.color || active?.variant.color || 'রং বেছে নিন'}</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2.5" role="group" aria-label="রং নির্বাচন করুন">
+            {gallery.map(({ variant: candidate }, index) => {
+              const selected = activeGalleryIndex === index
+              const colorName = (candidate.color || '').toLowerCase()
+              const darkCheck = /white|সাদা|silver|রূপালি|gold|সোনালি|gray|grey|ধূসর/.test(colorName)
+              return <button key={candidate.id} type="button" onClick={() => { setFallbackGalleryIndex(index); onSelect(candidate.id) }} aria-label={`${candidate.color || candidate.variant_title || 'রং'} নির্বাচন করুন`} aria-pressed={selected} title={candidate.color || candidate.variant_title} className={`flex h-10 w-10 items-center justify-center rounded-full transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${selected ? 'border-2 border-emerald-700 bg-emerald-50 ring-2 ring-emerald-600 ring-offset-2 shadow-[0_0_0_4px_rgba(16,185,129,0.10)]' : 'border border-slate-200 bg-white hover:border-slate-400'}`}>
+                <span className="relative flex h-6 w-6 items-center justify-center rounded-full border border-black/15 shadow-sm" style={{ backgroundColor: colorDot(candidate.color) }}>
+                  {selected ? <span aria-hidden="true" className={`text-[13px] font-black leading-none drop-shadow-sm ${darkCheck ? 'text-slate-900' : 'text-white'}`}>✓</span> : null}
+                </span>
+              </button>
+            })}
+          </div>
+        </div> : active?.variant.color ? <p className="mx-auto mt-3 max-w-[23rem] text-center text-sm font-bold text-slate-600 sm:max-w-[30rem]">{active.variant.color}</p> : null}
       </div>
       <div className="min-w-0 lg:py-5">
         <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-800">{product.brand?.name || 'PhonerBazar'}</span><span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200"><CircleCheck className="h-3.5 w-3.5 text-emerald-600" /> ক্যাশ অন ডেলিভারি</span></div>
