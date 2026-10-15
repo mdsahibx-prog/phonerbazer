@@ -38,3 +38,14 @@ Open Admin → Checkout Recovery. Filter and search the bounded list. WhatsApp i
 ## Limitations / release gate
 
 This branch has not been deployed and no live database was accessed. The migration must be applied to the intended non-production database first. Configure `CRON_SECRET` separately in Preview and Production before enabling the scheduled worker. Do not send real customer messages as part of testing.
+
+
+## Safe Vercel Preview configuration
+
+The Preview cart and admin dashboard require the server-side Supabase admin client. To validate those routes, configure the following values in **Vercel → Project Settings → Environment Variables**, scoped to **Preview only**, using credentials from a dedicated non-production Supabase project:
+
+- `NEXT_PUBLIC_SUPABASE_URL`: the non-production Supabase project URL.
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: that same non-production project's publishable/anon key.
+- `SUPABASE_SERVICE_ROLE_KEY`: that same non-production project's service-role key, stored only as a server-side Preview environment variable.
+
+Do not paste keys into issues, PR comments, logs, source code, or this document. Never copy production keys or production data into Preview. If no isolated Supabase project is available, keep the Preview routes blocked and create one through the normal secure setup process first. After configuring variables, trigger a fresh Preview deployment and recheck `/cart`, `/admin/dashboard`, and authenticated recovery actions with synthetic test data only.
