@@ -1,10 +1,11 @@
 'use client'
 
 import Image from 'next/image'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, ChevronDown, LoaderCircle, PackageCheck, Search, ShieldCheck, UserRound } from 'lucide-react'
 import { quoteCartOrder, createCartOrder } from '@/lib/commerce/order-actions'
+import { saveCheckoutRecoveryDraft } from '@/lib/commerce/checkout-recovery-actions'
 import { getAnalyticsConsent, trackClientEvent } from '@/lib/analytics/client'
 import type { OrderSuccessSummary } from '@/lib/orders/schema'
 import { formatPrice } from '@/lib/services/storefront-utils'
@@ -60,7 +61,21 @@ export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
   const [step, setStep] = useState<Step>('contact')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
-  const [checkoutRequestId] = useState(() => crypto.randomUUID())
+  const [checkoutRequestId] = useState(() => { if (typeof window === 'undefined') return crypto.randomUUID(); const key = 'phonerbazar-cart-checkout-request'; const saved = window.sessionStorage.getItem(key); if (saved) return saved; const id = crypto.randomUUID(); window.sessionStorage.setItem(key, id); return id })
+  const [recoveryToken] = useState(() => { if (typeof window === 'undefined') return crypto.randomUUID() + crypto.randomUUID(); const key = 'phonerbazar-recovery-token:' + checkoutRequestId; const saved = window.sessionStorage.getItem(key); if (saved) return saved; const token = crypto.randomUUID() + crypto.randomUUID(); window.sessionStorage.setItem(key, token); return token })
+  const [recoveryConsent, setRecoveryConsent] = useState(false)
+
+  useEffect(() => {
+    if (!form.fullName.trim() && !form.phone.trim() && !recoveryConsent) return
+    const timer = window.setTimeout(() => {
+      void saveCheckoutRecoveryDraft({
+        checkoutRequestId, recoveryToken, source: 'CART', fullName: form.fullName,
+        phone: form.phone, division: form.division, district: form.district,
+        area: form.area, address: form.address, recoveryConsent,
+      }).catch(() => undefined)
+    }, 700)
+    return () => window.clearTimeout(timer)
+  }, [checkoutRequestId, recoveryToken, form, recoveryConsent])
   const router = useRouter()
 
   function update(key: keyof FormState, value: string) {
@@ -132,6 +147,10 @@ export function CartCheckoutFlow({ cart }: { cart: CartSummary }) {
             <label className="text-xs font-black text-slate-800">Mobile number<input autoComplete="tel" inputMode="tel" value={form.phone} onChange={(e)=>update('phone',e.target.value)} onBlur={validatePhone} type="tel" placeholder="01XXXXXXXXX" className="mt-1.5 h-12 w-full rounded-xl border border-slate-200 px-3.5 text-sm font-normal outline-none focus:border-orange-500" /></label>
           </div>
         </section>
+        <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-[11px] leading-5 text-slate-600">
+          <input type="checkbox" checked={recoveryConsent} onChange={(event) => setRecoveryConsent(event.target.checked)} className="mt-1 accent-orange-600" />
+          <span>আমি চাইলে অর্ডার সম্পন্ন করতে সহায়তার জন্য Phonerbazar WhatsApp-এ যোগাযোগ করতে পারবে। এটি ঐচ্ছিক; যেকোনো সময় সম্মতি প্রত্যাহার করতে পারি।</span>
+        </label>
         <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 text-[10px] font-semibold text-slate-600"><span>✓ Cash on Delivery</span><span>✓ Secure order</span><span className="hidden min-[375px]:inline">✓ No account</span></div>
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/98 px-3 pt-2.5 pb-[calc(.625rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-18px_rgba(15,23,42,.35)] backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none"><button type="button" disabled={busy} onClick={continueToDelivery} className="mx-auto flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-orange)] px-5 text-sm font-black text-slate-950 shadow-md disabled:opacity-60">Continue to delivery →</button></div>
       </div>}

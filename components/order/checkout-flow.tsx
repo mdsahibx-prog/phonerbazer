@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Check, CheckCircle2, ChevronDown, LoaderCircle, PackageCheck, Search, ShieldCheck } from 'lucide-react'
 import Image from 'next/image'
 
 import { createGuestOrderWithRisk, quoteGuestCodOrder } from '@/lib/orders/actions'
+import { saveCheckoutRecoveryDraft } from '@/lib/commerce/checkout-recovery-actions'
 import { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
 import { getAnalyticsConsent, trackClientEvent } from '@/lib/analytics/client'
 import type { OrderSuccessSummary, Quote } from '@/lib/orders/schema'
@@ -85,6 +86,21 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const [checkoutRequestId] = useState(() => initialCheckoutRequestId || crypto.randomUUID())
+  const [recoveryToken] = useState(() => { if (typeof window === 'undefined') return crypto.randomUUID() + crypto.randomUUID(); const key = 'phonerbazar-recovery-token:' + checkoutRequestId; const saved = window.sessionStorage.getItem(key); if (saved) return saved; const token = crypto.randomUUID() + crypto.randomUUID(); window.sessionStorage.setItem(key, token); return token })
+  const [recoveryConsent, setRecoveryConsent] = useState(false)
+
+  useEffect(() => {
+    if (!form.fullName.trim() && !form.phone.trim() && !recoveryConsent) return
+    const timer = window.setTimeout(() => {
+      void saveCheckoutRecoveryDraft({
+        checkoutRequestId, recoveryToken, source: 'QUICK_ORDER', productId, variantId,
+        quantity: form.quantity, fullName: form.fullName, phone: form.phone,
+        division: form.division, district: form.district, area: form.area, address: form.address,
+        recoveryConsent,
+      }).catch(() => undefined)
+    }, 700)
+    return () => window.clearTimeout(timer)
+  }, [checkoutRequestId, recoveryToken, productId, variantId, form, recoveryConsent])
 
   function update(name: keyof FormState, value: string) {
     setForm((current) => ({ ...current, [name]: name === 'quantity' ? Math.max(1, Number(value) || 1) : value }))
@@ -179,6 +195,10 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
           <Input label="Full name" value={form.fullName} onChange={(value) => update('fullName', value)} error={fieldErrors.fullName} placeholder="Your full name" autoComplete="name" />
           <Input label="Mobile number" value={form.phone} onChange={(value) => update('phone', value)} onBlur={validatePhone} error={fieldErrors.phone} type="tel" placeholder="01XXXXXXXXX" autoComplete="tel" />
         </div>
+        <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-[11px] leading-5 text-slate-600">
+          <input type="checkbox" checked={recoveryConsent} onChange={(event) => setRecoveryConsent(event.target.checked)} className="mt-1 accent-orange-600" />
+          <span>আমি চাইলে অর্ডার সম্পন্ন করতে সহায়তার জন্য Phonerbazar WhatsApp-এ যোগাযোগ করতে পারবে। এটি ঐচ্ছিক; যেকোনো সময় সম্মতি প্রত্যাহার করতে পারি।</span>
+        </label>
         <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 text-[10px] font-semibold text-slate-600">
           <span className="flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5 text-orange-600" /> Cash on Delivery</span>
           <span className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-orange-600" /> Secure order</span>

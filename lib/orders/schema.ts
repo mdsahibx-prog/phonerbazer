@@ -27,7 +27,7 @@ export const deliveryDetailsSchema = z.object({
 export const guestOrderInputSchema = orderSelectionSchema
   .merge(customerDetailsSchema)
   .merge(deliveryDetailsSchema)
-  .extend({ checkoutRequestId: z.string().uuid('Unable to verify this checkout request. Please try again.'), analyticsConsent: z.boolean().optional().default(false), marketingConsent: z.boolean().optional().default(false) })
+  .extend({ checkoutRequestId: z.string().uuid('Unable to verify this checkout request. Please try again.'), checkoutSource: z.enum(['QUICK_ORDER', 'LANDING_PAGE']).optional().default('QUICK_ORDER'), analyticsConsent: z.boolean().optional().default(false), marketingConsent: z.boolean().optional().default(false) })
 
 export const orderQuoteInputSchema = orderSelectionSchema.merge(z.object({
   division: z.string().trim().min(2, 'Select your division.').max(80),
