@@ -8,6 +8,7 @@ import { requireAdmin } from '@/lib/admin/auth'
 import { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
 import { getStorefrontSettings } from '@/lib/services/storefront'
 import { getCart } from '@/lib/commerce/cart'
+import { checkoutRecoveryWriteResult } from '@/lib/commerce/checkout-recovery-write-result'
 
 const draftSchema = z.object({
   checkoutRequestId: z.string().uuid(),
@@ -159,8 +160,8 @@ export async function updateCheckoutRecoveryOutcome(raw: unknown) {
     if (orderLookupError) return { ok: false as const, message: 'Unable to verify this checkout. Refresh and try again.' }
     if (orders?.length) return { ok: false as const, message: 'An existing order makes this checkout ineligible.' }
     const { data: contactUpdated, error: updateError } = await db.from('checkout_sessions').update({ recovery_contact_count: Number(session.recovery_contact_count) + 1, recovery_last_contacted_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', session.id).eq('status', 'ABANDONED').eq('recovery_contact_count', Number(session.recovery_contact_count)).lt('recovery_contact_count', 2).select('id').maybeSingle()
-    if (updateError) return { ok: false as const, message: 'Unable to update recovery contact history. No contact was recorded.' }
-    if (!contactUpdated) return { ok: false as const, message: 'Another admin updated this checkout. Refresh and try again.' }
+    const contactWrite = checkoutRecoveryWriteResult(updateError, contactUpdated?.id, 'Unable to update recovery contact history. No contact was recorded.', 'Another admin updated this checkout. Refresh and try again.')
+    if (!contactWrite.ok) return contactWrite
   } else if (action === 'RECOVERED') {
     if (!parsed.data.orderId) return { ok: false as const, message: 'Link the recovered order before marking recovered.' }
     const { data: order, error: orderError } = await db.from('orders').select('id,checkout_request_id').eq('id', parsed.data.orderId).maybeSingle()
@@ -169,16 +170,16 @@ export async function updateCheckoutRecoveryOutcome(raw: unknown) {
     const { data: updated, error: updateError } = await db.from('checkout_sessions')
       .update({ recovery_outcome: action, recovery_outcome_at: new Date().toISOString(), completed_order_id: order.id, status: 'COMPLETED', updated_at: new Date().toISOString() })
       .eq('id', session.id).neq('status', 'COMPLETED').select('id').maybeSingle()
-    if (updateError) return { ok: false as const, message: 'Unable to link the recovered order. Refresh and try again.' }
-    if (!updated) return { ok: false as const, message: 'This checkout is already completed or has changed. Refresh and verify its linked order.' }
+    const recoveredWrite = checkoutRecoveryWriteResult(updateError, updated?.id, 'Unable to link the recovered order. Refresh and try again.', 'This checkout is already completed or has changed. Refresh and verify its linked order.')
+    if (!recoveredWrite.ok) return recoveredWrite
   } else {
     const { data: updated, error: updateError } = await db.from('checkout_sessions')
       .update({ recovery_outcome: action, recovery_outcome_at: new Date().toISOString(), updated_at: new Date().toISOString() })
       .eq('id', session.id).neq('status', 'COMPLETED').select('id').maybeSingle()
-    if (updateError) return { ok: false as const, message: 'Unable to update recovery outcome. Refresh and try again.' }
-    if (!updated) return { ok: false as const, message: 'This checkout is already completed or has changed. Refresh and verify its current status.' }
+    const outcomeWrite = checkoutRecoveryWriteResult(updateError, updated?.id, 'Unable to update recovery outcome. Refresh and try again.', 'This checkout is already completed or has changed. Refresh and verify its current status.')
+    if (!outcomeWrite.ok) return outcomeWrite
   }
   const { error: historyError } = await db.from('checkout_recovery_history').insert({ checkout_session_id: session.id, actor_admin_user_id: admin.id, action: action === 'CONTACTED' ? 'WHATSAPP_OPENED' : action, notes: parsed.data.notes ?? null, linked_order_id: parsed.data.orderId ?? null })
-  if (historyError) throw new Error('Recovery outcome could not be recorded.')
+  if (historyError) return { ok: false as const, message: 'The recovery status changed, but its audit history could not be saved. Ask an owner to review this checkout.' }
   return { ok: true as const }
 }
