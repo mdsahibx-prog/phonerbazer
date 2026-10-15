@@ -155,7 +155,8 @@ export async function updateCheckoutRecoveryOutcome(raw: unknown) {
   const action = parsed.data.outcome
   if (action === 'CONTACTED') {
     if (!session.customer_phone || !session.recovery_consent_at || session.recovery_consent_withdrawn_at || session.status !== 'ABANDONED' || session.completed_order_id || new Date(session.expires_at).getTime() <= Date.now() || Number(session.recovery_contact_count) >= 2) return { ok: false as const, message: 'This checkout is not eligible for recovery contact.' }
-    const { data: orders } = await db.from('orders').select('id,payment_status,order_status').eq('checkout_request_id', session.checkout_request_id).limit(1)
+    const { data: orders, error: orderLookupError } = await db.from('orders').select('id').eq('checkout_request_id', session.checkout_request_id).limit(1)
+    if (orderLookupError) return { ok: false as const, message: 'Unable to verify this checkout. Refresh and try again.' }
     if (orders?.length) return { ok: false as const, message: 'An existing order makes this checkout ineligible.' }
     const { data: contactUpdated, error: updateError } = await db.from('checkout_sessions').update({ recovery_contact_count: Number(session.recovery_contact_count) + 1, recovery_last_contacted_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', session.id).eq('status', 'ABANDONED').eq('recovery_contact_count', Number(session.recovery_contact_count)).lt('recovery_contact_count', 2).select('id').maybeSingle()
     if (updateError) throw new Error('Unable to update recovery contact history.')
