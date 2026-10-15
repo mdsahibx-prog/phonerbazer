@@ -264,7 +264,7 @@ export function LandingConversionSections({ sections, products, fixedImageUrl }:
     return () => window.removeEventListener('scroll', updateStickyVisibility)
   }, [])
   if (!selectedProduct || !selectedVariant) return <div className="mx-auto max-w-2xl px-4 py-16 text-center text-slate-600">এই পণ্যটি বর্তমানে পাওয়া যাচ্ছে না।</div>
-  return <div className="min-h-screen overflow-x-clip bg-white pb-24 text-slate-950 sm:pb-0"><ProductHero section={hero} product={selectedProduct} variant={selectedVariant} fixedImageUrl={fixedImageUrl} onSelect={setSelectedVariantId} /><ProductVisualGallery product={selectedProduct} selectedVariantId={selectedVariantId} onSelect={setSelectedVariantId} />
+  return <div className="min-h-screen overflow-x-clip bg-white pb-24 text-slate-950 sm:pb-0"><ProductHero section={hero} product={selectedProduct} variant={selectedVariant} fixedImageUrl={fixedImageUrl} onSelect={setSelectedVariantId} />
     {renderSections.map((section) => {
       if (section.enabled === false || section.type === 'hero' || section.type === 'product' || section.type === 'announcement' || section.type === 'offer' || section.type === 'countdown' || section.type === 'product_gallery' || section.type === 'related_products' || section.type === 'sticky_mobile_cta') return null
       if (section.type === 'variant_selector') { const quantitySection = sections.find((candidate): candidate is Extract<LandingSection, { type: 'quantity_selector' }> => candidate.type === 'quantity_selector'); return <VariantSelector key={section.id} section={section} product={selectedProduct} selectedVariantId={selectedVariantId} onSelect={setSelectedVariantId} quantity={quantity} onChange={setQuantity} maxQuantity={quantitySection?.maxQuantity ?? 10} /> }
