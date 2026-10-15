@@ -37,7 +37,8 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
     window.sessionStorage.setItem(key, token)
     return token
   })
-  const [recoveryConsent, setRecoveryConsent] = useState(() => typeof window !== 'undefined' && window.sessionStorage.getItem('phonerbazar-recovery-consent:' + checkoutRequestId) === 'true')
+  const [recoveryConsent, setRecoveryConsent] = useState(false)
+  useEffect(() => { if (window.sessionStorage.getItem('phonerbazar-recovery-consent:' + checkoutRequestId) === 'true') setRecoveryConsent(true) }, [checkoutRequestId])
   function clearCheckoutIdentity() {
     if (typeof window === 'undefined') return
     window.sessionStorage.removeItem(`phonerbazar-landing-checkout-request:${product.id}:${variant.id}`)
