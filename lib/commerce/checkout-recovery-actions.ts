@@ -6,7 +6,6 @@ import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAdmin } from '@/lib/admin/auth'
 import { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
-import { recordCommerceEvent } from '@/lib/analytics/events'
 import { getCart } from '@/lib/commerce/cart'
 
 const draftSchema = z.object({
