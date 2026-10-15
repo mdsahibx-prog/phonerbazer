@@ -86,8 +86,10 @@ export async function createECourierOrder(input: CreateShipmentInput): Promise<C
 
 export async function trackECourierShipment(trackingNumber: string): Promise<TrackingResult> {
   const result = await request('/track', { ecr: trackingNumber })
-  const row = Array.isArray(result?.query_data) ? result.query_data[0] : null
+  const rowValue = Array.isArray(result?.query_data) ? result.query_data[0] : null
+  const row = rowValue && typeof rowValue === 'object' && !Array.isArray(rowValue) ? rowValue as Record<string, Json | undefined> : null
   const statuses = Array.isArray(row?.status) ? row.status : []
-  const latest = statuses[0]
+  const latestValue = statuses[0]
+  const latest = Array.isArray(latestValue) ? latestValue : []
   return { providerShipmentId: String(row?.REFID ?? trackingNumber), trackingNumber, status: mapStatus(latest?.[0]), statusText: latest?.[0] ? String(latest[0]) : null, occurredAt: latest?.[2] ? String(latest[2]) : null, raw: result }
 }
