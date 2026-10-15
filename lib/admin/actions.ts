@@ -613,7 +613,7 @@ export async function saveAdminUser(input: unknown): Promise<AdminActionResult> 
   }
 }
 
-export async function getProductImagesForAdmin(): Promise<any[]> {
+export async function getProductImagesForAdmin() {
   try {
     await requireAdmin(['OWNER', 'ADMIN'])
     const db = createAdminClient()
