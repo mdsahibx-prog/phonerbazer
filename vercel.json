@@ -2,6 +2,9 @@
   "framework": "nextjs",
   "buildCommand": "pnpm build",
   "installCommand": "pnpm install --frozen-lockfile",
+  "crons": [
+    { "path": "/api/cron/checkout-recovery", "schedule": "*/15 * * * *" }
+  ],
   "functions": {
     "app/(storefront)/products/[slug]/page.tsx": {
       "regions": [
