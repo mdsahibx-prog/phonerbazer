@@ -12,7 +12,7 @@ type RecoveryRow = {
 }
 function formatDate(value: string) { return new Date(value).toLocaleString('en-BD', { dateStyle: 'medium', timeStyle: 'short' }) }
 function phoneForWhatsApp(value: string) { const digits = value.replace(/\D/g, ''); return digits.startsWith('880') ? digits : digits.startsWith('0') ? '88' + digits : '880' + digits }
-export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q }: { rows: RecoveryRow[]; count: number; page: number; pageSize: number; status?: string; q?: string }) {
+export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q, now }: { rows: RecoveryRow[]; count: number; page: number; pageSize: number; status?: string; q?: string; now: string }) {
   const [pending, startTransition] = useTransition()
   const [notice, setNotice] = useState('')
   function openWhatsApp(row: RecoveryRow) {
@@ -45,7 +45,7 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
         const snapshot = row.quote_snapshot ?? {}
         const items = Array.isArray(snapshot.items) ? snapshot.items as Array<{ product_name?: string; variant_title?: string; quantity?: number; unit_price_snapshot?: number }> : []
         const consent = Boolean(row.recovery_consent_at && !row.recovery_consent_withdrawn_at)
-        const expired = new Date(row.expires_at).getTime() <= Date.now()
+        const expired = new Date(row.expires_at).getTime() <= new Date(now).getTime()
         const eligible = row.status === 'ABANDONED' && consent && !expired && !row.completed_order_id && (row.recovery_contact_count ?? 0) < 2 && Boolean(row.customer_phone)
         const total = items.reduce((sum, item) => sum + Number(item.unit_price_snapshot ?? 0) * Number(item.quantity ?? 0), 0)
         return <article key={row.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
