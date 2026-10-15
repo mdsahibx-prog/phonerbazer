@@ -86,6 +86,8 @@ jobs:
 
       - name: Performance audit
         if: always() && steps.build.outcome == 'success'
+        env:
+          PERFORMANCE_BASE_URL: https://phonerbazer-git-audit-system-engineering-har-45b067-phonerbazer.vercel.app
         run: pnpm performance:audit
 
       - name: Stop isolated Supabase stack
