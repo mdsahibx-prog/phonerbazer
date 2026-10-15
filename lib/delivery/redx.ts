@@ -10,7 +10,7 @@ export const REDX_BASE_URL = 'https://openapi.redx.com.bd/v1.0.0-beta'
 type Credentials = { token: string; webhookToken?: string | null; baseUrl: string }
 type RedxArea = { id?: string | number; name?: string; [key: string]: Json | undefined }
 type RedxStore = { id?: string | number; [key: string]: Json | undefined }
-type RedxResponse = Record<string, Json | undefined> & { areas?: RedxArea[]; pickup_stores?: RedxStore[]; pickup_store?: Record<string, Json | undefined>; consignment?: Record<string, Json | undefined> }
+type RedxResponse = Record<string, Json | undefined> & { areas?: RedxArea[]; pickup_stores?: RedxStore[]; pickup_store?: Record<string, Json | undefined>; consignment?: Record<string, Json | undefined>; tracking?: Array<{ status?: string; message_en?: string; message_bn?: string; time?: string }> }
 
 async function getCredentials(): Promise<Credentials> {
   const db = createAdminClient()
