@@ -15,7 +15,9 @@ async function getCredentials(): Promise<Credentials> {
   return { apiKey: decryptSecret(data.encrypted_api_key), secretKey: decryptSecret(data.encrypted_secret_key), baseUrl: data.base_url || STEADFAST_BASE_URL }
 }
 
-async function steadfastRequest(path: string, init: RequestInit = {}) {
+type SteadfastResponse = Record<string, unknown> & { consignment?: Record<string, unknown> }
+
+async function steadfastRequest(path: string, init: RequestInit = {}): Promise<SteadfastResponse> {
   const credentials = await getCredentials()
   const headers = new Headers(init.headers)
   headers.set('Api-Key', credentials.apiKey)
@@ -26,7 +28,7 @@ async function steadfastRequest(path: string, init: RequestInit = {}) {
   let body: unknown = null
   try { body = text ? JSON.parse(text) : null } catch { body = { raw: text } }
   if (!response.ok) throw new Error(`Steadfast API ${response.status}: ${typeof body === 'object' && body && 'message' in body ? String((body as { message?: unknown }).message) : 'Request failed'}`)
-  return body as any
+  return body && typeof body === 'object' && !Array.isArray(body) ? body as SteadfastResponse : {}
 }
 
 export async function testSteadfastConnection() {
@@ -69,13 +71,14 @@ export async function trackSteadfastShipment(trackingNumber: string): Promise<Tr
   return { providerShipmentId: String(result?.consignment_id ?? trackingNumber), trackingNumber, status: mapStatus(result?.delivery_status), statusText: result?.delivery_status ?? null, raw: result }
 }
 
-export async function normalizeSteadfastWebhook(payload: any, headers: Headers) {
+export async function normalizeSteadfastWebhook(payload: unknown, headers: Headers) {
+  const event = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload as Record<string, unknown> : {}
   const auth = headers.get('authorization') ?? ''
   const db = createAdminClient()
   const { data } = await db.from('delivery_provider_credentials').select('encrypted_webhook_token').eq('provider', 'STEADFAST').maybeSingle()
   if (!data?.encrypted_webhook_token) throw new Error('Steadfast webhook token is not configured.')
   const expected = `Bearer ${decryptSecret(data.encrypted_webhook_token)}`
   if (auth !== expected) throw new Error('Invalid Steadfast webhook authorization.')
-  const providerEventId = `${payload?.notification_type ?? 'event'}:${payload?.consignment_id ?? payload?.invoice ?? payload?.updated_at ?? crypto.randomUUID()}`
-  return { provider: 'STEADFAST' as const, providerEventId, providerShipmentId: payload?.consignment_id ? String(payload.consignment_id) : null, trackingNumber: payload?.tracking_code ? String(payload.tracking_code) : null, status: mapStatus(payload?.status), occurredAt: payload?.updated_at ? String(payload.updated_at) : null, payload }
+  const providerEventId = `${event.notification_type ?? 'event'}:${event.consignment_id ?? event.invoice ?? event.updated_at ?? crypto.randomUUID()}`
+  return { provider: 'STEADFAST' as const, providerEventId, providerShipmentId: payload?.consignment_id ? String(payload.consignment_id) : null, trackingNumber: event.tracking_code ? String(payload.tracking_code) : null, status: mapStatus(event.status), occurredAt: payload?.updated_at ? String(payload.updated_at) : null, payload }
 }
