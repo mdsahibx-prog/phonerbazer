@@ -122,7 +122,15 @@ export async function listCheckoutRecovery(input: { page?: number; status?: stri
   }
   const { data, error, count } = await query
   if (error) throw new Error('Unable to load checkout recovery.')
-  return { rows: data ?? [], count: count ?? 0, page, pageSize: 25 }
+  const rows = data ?? []
+  const ids = rows.map((row) => row.id)
+  const historyResult = ids.length
+    ? await db.from('checkout_recovery_history').select('id,checkout_session_id,action,notes,created_at,linked_order_id').in('checkout_session_id', ids).order('created_at', { ascending: false }).limit(100)
+    : { data: [], error: null }
+  if (historyResult.error) throw new Error('Unable to load checkout recovery history.')
+  const historyBySession = new Map<string, typeof historyResult.data>()
+  for (const item of historyResult.data ?? []) historyBySession.set(item.checkout_session_id, [...(historyBySession.get(item.checkout_session_id) ?? []), item])
+  return { rows: rows.map((row) => ({ ...row, history: historyBySession.get(row.id) ?? [] })), count: count ?? 0, page, pageSize: 25 }
 }
 
 const outcomeSchema = z.object({ sessionId: z.string().uuid(), outcome: z.enum(['CONTACTED','RECOVERED','NOT_INTERESTED','CLOSED']), notes: z.string().trim().max(500).optional(), orderId: z.string().uuid().optional() })
