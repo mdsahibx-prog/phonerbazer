@@ -37,9 +37,12 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
   const currentPathRef = useRef<string | null>(pathname)
   const lastPageViewPathRef = useRef<string | null>(null)
 
-  // Keep the first-visit prompt visible until the visitor makes a choice.
+  // Read persisted consent after hydration so the server and first client render match.
   useEffect(() => {
-    if (hasAnalyticsConsent()) setConsent(getAnalyticsConsent())
+    const timer = window.setTimeout(() => {
+      if (hasAnalyticsConsent()) setConsent(getAnalyticsConsent())
+    }, 0)
+    return () => window.clearTimeout(timer)
   }, [])
 
   // Next.js App Router transitions don't reload the document. Track each
