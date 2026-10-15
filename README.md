@@ -1,124 +1,53 @@
-# SahiGadget E-Commerce Platform
+# Phonerbazar
 
-> **"সঠিক দাম, সঠিক গ্যাজেট"**  
-> **আসল পণ্য • দ্রুত ডেলিভারি • সারা দেশে সেবা**
+Bangladesh-focused mobile phone and gadget ecommerce storefront.
 
-## 1. Project Purpose
-SahiGadget is a professional e-commerce platform specializing in official mobile phones and smart gadgets in Bangladesh. Established in 2019 and based in Araihazar, Narayanganj, the platform provides authentic devices, transparent pricing, nationwide delivery, and robust warranty support.
+## Technology
 
-This repository (**SahiTech/SahiGatget**) represents **Phase 1 — Clean Production Foundation**, establishing a rigorous, secure, and scalable technical architecture using modern web standards.
+- Next.js App Router, React, TypeScript
+- Supabase (PostgreSQL, Auth, Storage)
+- Tailwind CSS, React Hook Form, Zod, Lucide
+- Vercel deployment and scheduled jobs
 
----
+## Core areas
 
-## 2. Business Overview
-- **Business Name**: SahiGadget Mobile Phone & Gadget Shop
-- **Repository**: [SahiTech/SahiGatget](https://github.com/SahiTech/SahiGatget)
-- **Website**: [https://sahigadget.shop](https://sahigadget.shop)
-- **Location**: Araihazar, Narayanganj, Bangladesh – 1460
-- **Contact**: +880 1601-654316 | www.sahigadget.com@gmail.com
-- **Admin Support**: helpline.sahitech@gmail.com
-- **Currency**: BDT (৳)
-- **Delivery Charges**: Dhaka ৳80 | Outside Dhaka ৳130 (Server-calculated)
-- **Warranty Policy**: 7 Days Guarantee & 1 Year Service Warranty (Configurable)
+- Public storefront: homepage, product catalogue/details, categories, brands, search and published landing pages
+- Commerce: cart, Buy Now, guest checkout, order confirmation/tracking, payment and inventory workflows
+- Administration: dashboard, products, orders, inventory, settings, analytics and checkout recovery
+- Integrations: consent-aware analytics, commerce events, courier/payment integrations and scheduled recovery processing
 
----
+## Local development
 
-## 3. Technology Stack
-- **Framework**: Next.js (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS & shadcn/ui primitives
-- **Icons**: Lucide React
-- **Database & Backend**: Supabase (PostgreSQL, Auth, Storage)
-- **Validation**: Zod & React Hook Form
-- **Tables**: TanStack Table
-- **Notifications**: Sonner
-- **Charts**: Recharts
-- **Deployment**: Vercel
+Requirements: Node.js 24 (matches current focused CI), pnpm 11.21.0, and a configured non-production Supabase project.
 
----
-
-## 4. Local Setup & Installation
-
-### Prerequisites
-- Node.js (v18+ recommended)
-- pnpm
-
-### Steps
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/SahiTech/SahiGatget.git sahigatget
-   cd sahigatget
-   ```
-2. Install dependencies:
-   ```bash
-   pnpm install
-   ```
-3. Configure environment variables:
-   Copy `.env.example` to `.env.local` and fill in your Supabase project credentials.
-   ```bash
-   cp .env.example .env.local
-   ```
-4. Run development server:
-   ```bash
-   pnpm dev
-   ```
-   Open [http://localhost:3000](http://localhost:3000) in your browser.
-
----
-
-## 5. Environment Variables
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
-NEXT_PUBLIC_SITE_URL=https://sahigadget.shop
+```bash
+pnpm install --frozen-lockfile
+pnpm dev
 ```
 
----
+Configure environment variables using the team's secure environment-variable process. Never commit `.env` files, access tokens, service-role keys, payment secrets or cron secrets. Preview/development must use isolated non-production services and credentials.
 
-## 6. Development & Build Commands
-- **Development**: `pnpm dev`
-- **Production Build**: `pnpm build`
-- **Start Production Server**: `pnpm start`
-- **Linting**: `pnpm lint`
+## Quality checks
 
----
-
-## 7. Architecture & Route Structure
-```
-app/
-├── page.tsx                    # Homepage
-├── products/                   # Product catalog
-│   └── [slug]/                 # Product landing page
-├── brands/                     # Brand browsing
-├── categories/                 # Category browsing
-├── search/                     # Fast search engine
-├── order/                      # Checkout & customer details
-│   └── success/                # Order confirmation
-├── track-order/                # Order tracking
-└── admin/                      # Secure admin portal
-    ├── login/                  # Admin authentication
-    ├── dashboard/              # Sales overview & analytics
-    ├── orders/                 # Order management
-    ├── products/               # Product CRUD
-    ├── inventory/              # Stock adjustment & IMEI tracking
-    ├── customers/              # Customer records
-    └── settings/               # Store settings & delivery config
+```bash
+pnpm lint
+pnpm exec tsc --noEmit
+pnpm test
+pnpm build
 ```
 
----
+The repository's `pnpm test` script runs the analytics contract, direct-order payment, risk-category and checkout-recovery policy test scripts. Passing these checks does not replace database-backed integration tests or browser/end-to-end verification.
 
-## 8. Security Notes
-- **Server-Only Secrets**: `SUPABASE_SERVICE_ROLE_KEY` is strictly confined to server-side modules using `server-only` to prevent client exposure.
-- **Server Validation**: Prices, discounts, delivery charges, and stock quantities are validated server-side.
-- **Authentication**: Role-based access control preparation for OWNER, ADMIN, and STAFF roles via Supabase Auth.
+## Checkout recovery safeguards
 
----
+Checkout recovery extends the existing `checkout_sessions` lifecycle; it must not create a second order or replace the canonical order/payment/inventory workflow. Drafts do not reserve stock. Recovery outreach is manual, consent-gated WhatsApp only, and an opened link is not proof of message delivery. The scheduled worker requires a high-entropy, environment-specific `CRON_SECRET`; never reuse a production secret in Preview.
 
-## 9. Git Workflow & Deployment
-- Developed on branch `main` in repository `SahiTech/SahiGatget`.
-- Vercel-ready with zero configuration required beyond environment variables.
-- Verified linting, TypeScript compilation, and production build.
+See [Checkout Recovery Engine documentation](docs/checkout-recovery.md) and the [performance architecture audit](docs/performance/ARCHITECTURE.md) for additional constraints and verification steps.
 
----
-*(c) 2019–2026 SahiGadget. All rights reserved.*
+## Release safety
+
+- Do not run production migrations or change production environment settings without an explicitly approved release process.
+- Test schema changes against an isolated non-production database first.
+- Keep authorization and transaction-critical checks on the server.
+- Do not use real customer data or contact customers during automated tests.
+- Submit changes through a feature branch and pull request; do not push directly to `main`.
