@@ -12,9 +12,9 @@
 
 ## Scheduler setup
 
-Vercel Cron is configured in `vercel.json` for `/api/cron/checkout-recovery` every 15 minutes. Before enabling it in any environment, configure a high-entropy `CRON_SECRET` environment variable in that environment. Vercel Cron sends `Authorization: Bearer <CRON_SECRET>`; requests without a matching bearer token return `401`. Do not commit the value or use a production secret in Preview. Preview needs its own secret if the scheduled route is to be exercised there.
+Vercel Cron is configured in `vercel.json` for `/api/cron/checkout-recovery` once daily at 08:00 UTC. The current Vercel Hobby plan rejects schedules more frequent than daily; this is eventual recovery processing, not near-real-time. Do not upgrade the plan as part of this change. If near-real-time processing becomes a requirement, choose an already-approved scheduler or separately approve the required hosting plan before changing the schedule. Before enabling it in any environment, configure a high-entropy `CRON_SECRET` environment variable in that environment. Vercel Cron sends `Authorization: Bearer <CRON_SECRET>`; requests without a matching bearer token return `401`. Do not commit the value or use a production secret in Preview. Preview needs its own secret if the scheduled route is to be exercised there.
 
-The worker processes at most 100 sessions per run, uses a conditional status update to avoid duplicate abandonment events, and never creates orders or reserves stock. It only changes inactivity state and emits the canonical `CHECKOUT_ABANDONED` event.
+The worker processes at most 100 sessions per run, uses a conditional status update to avoid duplicate abandonment events, derives saved delivery charges from server settings, and never creates orders or reserves stock. It only changes inactivity state and emits the canonical `CHECKOUT_ABANDONED` event.
 
 ## Database
 
