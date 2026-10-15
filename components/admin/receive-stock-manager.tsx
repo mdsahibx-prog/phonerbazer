@@ -8,16 +8,21 @@ import { receiveStock, initializeCost } from '@/lib/admin/actions'
 const inputClass = 'h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100'
 const labelClass = 'mb-1.5 block text-xs font-bold uppercase tracking-[0.12em] text-slate-600'
 
-export function ReceiveStockManager({ variants, receipts, costs }: { variants: any[]; receipts: any[]; costs: any[] }) {
+type StockVariant = { id: string; sku: string | null; variant_title: string; stock_quantity: number; products?: { name: string } | null }
+type StockReceipt = { id: string; variant_id: string; receipt_type: string; quantity: number; unit_cost: number; received_at: string; supplier_name: string | null; supplier_reference: string | null; note: string | null }
+type StockCost = { variant_id: string; average_cost: number | null }
+type StockFormValues = { variantId: string; quantity: number; unitCost: number; supplierName: string; supplierReference: string; receivedAt: string; note: string }
+
+export function ReceiveStockManager({ variants, receipts, costs }: { variants: StockVariant[]; receipts: StockReceipt[]; costs: StockCost[] }) {
   const [mode, setMode] = useState<'receive' | 'initialize'>('receive')
   const [message, setMessage] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
-  const form = useForm<any>({ defaultValues: { variantId: variants[0]?.id ?? '', quantity: 1, unitCost: 0, supplierName: '', supplierReference: '', receivedAt: new Date().toISOString().slice(0,16), note: '' } })
+  const form = useForm<StockFormValues>({ defaultValues: { variantId: variants[0]?.id ?? '', quantity: 1, unitCost: 0, supplierName: '', supplierReference: '', receivedAt: new Date().toISOString().slice(0,16), note: '' } })
   const variantId = form.watch('variantId')
   const selected = variants.find((v) => v.id === variantId)
-  const cost = costs.find((v: any) => v.variant_id === variantId)
+  const cost = costs.find((v) => v.variant_id === variantId)
 
-  function submit(values: any) {
+  function submit(values: StockFormValues) {
     startTransition(async () => {
       const result = mode === 'receive'
         ? await receiveStock(values)
@@ -43,6 +48,6 @@ export function ReceiveStockManager({ variants, receipts, costs }: { variants: a
       </form>
       {message ? <p role="status" className="mt-3 rounded-lg bg-slate-100 px-3 py-2 text-sm">{message}</p> : null}
     </section>
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="border-b border-slate-100 px-5 py-4"><h2 className="font-semibold">Inventory receipts</h2><p className="mt-1 text-sm text-slate-500">Receipts are append-only records linked to the existing stock movement ledger.</p></div><div className="overflow-x-auto"><table className="w-full min-w-[850px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-3">When</th><th className="px-5 py-3">Variant</th><th className="px-5 py-3">Type</th><th className="px-5 py-3">Qty</th><th className="px-5 py-3">Cost</th><th className="px-5 py-3">Supplier / Ref</th><th className="px-5 py-3">Note</th></tr></thead><tbody>{receipts.map((r: any) => { const v=variants.find((item)=>item.id===r.variant_id); return <tr key={r.id} className="border-t border-slate-100"><td className="px-5 py-3 text-xs text-slate-500">{new Date(r.received_at).toLocaleString('en-BD')}</td><td className="px-5 py-3"><p className="font-semibold">{v?.products?.name ?? 'Product'}</p><p className="font-mono text-xs text-slate-500">{v?.sku}</p></td><td className="px-5 py-3 text-xs font-semibold">{r.receipt_type}</td><td className="px-5 py-3 font-bold">+{r.quantity}</td><td className="px-5 py-3 font-semibold">৳{Number(r.unit_cost).toLocaleString('en-BD', {minimumFractionDigits:2,maximumFractionDigits:2})}</td><td className="px-5 py-3">{r.supplier_name ?? '—'}{r.supplier_reference ? ` · ${r.supplier_reference}` : ''}</td><td className="px-5 py-3 text-slate-600">{r.note ?? '—'}</td></tr> })}</tbody></table></div></section>
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="border-b border-slate-100 px-5 py-4"><h2 className="font-semibold">Inventory receipts</h2><p className="mt-1 text-sm text-slate-500">Receipts are append-only records linked to the existing stock movement ledger.</p></div><div className="overflow-x-auto"><table className="w-full min-w-[850px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-3">When</th><th className="px-5 py-3">Variant</th><th className="px-5 py-3">Type</th><th className="px-5 py-3">Qty</th><th className="px-5 py-3">Cost</th><th className="px-5 py-3">Supplier / Ref</th><th className="px-5 py-3">Note</th></tr></thead><tbody>{receipts.map((r) => { const v=variants.find((item)=>item.id===r.variant_id); return <tr key={r.id} className="border-t border-slate-100"><td className="px-5 py-3 text-xs text-slate-500">{new Date(r.received_at).toLocaleString('en-BD')}</td><td className="px-5 py-3"><p className="font-semibold">{v?.products?.name ?? 'Product'}</p><p className="font-mono text-xs text-slate-500">{v?.sku}</p></td><td className="px-5 py-3 text-xs font-semibold">{r.receipt_type}</td><td className="px-5 py-3 font-bold">+{r.quantity}</td><td className="px-5 py-3 font-semibold">৳{Number(r.unit_cost).toLocaleString('en-BD', {minimumFractionDigits:2,maximumFractionDigits:2})}</td><td className="px-5 py-3">{r.supplier_name ?? '—'}{r.supplier_reference ? ` · ${r.supplier_reference}` : ''}</td><td className="px-5 py-3 text-slate-600">{r.note ?? '—'}</td></tr> })}</tbody></table></div></section>
   </div>
 }
