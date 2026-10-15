@@ -3,6 +3,7 @@ import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptSecret } from './secrets'
 import type { CreateShipmentInput, CreateShipmentResult, ShipmentStatus, TrackingResult } from './contracts'
+import type { Json } from '@/lib/types/database'
 
 export const ECOURIER_BASE_URL = 'https://backoffice.ecourier.com.bd/api'
 
@@ -30,10 +31,10 @@ async function request(path: string, body: Record<string, unknown>) {
     signal: AbortSignal.timeout(15000),
   })
   const text = await response.text()
-  let data: Record<string, unknown> | null = null
+  let data: Record<string, Json | undefined> | null = null
   try {
     const parsed: unknown = text ? JSON.parse(text) : null
-    data = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null
+    data = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, Json | undefined> : null
   } catch { data = { raw: text } }
   if (!response.ok || Number(data?.response_code ?? response.status) >= 400) throw new Error(`eCourier API ${response.status}: ${Array.isArray(data?.errors) ? data.errors.join(' ') : data?.message ?? 'Request failed'}`)
   return data
