@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight, Percent, Sparkles, PackageOpen } from 'lucide-react'
 
@@ -25,7 +26,11 @@ export default async function OffersPage() {
         </div>
       </section>
 
-      {dealBanners.length > 0 ? <section className="mx-auto max-w-7xl px-3 pt-4 sm:px-6 sm:pt-6 lg:px-8"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{dealBanners.map((banner) => <Link key={banner.id} href={banner.primary_cta_url?.trim() || '/offers'} className="group relative aspect-[2.1/1] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><img src={banner.mobile_image_url || banner.desktop_image_url} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" /></Link>)}</div></section> : null}
+      {dealBanners.length > 0 ? <section className="mx-auto max-w-7xl px-3 pt-4 sm:px-6 sm:pt-6 lg:px-8"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{dealBanners.map((banner) => {
+        const imageUrl = banner.mobile_image_url || banner.desktop_image_url
+        if (!imageUrl) return null
+        return <Link key={banner.id} href={banner.primary_cta_url?.trim() || '/offers'} className="group relative aspect-[2.1/1] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><Image src={imageUrl} alt="" fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover transition-transform duration-300 group-hover:scale-[1.02]" /></Link>
+      })}</div></section> : null}
 
       <section className="mx-auto max-w-7xl px-3 py-5 sm:px-6 sm:py-10 lg:px-8" aria-labelledby="offers-heading">
         <div className="flex items-end justify-between gap-3"><div><p className="flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.16em] text-orange-500"><Sparkles className="h-3.5 w-3.5" /> Current deals</p><h2 id="offers-heading" className="mt-1 text-xl font-black tracking-tight text-slate-950 sm:text-3xl">Discounted <span className="text-orange-500">Products</span></h2></div><span className="text-[10px] font-bold text-slate-400 sm:text-xs">{offers.length} available</span></div>
