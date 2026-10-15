@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { checkoutRecoveryWriteResult } from '../lib/commerce/checkout-recovery-write-result'
+import { checkoutRecoveryLookupResult, checkoutRecoveryWriteResult } from '../lib/commerce/checkout-recovery-write-result'
 
 type Candidate = { status: string; consentAt: boolean; withdrawnAt: boolean; contacts: number; expiresAt: number; now: number; hasOrder: boolean; paymentStatus?: string }
 function eligible(x: Candidate) {
@@ -46,4 +46,22 @@ test('duplicate contact attempts at the configured limit and withdrawn consent r
   assert.equal(eligible({ ...base, contacts: 2 }), false)
   assert.equal(eligible({ ...base, withdrawnAt: true }), false)
   assert.equal(eligible({ ...base, hasOrder: true }), false)
+})
+
+test('database lookup failures are not misreported as missing sessions or orders', () => {
+  assert.deepEqual(
+    checkoutRecoveryLookupResult(new Error('connection unavailable'), null, 'lookup failed safely', 'not found'),
+    { ok: false, message: 'lookup failed safely' },
+  )
+})
+
+test('successful lookup with no row remains distinct from a database error', () => {
+  assert.deepEqual(
+    checkoutRecoveryLookupResult(null, null, 'lookup failed safely', 'not found'),
+    { ok: false, message: 'not found' },
+  )
+  assert.deepEqual(
+    checkoutRecoveryLookupResult(null, { id: 'order-id' }, 'lookup failed safely', 'not found'),
+    { ok: true, data: { id: 'order-id' } },
+  )
 })
