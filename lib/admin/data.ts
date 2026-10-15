@@ -108,8 +108,8 @@ export async function getInventoryData() {
   const orderStatusById = new Map((orderStatuses.data ?? []).map((row) => [row.id, row.order_status]))
   const costRows = (costItems.data ?? []).filter((row) => row.cost_total != null && orderStatusById.get(row.order_id) !== 'CANCELLED')
   const revenue = costRows.reduce((sum, row) => sum + Number(row.line_total ?? 0), 0)
-  const cogs = costRows.reduce((sum: number, row: any) => sum + Number(row.cost_total ?? 0), 0)
-  const grossProfit = costRows.reduce((sum: number, row: any) => sum + Number(row.gross_profit ?? 0), 0)
+  const cogs = costRows.reduce((sum, row) => sum + Number(row.cost_total ?? 0), 0)
+  const grossProfit = costRows.reduce((sum, row) => sum + Number(row.gross_profit ?? 0), 0)
   const metrics = canManageCosts ? { unitsInStock, inventoryValue, revenue, cogs, grossProfit } : null
   return { variants: variants.data ?? [], costs: costs.data ?? [], receipts: receipts.data ?? [], movements: movements.data ?? [], imei: imei.data ?? [], lowStock, canManageImei: canManageCosts, canManageCosts, metrics }
 }
