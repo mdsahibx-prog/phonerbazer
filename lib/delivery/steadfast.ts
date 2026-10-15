@@ -69,7 +69,7 @@ export async function createSteadfastOrder(input: CreateShipmentInput): Promise<
 
 export async function trackSteadfastShipment(trackingNumber: string): Promise<TrackingResult> {
   const result = await steadfastRequest(`/status_by_trackingcode/${encodeURIComponent(trackingNumber)}`)
-  return { providerShipmentId: String(result?.consignment_id ?? trackingNumber), trackingNumber, status: mapStatus(result?.delivery_status), statusText: result?.delivery_status ?? null, raw: result }
+  return { providerShipmentId: String(result?.consignment_id ?? trackingNumber), trackingNumber, status: mapStatus(result?.delivery_status), statusText: result?.delivery_status == null ? null : String(result.delivery_status), raw: result }
 }
 
 export async function normalizeSteadfastWebhook(payload: Json, headers: Headers) {
