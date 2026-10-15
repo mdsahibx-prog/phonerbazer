@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { BatteryCharging, Bluetooth, Camera, CircleCheck, Radio, ShieldCheck, Smartphone, Sparkles, Truck } from 'lucide-react'
 import type { LandingSection } from '@/lib/landing-pages/types'
 import type { StorefrontProduct, StorefrontVariant } from '@/lib/services/storefront-utils'
@@ -75,54 +75,73 @@ function scrollToOrder() {
   document.getElementById('order-form')?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' })
 }
 
-function ProductHero({ section, product, variant, fixedImageUrl }: { section?: Extract<LandingSection, { type: 'hero' }>; product?: StorefrontProduct; variant?: StorefrontVariant; fixedImageUrl?: string | null }) {
+function ProductHero({ section, product, variant, fixedImageUrl, onSelect }: { section?: Extract<LandingSection, { type: 'hero' }>; product?: StorefrontProduct; variant?: StorefrontVariant; fixedImageUrl?: string | null; onSelect: (id: string) => void }) {
+  const gallery = useMemo(() => {
+    if (!product) return []
+    const seen = new Set<string>()
+    return product.variants.map((candidate) => {
+      const image = imageForVariant(product, candidate) ?? imageForVariant(product, undefined, fixedImageUrl || section?.imageUrl)
+      if (!image || seen.has(image.image_url)) return null
+      seen.add(image.image_url)
+      return { variant: candidate, image }
+    }).filter((entry): entry is { variant: StorefrontVariant; image: StorefrontProduct['images'][number] } => Boolean(entry))
+  }, [product, fixedImageUrl, section?.imageUrl])
+  const [galleryIndex, setGalleryIndex] = useState(() => {
+    const selectedIndex = gallery.findIndex((entry) => entry.variant.id === variant?.id)
+    return selectedIndex >= 0 ? selectedIndex : 0
+  })
+  const touchStartXRef = useRef(0)
+  useEffect(() => {
+    if (gallery.length < 2) return
+    const timer = window.setInterval(() => setGalleryIndex((index) => (index + 1) % gallery.length), 3600)
+    return () => window.clearInterval(timer)
+  }, [gallery.length])
   if (!product) return null
-  const image = imageForVariant(product, variant) ?? imageForVariant(product, undefined, fixedImageUrl || section?.imageUrl) ?? primaryImage(product)
-  const title = product.name
+  const active = gallery[galleryIndex] ?? gallery.find((entry) => entry.variant.id === variant?.id)
+  const image = active?.image ?? imageForVariant(product, variant) ?? imageForVariant(product, undefined, fixedImageUrl || section?.imageUrl) ?? primaryImage(product)
   const compareAt = variant?.compare_at_price && variant.price < variant.compare_at_price ? variant.compare_at_price : null
+  const colorDot = (color?: string | null) => {
+    const value = (color || '').toLowerCase()
+    if (/black|কালো/.test(value)) return '#171717'
+    if (/white|সাদা|silver|রূপালি/.test(value)) return '#e5e7eb'
+    if (/gold|সোনালি/.test(value)) return '#d6a84f'
+    if (/green|সবুজ/.test(value)) return '#16834a'
+    if (/blue|নীল/.test(value)) return '#2563eb'
+    if (/red|লাল/.test(value)) return '#dc2626'
+    if (/gray|grey|ধূসর/.test(value)) return '#9ca3af'
+    return '#0f766e'
+  }
+  const moveGallery = (direction: number) => {
+    if (gallery.length < 2) return
+    const next = (galleryIndex + direction + gallery.length) % gallery.length
+    setGalleryIndex(next)
+    onSelect(gallery[next].variant.id)
+  }
   return <section className="overflow-hidden border-b border-emerald-100 bg-gradient-to-b from-emerald-50 via-white to-white">
-    <div className="mx-auto grid max-w-5xl items-center gap-6 px-4 py-5 sm:px-6 sm:py-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-12 lg:py-14">
-      <div className="relative mx-auto aspect-[5/4] w-full max-w-[23rem] overflow-hidden rounded-2xl border border-white bg-white shadow-[0_16px_44px_rgba(16,185,129,0.11)] ring-1 ring-emerald-100 sm:aspect-square sm:max-w-[30rem] sm:rounded-[1.75rem] sm:shadow-[0_24px_70px_rgba(16,185,129,0.13)]">
-        <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(167,243,208,0.45),transparent_60%)]" />
-        {image ? <Image src={image.image_url} alt={image.alt_text || product.name} fill preload fetchPriority="high" className="object-contain p-2 sm:p-6" sizes="(max-width: 640px) 88vw, (max-width: 1024px) 92vw, 42vw" /> : null}
-        <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full border border-emerald-100 bg-white/95 px-3 py-2 text-xs font-black text-emerald-800 shadow-sm"><Sparkles className="h-3.5 w-3.5" /> ক্লাসিক ডিজাইন</div>
-        <div className="absolute bottom-3 right-3 rounded-2xl bg-slate-950 px-3.5 py-2.5 text-white shadow-lg"><p className="text-[10px] font-bold text-emerald-200">বর্তমান মূল্য</p><p className="text-lg font-black">{money(variant?.price)}</p></div>
+    <div className="mx-auto grid max-w-5xl items-center gap-5 px-4 py-4 sm:px-6 sm:py-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-12 lg:py-14">
+      <div className="min-w-0">
+        <div className="relative mx-auto aspect-[5/4] w-full max-w-[23rem] overflow-hidden rounded-2xl border border-white bg-white shadow-[0_16px_44px_rgba(16,185,129,0.11)] ring-1 ring-emerald-100 sm:aspect-square sm:max-w-[30rem] sm:rounded-[1.75rem] sm:shadow-[0_24px_70px_rgba(16,185,129,0.13)]"
+          onTouchStart={(event) => { touchStartXRef.current = event.touches[0]?.clientX ?? 0 }}
+          onTouchEnd={(event) => { const delta = (event.changedTouches[0]?.clientX ?? touchStartXRef.current) - touchStartXRef.current; if (Math.abs(delta) > 42) moveGallery(delta < 0 ? 1 : -1) }}
+          aria-label="ফোনের রং সোয়াইপ করে দেখুন">
+          <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(167,243,208,0.45),transparent_60%)]" />
+          {image ? <Image key={image.image_url} src={image.image_url} alt={image.alt_text || product.name} fill preload fetchPriority="high" className="object-contain p-2 transition-opacity duration-300 sm:p-6" sizes="(max-width: 640px) 88vw, (max-width: 1024px) 92vw, 42vw" /> : null}
+          <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full border border-emerald-100 bg-white/95 px-3 py-2 text-xs font-black text-emerald-800 shadow-sm"><Sparkles className="h-3.5 w-3.5" /> ক্লাসিক ডিজাইন</div>
+          <div className="absolute bottom-3 right-3 rounded-2xl bg-slate-950 px-3.5 py-2.5 text-white shadow-lg"><p className="text-[10px] font-bold text-emerald-200">বর্তমান মূল্য</p><p className="text-lg font-black">{money(variant?.price)}</p></div>
+          {gallery.length > 1 ? <><button type="button" onClick={() => moveGallery(-1)} aria-label="আগের রং দেখুন" className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-lg font-black text-slate-800 shadow-md">‹</button><button type="button" onClick={() => moveGallery(1)} aria-label="পরের রং দেখুন" className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-lg font-black text-slate-800 shadow-md">›</button></> : null}
+        </div>
+        {gallery.length > 1 ? <div className="mt-3 flex items-center justify-center gap-3" aria-label="রং নির্বাচন করুন">{gallery.map(({ variant: candidate }, index) => <button key={candidate.id} type="button" onClick={() => { setGalleryIndex(index); onSelect(candidate.id) }} aria-label={`${candidate.color || candidate.variant_title || 'রং'} নির্বাচন করুন`} aria-pressed={galleryIndex === index} title={candidate.color || candidate.variant_title} className={`flex h-8 w-8 items-center justify-center rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${galleryIndex === index ? 'ring-2 ring-emerald-600 ring-offset-2' : ''}`}><span className="h-4 w-4 rounded-full border border-black/15 shadow-sm" style={{ backgroundColor: colorDot(candidate.color) }} /></button>)}</div> : null}
+        {active?.variant.color ? <p className="mt-1 text-center text-xs font-bold text-slate-600">{active.variant.color}</p> : null}
       </div>
       <div className="min-w-0 lg:py-5">
         <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-800">{product.brand?.name || 'PhonerBazar'}</span><span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200"><CircleCheck className="h-3.5 w-3.5 text-emerald-600" /> ক্যাশ অন ডেলিভারি</span></div>
-        <h1 className="mt-2 text-2xl font-black leading-tight tracking-tight text-slate-950 sm:mt-3 sm:text-5xl">{title}</h1>
-        <div className="mt-5 flex flex-wrap items-end gap-x-3 gap-y-1">
-          <span className="text-3xl font-black text-emerald-700">{money(variant?.price)}</span>
-          {compareAt ? <span className="text-base font-semibold text-slate-400 line-through">{money(compareAt)}</span> : null}
-        </div>
+        <h1 className="mt-2 text-2xl font-black leading-tight tracking-tight text-slate-950 sm:mt-3 sm:text-5xl">{product.name}</h1>
+        <div className="mt-4 flex flex-wrap items-end gap-x-3 gap-y-1"><span className="text-3xl font-black text-emerald-700">{money(variant?.price)}</span>{compareAt ? <span className="text-base font-semibold text-slate-400 line-through">{money(compareAt)}</span> : null}</div>
         <p className="mt-2 text-sm font-bold text-slate-600">{variant ? `${variantLabel(variant)} · ${variant.is_in_stock ? 'স্টকে আছে' : 'এই ভ্যারিয়েন্টটি বর্তমানে অনুপলব্ধ'}` : 'একটি ভ্যারিয়েন্ট নির্বাচন করুন'}</p>
         <div className="mt-4 grid grid-cols-3 gap-2 text-center"><div className="rounded-xl border border-emerald-100 bg-white/90 px-2 py-3"><Truck className="mx-auto h-5 w-5 text-emerald-700" /><span className="mt-1.5 block text-[11px] font-bold text-slate-700">সারা দেশে ডেলিভারি</span></div><div className="rounded-xl border border-emerald-100 bg-white/90 px-2 py-3"><ShieldCheck className="mx-auto h-5 w-5 text-emerald-700" /><span className="mt-1.5 block text-[11px] font-bold text-slate-700">৭ দিনের গ্যারান্টি</span></div><div className="rounded-xl border border-emerald-100 bg-white/90 px-2 py-3"><CircleCheck className="mx-auto h-5 w-5 text-emerald-700" /><span className="mt-1.5 block text-[11px] font-bold text-slate-700">সহজ অর্ডার</span></div></div>
-        <button type="button" onClick={scrollToOrder} className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-emerald-600 px-7 py-3 text-base font-black text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 sm:w-auto">অর্ডার করুন</button>
+        <button type="button" onClick={scrollToOrder} className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-emerald-600 px-7 py-3 text-base font-black text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 sm:w-auto">অর্ডার করুন</button>
       </div>
     </div>
-  </section>
-}
-
-function ProductVisualGallery({ product, selectedVariantId, onSelect }: { product: StorefrontProduct; selectedVariantId: string; onSelect: (id: string) => void }) {
-  const primaryUrl = primaryImage(product)?.image_url
-  const images = product.variants.map((variant) => {
-    const tokens = [variant.color, variant.variant_title].filter(Boolean).join(' ').toLowerCase().split(/\s+|\//).filter((token) => token.length > 2)
-    const image = product.images.find((candidate) => candidate.variant_id === variant.id)
-      ?? product.images.find((candidate) => candidate.image_url !== primaryUrl && tokens.some((token) => `${candidate.alt_text ?? ''} ${candidate.image_url}`.toLowerCase().includes(token)))
-    return image && image.image_url !== primaryUrl ? { variant, image } : null
-  }).filter((entry): entry is { variant: StorefrontVariant; image: StorefrontProduct['images'][number] } => Boolean(entry))
-    .filter((entry, index, all) => all.findIndex((other) => other?.image.image_url === entry.image.image_url) === index)
-    .slice(0, 2)
-  if (!images.length) return null
-  return <section aria-label="পছন্দের রং নির্বাচন" className="mx-auto max-w-5xl px-4 pb-7 pt-2 sm:px-6 sm:pb-10">
-    <div className="mb-4"><p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">পছন্দের রং</p><h2 className="mt-1 text-xl font-black tracking-tight text-slate-950">আপনার পছন্দের রংটি বেছে নিন</h2></div>
-    <div className="grid grid-cols-2 gap-3 sm:max-w-xl">{images.map(({ variant, image }) => {
-      const selected = selectedVariantId === variant.id
-      return <button key={variant.id} type="button" onClick={() => onSelect(variant.id)} disabled={!variant.is_in_stock} aria-pressed={selected} className={`group rounded-2xl border bg-white p-2 text-left shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-50 ${selected ? 'border-emerald-500 ring-2 ring-emerald-100' : 'border-slate-200'}`}>
-        <span className="relative block aspect-square overflow-hidden rounded-xl bg-gradient-to-br from-slate-50 to-emerald-50/60"><Image src={image.image_url} alt={`${product.name} ${variant.color || variant.variant_title || 'ভ্যারিয়েন্ট'}`} fill loading="lazy" className="object-contain p-2 transition-transform duration-200 group-hover:scale-[1.03]" sizes="(max-width: 640px) 44vw, 240px" /></span>
-        <span className="flex items-center justify-between gap-2 px-2 pb-2 pt-3"><span className="min-w-0 truncate text-sm font-black text-slate-900">{variantLabel(variant)}</span><span className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-black ${selected ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'}`}>{selected ? 'নির্বাচিত' : 'বেছে নিন'}</span></span>
-      </button>
-    })}</div>
   </section>
 }
 
@@ -246,7 +265,7 @@ export function LandingConversionSections({ sections, products, fixedImageUrl }:
     return () => window.removeEventListener('scroll', updateStickyVisibility)
   }, [])
   if (!selectedProduct || !selectedVariant) return <div className="mx-auto max-w-2xl px-4 py-16 text-center text-slate-600">এই পণ্যটি বর্তমানে পাওয়া যাচ্ছে না।</div>
-  return <div className="min-h-screen overflow-x-clip bg-white pb-24 text-slate-950 sm:pb-0"><ProductHero section={hero} product={selectedProduct} variant={selectedVariant} fixedImageUrl={fixedImageUrl} /><ProductVisualGallery product={selectedProduct} selectedVariantId={selectedVariantId} onSelect={setSelectedVariantId} />
+  return <div className="min-h-screen overflow-x-clip bg-white pb-24 text-slate-950 sm:pb-0"><ProductHero section={hero} product={selectedProduct} variant={selectedVariant} fixedImageUrl={fixedImageUrl} onSelect={setSelectedVariantId} />
     {renderSections.map((section) => {
       if (section.enabled === false || section.type === 'hero' || section.type === 'product' || section.type === 'announcement' || section.type === 'offer' || section.type === 'countdown' || section.type === 'product_gallery' || section.type === 'related_products' || section.type === 'sticky_mobile_cta') return null
       if (section.type === 'variant_selector') { const quantitySection = sections.find((candidate): candidate is Extract<LandingSection, { type: 'quantity_selector' }> => candidate.type === 'quantity_selector'); return <VariantSelector key={section.id} section={section} product={selectedProduct} selectedVariantId={selectedVariantId} onSelect={setSelectedVariantId} quantity={quantity} onChange={setQuantity} maxQuantity={quantitySection?.maxQuantity ?? 10} /> }

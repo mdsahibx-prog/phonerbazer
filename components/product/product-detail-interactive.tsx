@@ -47,7 +47,7 @@ export function ProductDetailInteractive({ product }: { product: StorefrontProdu
       Number(b.is_primary) - Number(a.is_primary) ||
       a.sort_order - b.sort_order,
     )
-  }, [product.images, selected?.color, selected?.id])
+  }, [product, selected])
   const imageCount = displayImages.length
   const activeImage = displayImages[activeImageIndex] || displayImages[0]
   const imageUrl = activeImage?.image_url || getProductImageUrl(product)

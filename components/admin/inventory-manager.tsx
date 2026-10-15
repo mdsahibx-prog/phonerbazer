@@ -12,8 +12,6 @@ import {
   Boxes,
   CircleDollarSign,
   ClipboardList,
-  PackageCheck,
-  PackageX,
   Plus,
   RefreshCw,
   Search,

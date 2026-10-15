@@ -43,6 +43,20 @@ jobs:
       - name: Start isolated Supabase stack
         run: supabase start
 
+      - name: Set local Supabase public build environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          local_env="$(supabase status -o env)"
+          supabase_url="$(printf '%s\n' "$local_env" | sed -n 's/^API_URL="\([^"]*\)"$/\1/p')"
+          supabase_anon_key="$(printf '%s\n' "$local_env" | sed -n 's/^ANON_KEY="\([^"]*\)"$/\1/p')"
+          if [[ -z "$supabase_url" || -z "$supabase_anon_key" ]]; then
+            printf '%s\n' 'Unable to resolve local Supabase public build environment.' >&2
+            exit 1
+          fi
+          printf 'NEXT_PUBLIC_SUPABASE_URL=%s\n' "$supabase_url" >> "$GITHUB_ENV"
+          printf 'NEXT_PUBLIC_SUPABASE_ANON_KEY=%s\n' "$supabase_anon_key" >> "$GITHUB_ENV"
+
       - name: Reset isolated database and apply every migration
         run: supabase db reset --local
 

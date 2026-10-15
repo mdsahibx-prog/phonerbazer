@@ -2,6 +2,7 @@ import 'server-only'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptSecret } from './secrets'
+import type { Json } from '@/lib/types/database'
 import type { CreateShipmentInput, CreateShipmentResult, ShipmentStatus, TrackingResult } from './contracts'
 
 export const REDX_BASE_URL = 'https://openapi.redx.com.bd/v1.0.0-beta'
@@ -15,31 +16,41 @@ async function getCredentials(): Promise<Credentials> {
   return { token: decryptSecret(data.encrypted_api_key).replace(/^Bearer\s+/i, '').trim(), webhookToken: data.encrypted_webhook_token ? decryptSecret(data.encrypted_webhook_token) : null, baseUrl: data.base_url || REDX_BASE_URL }
 }
 
-async function redxRequest(path: string, init: RequestInit = {}) {
+function asRecord(value: Json | undefined): Record<string, Json | undefined> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : {}
+}
+
+function recordList(value: Json | undefined): Record<string, Json | undefined>[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((entry): entry is Record<string, Json | undefined> => entry !== null && typeof entry === 'object' && !Array.isArray(entry))
+}
+
+async function redxRequest(path: string, init: RequestInit = {}): Promise<Record<string, Json | undefined>> {
   const credentials = await getCredentials()
   const headers = new Headers(init.headers)
   headers.set('API-ACCESS-TOKEN', `Bearer ${credentials.token}`)
   headers.set('Content-Type', 'application/json')
   const response = await fetch(`${credentials.baseUrl}${path}`, { ...init, headers, cache: 'no-store', signal: AbortSignal.timeout(15000) })
   const text = await response.text()
-  let body: unknown = null
-  try { body = text ? JSON.parse(text) : null } catch { body = { raw: text } }
+  let body: Json = null
+  try { body = text ? JSON.parse(text) as Json : null } catch { body = { raw: text } }
+  const record = asRecord(body)
   if (!response.ok) {
-    const message = typeof body === 'object' && body && 'message' in body ? String((body as { message?: unknown }).message) : `HTTP ${response.status}`
+    const message = typeof record.message === 'string' ? record.message : `HTTP ${response.status}`
     throw new Error(`REDX API ${response.status}: ${message}`)
   }
-  return body as any
+  return record
 }
 
 export async function listRedxAreas(postCode?: string, districtName?: string) {
   const query = postCode ? `?post_code=${encodeURIComponent(postCode)}` : districtName ? `?district_name=${encodeURIComponent(districtName)}` : ''
   const result = await redxRequest(`/areas${query}`)
-  return Array.isArray(result?.areas) ? result.areas : []
+  return recordList(result.areas)
 }
 
 export async function listRedxPickupStores() {
   const result = await redxRequest('/pickup/stores')
-  return Array.isArray(result?.pickup_stores) ? result.pickup_stores : []
+  return recordList(result.pickup_stores)
 }
 
 export async function getRedxPickupStoreInfo(pickupStoreId: number) {
@@ -74,16 +85,16 @@ function mapStatus(value: unknown): ShipmentStatus {
 export async function resolveRedxDeliveryArea(customer: CreateShipmentInput['order']['customer']) {
   const areas = await listRedxAreas(customer.postalCode || undefined, customer.district || undefined)
   const normalizedArea = customer.area.trim().toLowerCase()
-  const exact = areas.find((area: any) => String(area.name ?? '').trim().toLowerCase() === normalizedArea)
+  const exact = areas.find((area) => String(area.name ?? '').trim().toLowerCase() === normalizedArea)
   if (exact) return exact
-  const partial = areas.find((area: any) => String(area.name ?? '').trim().toLowerCase().includes(normalizedArea) || normalizedArea.includes(String(area.name ?? '').trim().toLowerCase()))
+  const partial = areas.find((area) => String(area.name ?? '').trim().toLowerCase().includes(normalizedArea) || normalizedArea.includes(String(area.name ?? '').trim().toLowerCase()))
   if (partial) return partial
   throw new Error(`REDX delivery area could not be resolved for ${customer.area}.`)
 }
 
 export async function createRedxParcel(input: CreateShipmentInput & { deliveryArea: string; deliveryAreaId: number; pickupStoreId?: number | null; declaredValue?: number }): Promise<CreateShipmentResult> {
   const stores = await listRedxPickupStores()
-  const pickupStore = input.pickupStoreId ? stores.find((store: any) => Number(store.id) === Number(input.pickupStoreId)) : stores[0]
+  const pickupStore = input.pickupStoreId ? stores.find((store) => Number(store.id) === Number(input.pickupStoreId)) : stores[0]
   const payload: Record<string, unknown> = {
     customer_name: input.order.customer.name,
     customer_phone: input.order.customer.phone,
@@ -106,10 +117,10 @@ export async function createRedxParcel(input: CreateShipmentInput & { deliveryAr
 
 export async function trackRedxParcel(trackingNumber: string): Promise<TrackingResult> {
   const result = await redxRequest(`/parcel/track/${encodeURIComponent(trackingNumber)}`)
-  const tracking = Array.isArray(result?.tracking) ? result.tracking : []
+  const tracking = recordList(result.tracking)
   const latest = tracking[tracking.length - 1]
   const latestText = `${latest?.status ?? ''} ${latest?.message_en ?? ''}`.trim()
-  return { providerShipmentId: trackingNumber, trackingNumber, status: mapStatus(latestText), statusText: latest?.message_en ?? latest?.message_bn ?? null, occurredAt: latest?.time ?? null, raw: result }
+  return { providerShipmentId: trackingNumber, trackingNumber, status: mapStatus(latestText), statusText: latest?.message_en != null ? String(latest.message_en) : latest?.message_bn != null ? String(latest.message_bn) : null, occurredAt: latest?.time != null ? String(latest.time) : null, raw: result }
 }
 
 export async function getRedxParcelInfo(trackingNumber: string) {
@@ -117,12 +128,13 @@ export async function getRedxParcelInfo(trackingNumber: string) {
   return result?.parcel ?? null
 }
 
-export async function normalizeRedxWebhook(payload: any, requestUrl: string) {
+export async function normalizeRedxWebhook(payload: Json, requestUrl: string) {
+  const event = asRecord(payload)
   const credentials = await getCredentials()
   if (!credentials.webhookToken) throw new Error('REDX webhook token is not configured.')
   const supplied = new URL(requestUrl).searchParams.get('token') ?? ''
   if (!supplied || supplied !== credentials.webhookToken) throw new Error('Invalid REDX webhook token.')
-  const providerShipmentId = payload?.tracking_number ? String(payload.tracking_number) : null
-  const providerEventId = `redx:${providerShipmentId ?? payload?.invoice_number ?? 'event'}:${payload?.timestamp ?? payload?.status ?? crypto.randomUUID()}`
-  return { provider: 'REDX' as const, providerEventId, providerShipmentId, trackingNumber: providerShipmentId, status: mapStatus(payload?.status), occurredAt: payload?.timestamp ? String(payload.timestamp) : null, payload }
+  const providerShipmentId = event.tracking_number ? String(event.tracking_number) : null
+  const providerEventId = `redx:${providerShipmentId ?? event.invoice_number ?? 'event'}:${event.timestamp ?? event.status ?? crypto.randomUUID()}`
+  return { provider: 'REDX' as const, providerEventId, providerShipmentId, trackingNumber: providerShipmentId, status: mapStatus(event.status), occurredAt: event.timestamp ? String(event.timestamp) : null, payload }
 }

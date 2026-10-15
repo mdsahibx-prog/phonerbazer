@@ -37,9 +37,12 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
   const currentPathRef = useRef<string | null>(pathname)
   const lastPageViewPathRef = useRef<string | null>(null)
 
-  // Keep the first-visit prompt visible until the visitor makes a choice.
+  // Read persisted consent after hydration so the server and first client render match.
   useEffect(() => {
-    if (hasAnalyticsConsent()) setConsent(getAnalyticsConsent())
+    const timer = window.setTimeout(() => {
+      if (hasAnalyticsConsent()) setConsent(getAnalyticsConsent())
+    }, 0)
+    return () => window.clearTimeout(timer)
   }, [])
 
   // Next.js App Router transitions don't reload the document. Track each
@@ -80,7 +83,6 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
 
     const sync = () => {
       const next = hasAnalyticsConsent() ? getAnalyticsConsent() : null
-      setConsent(next)
       if (next && (next.analytics || next.marketing)) {
         // Dispatch promptly; browser provider calls are queued until public config
         // has loaded, so first-landing PageView/ViewContent events are not lost.
@@ -93,7 +95,10 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
     configureAnalyticsRuntime(runtimeConfig)
     sync()
 
-    const onConsentChange = () => sync()
+    const onConsentChange = () => {
+      setConsent(hasAnalyticsConsent() ? getAnalyticsConsent() : null)
+      sync()
+    }
     window.addEventListener('analytics-consent-change', onConsentChange)
 
     return () => {
