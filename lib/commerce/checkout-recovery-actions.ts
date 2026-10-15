@@ -81,7 +81,7 @@ export async function saveCheckoutRecoveryDraft(raw: unknown) {
     const consentAt = input.recoveryConsent ? (existing?.recovery_consent_at ?? now) : existing?.recovery_consent_at ?? null
     const payload = {
       checkout_request_id: input.checkoutRequestId, source: input.source, cart_id: cart?.id || undefined,
-      status: Object.keys(delivery).some((key) => delivery[key as keyof typeof delivery]) ? 'DETAILS_ENTERED' : (existing?.status === 'ABANDONED' ? 'STARTED' : existing?.status ?? 'STARTED'),
+      status: existing?.status === 'QUOTED' ? 'QUOTED' : (Object.keys(delivery).some((key) => delivery[key as keyof typeof delivery]) ? 'DETAILS_ENTERED' : (existing?.status === 'ABANDONED' ? 'STARTED' : existing?.status ?? 'STARTED')),
       customer_name: name, customer_phone: phone, customer_email: cleanText(input.email, 254),
       recovery_token_hash: tokenHash, recovery_consent_at: consentAt,
       recovery_consent_withdrawn_at: input.recoveryConsent ? null : (existing?.recovery_consent_at ? now : existing?.recovery_consent_withdrawn_at ?? null),
@@ -93,14 +93,15 @@ export async function saveCheckoutRecoveryDraft(raw: unknown) {
         ? await db.from('checkout_sessions').update(payload).eq('checkout_request_id', input.checkoutRequestId).eq('recovery_token_hash', tokenHash).not('status', 'in', '(COMPLETED,PAYMENT_INITIATED)').select('id').maybeSingle()
         : await db.from('checkout_sessions').update(payload).eq('checkout_request_id', input.checkoutRequestId).is('recovery_token_hash', null).not('status', 'in', '(COMPLETED,PAYMENT_INITIATED)').select('id').maybeSingle()
       if (updateResult.error) throw updateResult.error
+      if (!updateResult.data) return { ok: true as const, saved: false as const }
     } else {
       const { error } = await db.from('checkout_sessions').insert(payload)
       if (error && !String(error.message).includes('duplicate key')) throw error
       if (error) return { ok: false as const, message: 'Checkout draft could not be saved.' }
     }
-    if (input.recoveryConsent && !existing?.recovery_consent_at) {
+    if ((input.recoveryConsent && !existing?.recovery_consent_at) || (!input.recoveryConsent && existing?.recovery_consent_at && !existing?.recovery_consent_withdrawn_at)) {
       const { data: row } = await db.from('checkout_sessions').select('id').eq('checkout_request_id', input.checkoutRequestId).maybeSingle()
-      if (row?.id) await db.from('checkout_recovery_history').insert({ checkout_session_id: row.id, action: 'CONSENT_GRANTED' })
+      if (row?.id) await db.from('checkout_recovery_history').insert({ checkout_session_id: row.id, action: input.recoveryConsent ? 'CONSENT_GRANTED' : 'CONSENT_WITHDRAWN' })
     }
     return { ok: true as const, saved: true as const }
   } catch (error) {
