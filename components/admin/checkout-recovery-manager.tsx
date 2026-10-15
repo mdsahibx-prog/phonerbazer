@@ -17,10 +17,13 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
   function openWhatsApp(row: RecoveryRow) {
     const message = 'আসসালামু আলাইকুম! Phonerbazar থেকে বলছি। আপনি একটি অর্ডার সম্পন্ন করার আগে চেকআউট থেকে বের হয়ে গিয়েছিলেন। অর্ডারটি সম্পন্ন করতে কোনো সাহায্য লাগলে আমরা সহযোগিতা করতে প্রস্তুত। আগ্রহী থাকলে জানাবেন। ধন্যবাদ।'
     const url = 'https://wa.me/' + phoneForWhatsApp(row.customer_phone ?? '') + '?text=' + encodeURIComponent(message)
+    const popup = window.open('about:blank', '_blank')
+    if (!popup) { setNotice('Allow pop-ups to open WhatsApp, then try again.'); return }
+    popup.opener = null
     startTransition(() => {
       void updateCheckoutRecoveryOutcome({ sessionId: row.id, outcome: 'CONTACTED', notes: 'WhatsApp link opened by admin; message delivery is not confirmed.' })
-        .then((result) => { if (!result.ok) { setNotice(result.message); return } window.open(url, '_blank', 'noopener,noreferrer'); setNotice('WhatsApp link opened. Message sending is not confirmed.') })
-        .catch(() => setNotice('Could not record the recovery action.'))
+        .then((result) => { if (!result.ok) { popup.close(); setNotice(result.message); return } popup.location.href = url; setNotice('WhatsApp link opened. Message sending is not confirmed.') })
+        .catch(() => { popup.close(); setNotice('Could not record the recovery action.') })
     })
   }
   function updateOutcome(row: RecoveryRow, outcome: 'NOT_INTERESTED' | 'CLOSED') {
