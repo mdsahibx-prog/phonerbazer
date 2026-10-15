@@ -80,7 +80,7 @@ export async function resolveRedxDeliveryArea(customer: CreateShipmentInput['ord
   const normalizedArea = customer.area.trim().toLowerCase()
   const exact = areas.find((area) => String(area.name ?? '').trim().toLowerCase() === normalizedArea)
   if (exact) return exact
-  const partial = areas.find((area: any) => String(area.name ?? '').trim().toLowerCase().includes(normalizedArea) || normalizedArea.includes(String(area.name ?? '').trim().toLowerCase()))
+  const partial = areas.find((area) => String(area.name ?? '').trim().toLowerCase().includes(normalizedArea) || normalizedArea.includes(String(area.name ?? '').trim().toLowerCase()))
   if (partial) return partial
   throw new Error(`REDX delivery area could not be resolved for ${customer.area}.`)
 }
