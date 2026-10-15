@@ -126,7 +126,7 @@ export async function normalizeRedxWebhook(payload: unknown, requestUrl: string)
   if (!credentials.webhookToken) throw new Error('REDX webhook token is not configured.')
   const supplied = new URL(requestUrl).searchParams.get('token') ?? ''
   if (!supplied || supplied !== credentials.webhookToken) throw new Error('Invalid REDX webhook token.')
-  const providerShipmentId = event.tracking_number ? String(payload.tracking_number) : null
-  const providerEventId = `redx:${providerShipmentId ?? event.invoice_number ?? 'event'}:${payload?.timestamp ?? event.status ?? crypto.randomUUID()}`
-  return { provider: 'REDX' as const, providerEventId, providerShipmentId, trackingNumber: providerShipmentId, status: mapStatus(payload?.status), occurredAt: payload?.timestamp ? String(payload.timestamp) : null, payload }
+  const providerShipmentId = event.tracking_number ? String(event.tracking_number) : null
+  const providerEventId = `redx:${providerShipmentId ?? event.invoice_number ?? 'event'}:${event.timestamp ?? event.status ?? crypto.randomUUID()}`
+  return { provider: 'REDX' as const, providerEventId, providerShipmentId, trackingNumber: providerShipmentId, status: mapStatus(event.status), occurredAt: payload?.timestamp ? String(event.timestamp) : null, payload }
 }
