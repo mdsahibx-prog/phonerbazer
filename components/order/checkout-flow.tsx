@@ -86,7 +86,7 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const [checkoutRequestId] = useState(() => initialCheckoutRequestId || crypto.randomUUID())
-  const [recoveryToken] = useState(() => crypto.randomUUID() + crypto.randomUUID())
+  const [recoveryToken] = useState(() => { if (typeof window === 'undefined') return crypto.randomUUID() + crypto.randomUUID(); const key = 'phonerbazar-recovery-token:' + checkoutRequestId; const saved = window.sessionStorage.getItem(key); if (saved) return saved; const token = crypto.randomUUID() + crypto.randomUUID(); window.sessionStorage.setItem(key, token); return token })
   const [recoveryConsent, setRecoveryConsent] = useState(false)
 
   useEffect(() => {
