@@ -2,6 +2,7 @@ import 'server-only'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptSecret } from './secrets'
+import type { Json } from '@/lib/types/database'
 import type { CreateShipmentInput, CreateShipmentResult, ShipmentStatus, TrackingResult } from './contracts'
 
 export const STEADFAST_BASE_URL = 'https://portal.packzy.com/api/v1'
@@ -15,7 +16,11 @@ async function getCredentials(): Promise<Credentials> {
   return { apiKey: decryptSecret(data.encrypted_api_key), secretKey: decryptSecret(data.encrypted_secret_key), baseUrl: data.base_url || STEADFAST_BASE_URL }
 }
 
-async function steadfastRequest(path: string, init: RequestInit = {}) {
+function asRecord(value: Json | undefined): Record<string, Json | undefined> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : {}
+}
+
+async function steadfastRequest(path: string, init: RequestInit = {}): Promise<Record<string, Json | undefined>> {
   const credentials = await getCredentials()
   const headers = new Headers(init.headers)
   headers.set('Api-Key', credentials.apiKey)
@@ -23,10 +28,11 @@ async function steadfastRequest(path: string, init: RequestInit = {}) {
   headers.set('Content-Type', 'application/json')
   const response = await fetch(`${credentials.baseUrl}${path}`, { ...init, headers, cache: 'no-store', signal: AbortSignal.timeout(15000) })
   const text = await response.text()
-  let body: unknown = null
-  try { body = text ? JSON.parse(text) : null } catch { body = { raw: text } }
-  if (!response.ok) throw new Error(`Steadfast API ${response.status}: ${typeof body === 'object' && body && 'message' in body ? String((body as { message?: unknown }).message) : 'Request failed'}`)
-  return body as any
+  let body: Json = null
+  try { body = text ? JSON.parse(text) as Json : null } catch { body = { raw: text } }
+  const record = asRecord(body)
+  if (!response.ok) throw new Error(`Steadfast API ${response.status}: ${String(record.message ?? 'Request failed')}`)
+  return record
 }
 
 export async function testSteadfastConnection() {
@@ -59,23 +65,24 @@ export async function createSteadfastOrder(input: CreateShipmentInput): Promise<
     delivery_type: 0,
   }
   const result = await steadfastRequest('/create_order', { method: 'POST', body: JSON.stringify(payload) })
-  const consignment = result?.consignment
+  const consignment = asRecord(result?.consignment)
   if (!consignment?.consignment_id) throw new Error('Steadfast did not return a consignment ID.')
   return { providerShipmentId: String(consignment.consignment_id), trackingNumber: consignment.tracking_code ? String(consignment.tracking_code) : null, labelReference: null, status: mapStatus(consignment.status), raw: result }
 }
 
 export async function trackSteadfastShipment(trackingNumber: string): Promise<TrackingResult> {
   const result = await steadfastRequest(`/status_by_trackingcode/${encodeURIComponent(trackingNumber)}`)
-  return { providerShipmentId: String(result?.consignment_id ?? trackingNumber), trackingNumber, status: mapStatus(result?.delivery_status), statusText: result?.delivery_status ?? null, raw: result }
+  return { providerShipmentId: String(result?.consignment_id ?? trackingNumber), trackingNumber, status: mapStatus(result?.delivery_status), statusText: result?.delivery_status != null ? String(result.delivery_status) : null, raw: result }
 }
 
-export async function normalizeSteadfastWebhook(payload: any, headers: Headers) {
+export async function normalizeSteadfastWebhook(payload: Json, headers: Headers) {
+  const event = asRecord(payload)
   const auth = headers.get('authorization') ?? ''
   const db = createAdminClient()
   const { data } = await db.from('delivery_provider_credentials').select('encrypted_webhook_token').eq('provider', 'STEADFAST').maybeSingle()
   if (!data?.encrypted_webhook_token) throw new Error('Steadfast webhook token is not configured.')
   const expected = `Bearer ${decryptSecret(data.encrypted_webhook_token)}`
   if (auth !== expected) throw new Error('Invalid Steadfast webhook authorization.')
-  const providerEventId = `${payload?.notification_type ?? 'event'}:${payload?.consignment_id ?? payload?.invoice ?? payload?.updated_at ?? crypto.randomUUID()}`
-  return { provider: 'STEADFAST' as const, providerEventId, providerShipmentId: payload?.consignment_id ? String(payload.consignment_id) : null, trackingNumber: payload?.tracking_code ? String(payload.tracking_code) : null, status: mapStatus(payload?.status), occurredAt: payload?.updated_at ? String(payload.updated_at) : null, payload }
+  const providerEventId = `${event.notification_type ?? 'event'}:${event.consignment_id ?? event.invoice ?? event.updated_at ?? crypto.randomUUID()}`
+  return { provider: 'STEADFAST' as const, providerEventId, providerShipmentId: event.consignment_id ? String(payload.consignment_id) : null, trackingNumber: event.tracking_code ? String(payload.tracking_code) : null, status: mapStatus(event.status), occurredAt: event.updated_at ? String(payload.updated_at) : null, payload }
 }
