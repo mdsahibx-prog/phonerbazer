@@ -3,13 +3,14 @@ import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptSecret } from './secrets'
 import type { CreateShipmentInput, CreateShipmentResult, ShipmentStatus, TrackingResult } from './contracts'
+import type { Json } from '@/lib/types/database'
 
 export const REDX_BASE_URL = 'https://openapi.redx.com.bd/v1.0.0-beta'
 
 type Credentials = { token: string; webhookToken?: string | null; baseUrl: string }
-type RedxArea = { id?: string | number; name?: string; [key: string]: unknown }
-type RedxStore = { id?: string | number; [key: string]: unknown }
-type RedxResponse = Record<string, unknown> & { areas?: RedxArea[]; pickup_stores?: RedxStore[]; pickup_store?: Record<string, unknown>; consignment?: Record<string, unknown> }
+type RedxArea = { id?: string | number; name?: string; [key: string]: Json | undefined }
+type RedxStore = { id?: string | number; [key: string]: Json | undefined }
+type RedxResponse = Record<string, Json | undefined> & { areas?: RedxArea[]; pickup_stores?: RedxStore[]; pickup_store?: Record<string, Json | undefined>; consignment?: Record<string, Json | undefined> }
 
 async function getCredentials(): Promise<Credentials> {
   const db = createAdminClient()
@@ -120,7 +121,7 @@ export async function getRedxParcelInfo(trackingNumber: string) {
   return result?.parcel ?? null
 }
 
-export async function normalizeRedxWebhook(payload: unknown, requestUrl: string) {
+export async function normalizeRedxWebhook(payload: Json, requestUrl: string) {
   const event = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload as Record<string, unknown> : {}
   const credentials = await getCredentials()
   if (!credentials.webhookToken) throw new Error('REDX webhook token is not configured.')
