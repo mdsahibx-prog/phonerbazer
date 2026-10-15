@@ -80,7 +80,6 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
 
     const sync = () => {
       const next = hasAnalyticsConsent() ? getAnalyticsConsent() : null
-      setConsent(next)
       if (next && (next.analytics || next.marketing)) {
         // Dispatch promptly; browser provider calls are queued until public config
         // has loaded, so first-landing PageView/ViewContent events are not lost.
@@ -93,7 +92,10 @@ export function AnalyticsRuntime({ runtimeConfig = DEFAULT_RUNTIME_CONFIG }: { r
     configureAnalyticsRuntime(runtimeConfig)
     sync()
 
-    const onConsentChange = () => sync()
+    const onConsentChange = () => {
+      setConsent(hasAnalyticsConsent() ? getAnalyticsConsent() : null)
+      sync()
+    }
     window.addEventListener('analytics-consent-change', onConsentChange)
 
     return () => {
