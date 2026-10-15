@@ -10,5 +10,5 @@ export default async function CheckoutRecoveryPage({ searchParams }: { searchPar
   const page = Math.max(1, Number.parseInt(params.page ?? '1', 10) || 1)
   const status = params.status ?? 'ABANDONED'
   const result = await listCheckoutRecovery({ page, status, q: params.q })
-  return <div><AdminPageHeader eyebrow="Customer recovery" title="Incomplete checkouts" description="Review saved checkout progress and manually offer help only where explicit recovery consent is active. Opening WhatsApp is recorded as an attempt, not proof of delivery." /><CheckoutRecoveryManager {...result} status={status} q={params.q} /></div>
+  return <div><AdminPageHeader eyebrow="Customer recovery" title="Incomplete checkouts" description="Review saved checkout progress and manually offer help only where explicit recovery consent is active. Opening WhatsApp is recorded as an attempt, not proof of delivery." /><CheckoutRecoveryManager {...result} status={status} q={params.q} now={new Date().toISOString()} /></div>
 }
