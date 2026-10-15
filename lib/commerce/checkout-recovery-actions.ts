@@ -163,11 +163,19 @@ export async function updateCheckoutRecoveryOutcome(raw: unknown) {
     if (!contactUpdated) return { ok: false as const, message: 'Another admin updated this checkout. Refresh and try again.' }
   } else if (action === 'RECOVERED') {
     if (!parsed.data.orderId) return { ok: false as const, message: 'Link the recovered order before marking recovered.' }
-    const { data: order } = await db.from('orders').select('id,checkout_request_id').eq('id', parsed.data.orderId).maybeSingle()
+    const { data: order, error: orderError } = await db.from('orders').select('id,checkout_request_id').eq('id', parsed.data.orderId).maybeSingle()
+    if (orderError) return { ok: false as const, message: 'Unable to verify the linked order. Refresh and try again.' }
     if (!order || order.checkout_request_id !== session.checkout_request_id) return { ok: false as const, message: 'Order does not belong to this checkout.' }
-    await db.from('checkout_sessions').update({ recovery_outcome: action, recovery_outcome_at: new Date().toISOString(), completed_order_id: order.id, status: 'COMPLETED', updated_at: new Date().toISOString() }).eq('id', session.id).neq('status', 'COMPLETED')
+    const { data: updated, error: updateError } = await db.from('checkout_sessions')
+      .update({ recovery_outcome: action, recovery_outcome_at: new Date().toISOString(), completed_order_id: order.id, status: 'COMPLETED', updated_at: new Date().toISOString() })
+      .eq('id', session.id).neq('status', 'COMPLETED').select('id').maybeSingle()
+    if (updateError) throw new Error('Unable to link the recovered order.')
+    if (!updated) return { ok: false as const, message: 'This checkout is already completed or has changed. Refresh and verify its linked order.' }
   } else {
-    await db.from('checkout_sessions').update({ recovery_outcome: action, recovery_outcome_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', session.id).neq('status', 'COMPLETED')
+    const { error: updateError } = await db.from('checkout_sessions')
+      .update({ recovery_outcome: action, recovery_outcome_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq('id', session.id).neq('status', 'COMPLETED')
+    if (updateError) throw new Error('Unable to update recovery outcome.')
   }
   const { error: historyError } = await db.from('checkout_recovery_history').insert({ checkout_session_id: session.id, actor_admin_user_id: admin.id, action: action === 'CONTACTED' ? 'WHATSAPP_OPENED' : action, notes: parsed.data.notes ?? null, linked_order_id: parsed.data.orderId ?? null })
   if (historyError) throw new Error('Recovery outcome could not be recorded.')
