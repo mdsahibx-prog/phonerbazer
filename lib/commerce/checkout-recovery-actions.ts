@@ -64,6 +64,7 @@ export async function saveCheckoutRecoveryDraft(raw: unknown) {
   try {
     const items = await authoritativeItems(db, input)
     const cart = input.source === 'CART' ? await getCart() : null
+    if (input.source === 'CART' && (!cart?.id || !items.length)) return { ok: false as const, message: 'Your cart is empty.' }
     const phone = input.phone && isValidBangladeshMobile(input.phone) ? normalizePhone(input.phone) : null
     const name = cleanText(input.fullName, 120)
     const now = new Date().toISOString()
@@ -88,8 +89,10 @@ export async function saveCheckoutRecoveryDraft(raw: unknown) {
       delivery_snapshot: delivery, last_activity_at: now, expires_at: new Date(Date.now() + 30 * 86400000).toISOString(), updated_at: now,
     }
     if (existing) {
-      const { error } = await db.from('checkout_sessions').update(payload).eq('checkout_request_id', input.checkoutRequestId).eq('recovery_token_hash', tokenHash).not('status', 'in', '(COMPLETED,PAYMENT_INITIATED)').select('id').maybeSingle()
-      if (error) throw error
+      const updateResult = existing.recovery_token_hash
+        ? await db.from('checkout_sessions').update(payload).eq('checkout_request_id', input.checkoutRequestId).eq('recovery_token_hash', tokenHash).not('status', 'in', '(COMPLETED,PAYMENT_INITIATED)').select('id').maybeSingle()
+        : await db.from('checkout_sessions').update(payload).eq('checkout_request_id', input.checkoutRequestId).is('recovery_token_hash', null).not('status', 'in', '(COMPLETED,PAYMENT_INITIATED)').select('id').maybeSingle()
+      if (updateResult.error) throw updateResult.error
     } else {
       const { error } = await db.from('checkout_sessions').insert(payload)
       if (error && !String(error.message).includes('duplicate key')) throw error
