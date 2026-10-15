@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { BatteryCharging, Bluetooth, Camera, CircleCheck, Radio, ShieldCheck, Smartphone, Sparkles, Truck } from 'lucide-react'
 import type { LandingSection } from '@/lib/landing-pages/types'
 import type { StorefrontProduct, StorefrontVariant } from '@/lib/services/storefront-utils'
@@ -76,25 +76,26 @@ function scrollToOrder() {
 }
 
 function ProductHero({ section, product, variant, fixedImageUrl, onSelect }: { section?: Extract<LandingSection, { type: 'hero' }>; product?: StorefrontProduct; variant?: StorefrontVariant; fixedImageUrl?: string | null; onSelect: (id: string) => void }) {
-  const variants = product?.variants ?? []
-  const [galleryIndex, setGalleryIndex] = useState(0)
-  const touchStartX = useState({ current: 0 })[0]
   const gallery = useMemo(() => {
     if (!product) return []
     const seen = new Set<string>()
-    return variants.map((candidate) => {
+    return product.variants.map((candidate) => {
       const image = imageForVariant(product, candidate) ?? imageForVariant(product, undefined, fixedImageUrl || section?.imageUrl)
       if (!image || seen.has(image.image_url)) return null
       seen.add(image.image_url)
       return { variant: candidate, image }
     }).filter((entry): entry is { variant: StorefrontVariant; image: StorefrontProduct['images'][number] } => Boolean(entry))
-  }, [product, variants, fixedImageUrl, section?.imageUrl])
+  }, [product, fixedImageUrl, section?.imageUrl])
+  const [galleryIndex, setGalleryIndex] = useState(() => {
+    const selectedIndex = gallery.findIndex((entry) => entry.variant.id === variant?.id)
+    return selectedIndex >= 0 ? selectedIndex : 0
+  })
+  const touchStartXRef = useRef(0)
   useEffect(() => {
     if (gallery.length < 2) return
     const timer = window.setInterval(() => setGalleryIndex((index) => (index + 1) % gallery.length), 3600)
     return () => window.clearInterval(timer)
   }, [gallery.length])
-  useEffect(() => { setGalleryIndex(Math.max(0, gallery.findIndex((entry) => entry.variant.id === variant?.id))) }, [variant?.id, gallery])
   if (!product) return null
   const active = gallery[galleryIndex] ?? gallery.find((entry) => entry.variant.id === variant?.id)
   const image = active?.image ?? imageForVariant(product, variant) ?? imageForVariant(product, undefined, fixedImageUrl || section?.imageUrl) ?? primaryImage(product)
@@ -120,8 +121,8 @@ function ProductHero({ section, product, variant, fixedImageUrl, onSelect }: { s
     <div className="mx-auto grid max-w-5xl items-center gap-5 px-4 py-4 sm:px-6 sm:py-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-12 lg:py-14">
       <div className="min-w-0">
         <div className="relative mx-auto aspect-[5/4] w-full max-w-[23rem] overflow-hidden rounded-2xl border border-white bg-white shadow-[0_16px_44px_rgba(16,185,129,0.11)] ring-1 ring-emerald-100 sm:aspect-square sm:max-w-[30rem] sm:rounded-[1.75rem] sm:shadow-[0_24px_70px_rgba(16,185,129,0.13)]"
-          onTouchStart={(event) => { touchStartX.current = event.touches[0]?.clientX ?? 0 }}
-          onTouchEnd={(event) => { const delta = (event.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current; if (Math.abs(delta) > 42) moveGallery(delta < 0 ? 1 : -1) }}
+          onTouchStart={(event) => { touchStartXRef.current = event.touches[0]?.clientX ?? 0 }}
+          onTouchEnd={(event) => { const delta = (event.changedTouches[0]?.clientX ?? touchStartXRef.current) - touchStartXRef.current; if (Math.abs(delta) > 42) moveGallery(delta < 0 ? 1 : -1) }}
           aria-label="ফোনের রং সোয়াইপ করে দেখুন">
           <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(167,243,208,0.45),transparent_60%)]" />
           {image ? <Image key={image.image_url} src={image.image_url} alt={image.alt_text || product.name} fill preload fetchPriority="high" className="object-contain p-2 transition-opacity duration-300 sm:p-6" sizes="(max-width: 640px) 88vw, (max-width: 1024px) 92vw, 42vw" /> : null}
@@ -129,7 +130,7 @@ function ProductHero({ section, product, variant, fixedImageUrl, onSelect }: { s
           <div className="absolute bottom-3 right-3 rounded-2xl bg-slate-950 px-3.5 py-2.5 text-white shadow-lg"><p className="text-[10px] font-bold text-emerald-200">বর্তমান মূল্য</p><p className="text-lg font-black">{money(variant?.price)}</p></div>
           {gallery.length > 1 ? <><button type="button" onClick={() => moveGallery(-1)} aria-label="আগের রং দেখুন" className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-lg font-black text-slate-800 shadow-md">‹</button><button type="button" onClick={() => moveGallery(1)} aria-label="পরের রং দেখুন" className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-lg font-black text-slate-800 shadow-md">›</button></> : null}
         </div>
-        {gallery.length > 1 ? <div className="mt-3 flex items-center justify-center gap-3" aria-label="রং নির্বাচন করুন">{gallery.map(({ variant: candidate }, index) => <button key={candidate.id} type="button" onClick={() => { setGalleryIndex(index); onSelect(candidate.id) }} aria-label={`${candidate.color || candidate.variant_title || 'রং'} নির্বাচন করুন`} aria-pressed={variant?.id === candidate.id} title={candidate.color || candidate.variant_title} className={`flex h-8 w-8 items-center justify-center rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${variant?.id === candidate.id ? 'ring-2 ring-emerald-600 ring-offset-2' : ''}`}><span className="h-4 w-4 rounded-full border border-black/15 shadow-sm" style={{ backgroundColor: colorDot(candidate.color) }} /></button>)}</div> : null}
+        {gallery.length > 1 ? <div className="mt-3 flex items-center justify-center gap-3" aria-label="রং নির্বাচন করুন">{gallery.map(({ variant: candidate }, index) => <button key={candidate.id} type="button" onClick={() => { setGalleryIndex(index); onSelect(candidate.id) }} aria-label={`${candidate.color || candidate.variant_title || 'রং'} নির্বাচন করুন`} aria-pressed={galleryIndex === index} title={candidate.color || candidate.variant_title} className={`flex h-8 w-8 items-center justify-center rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${galleryIndex === index ? 'ring-2 ring-emerald-600 ring-offset-2' : ''}`}><span className="h-4 w-4 rounded-full border border-black/15 shadow-sm" style={{ backgroundColor: colorDot(candidate.color) }} /></button>)}</div> : null}
         {active?.variant.color ? <p className="mt-1 text-center text-xs font-bold text-slate-600">{active.variant.color}</p> : null}
       </div>
       <div className="min-w-0 lg:py-5">
