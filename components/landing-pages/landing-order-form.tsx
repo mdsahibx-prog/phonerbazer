@@ -137,7 +137,7 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
-  const [recoveryConsent, setRecoveryConsent] = useState(true)
+  const [recoveryConsent, setRecoveryConsent] = useState(false)
   const [quoteCache, setQuoteCache] = useState<Map<string, DeliveryZonesQuote>>(() => new Map())
   const quoteSequence = useRef(0)
   const funnelEventsSent = useRef(false)
@@ -182,7 +182,8 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
   }, [quoteKey, quoteAttempt, quoteCache, product.id, variant.id, quantity])
 
   useEffect(() => {
-    if (!formInteracted.current && !form.fullName.trim() && !form.phone.trim() && !form.division && !form.address.trim()) return
+    // Persist recovery data only after a real product/variant is selected and a valid mobile is entered.
+    if (!product.id || !variant.id || !form.phone.trim() || !isValidBangladeshMobile(form.phone)) return
     try {
       window.sessionStorage.setItem(RECOVERY_CONSENT_KEY + checkoutRequestId, String(recoveryConsent))
     } catch {
