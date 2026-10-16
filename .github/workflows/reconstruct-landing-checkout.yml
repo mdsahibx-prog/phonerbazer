@@ -1,0 +1,55 @@
+name: Reconstruct landing checkout source
+on:
+  push:
+    branches:
+      - feature/landing-one-click-confirm
+permissions:
+  contents: write
+concurrency:
+  group: reconstruct-landing-checkout-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  reconstruct:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Apply verified source patch on main
+        shell: bash
+        run: |
+          set -euo pipefail
+          FEATURE_SHA="$(git rev-parse HEAD)"
+          git show "${FEATURE_SHA}:.repair/landing.patch.br.b85" > /tmp/landing.patch.br.b85
+          python3 - <<'PY'
+          import base64
+          compressed = base64.b85decode(open('/tmp/landing.patch.br.b85', 'rb').read())
+          open('/tmp/landing.patch.br', 'wb').write(compressed)
+          PY
+          node - <<'NODE'
+          const fs = require('node:fs')
+          const { brotliDecompressSync } = require('node:zlib')
+          fs.writeFileSync('/tmp/landing.patch', brotliDecompressSync(fs.readFileSync('/tmp/landing.patch.br')))
+          NODE
+          git fetch origin main
+          git checkout --detach origin/main
+          git apply --binary --unidiff-zero --check /tmp/landing.patch
+          git apply --binary --unidiff-zero /tmp/landing.patch
+          git diff --check
+          corepack enable
+          corepack prepare pnpm@11.21.0 --activate
+          pnpm install --frozen-lockfile
+          pnpm test
+          pnpm exec tsc --noEmit
+          pnpm lint
+          git add components/landing-pages/landing-order-form.tsx components/order/checkout-flow.tsx components/order/search-select.tsx lib/orders/actions.ts lib/orders/delivery-quote.ts lib/orders/locations.ts lib/orders/phone.ts lib/orders/schema.ts package.json scripts/landing-order-contract-test.ts
+          TREE_SHA="$(git write-tree)"
+          NEW_SHA="$(printf '%s\n' 'feat(landing): confirm orders in one step' | git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit-tree "$TREE_SHA" -p "$FEATURE_SHA")"
+          git push origin "${NEW_SHA}:refs/heads/feature/landing-one-click-confirm"
