@@ -5,7 +5,7 @@ import { createOrderFromIncompleteCheckout, updateCheckoutRecoveryOutcome } from
 
 type RecoveryRow = {
   id: string; checkout_request_id: string; source: string; status: string; customer_name: string | null;
-  customer_phone: string | null; quote_snapshot: Record<string, unknown> | null; delivery_snapshot: Record<string, unknown> | null;
+  customer_phone: string | null; customer_email?: string | null; quote_snapshot: Record<string, unknown> | null; delivery_snapshot: Record<string, unknown> | null;
   last_activity_at: string; expires_at: string; recovery_consent_at: string | null; recovery_consent_withdrawn_at: string | null;
   recovery_contact_count: number; recovery_last_contacted_at: string | null; recovery_outcome: string | null; completed_order_id: string | null;
   history?: Array<{ id: string; action: string; notes: string | null; created_at: string; linked_order_id: string | null }>
