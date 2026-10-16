@@ -300,5 +300,17 @@ export async function getRecoveryProductVariants(sessionId: string) {
     .select('id,product_id,variant_title,color,ram,storage,price,stock_quantity')
     .eq('product_id', productId).eq('is_active', true).order('price', { ascending: true })
   if (variantsError) return { ok: false as const, message: 'Unable to load active variants.', variants: [] }
-  return { ok: true as const, variants: (variants ?? []).map((variant) => ({ ...variant, price: Number(variant.price), stock_quantity: Number(variant.stock_quantity) })) }
+  try {
+    const settings = await getStorefrontSettings()
+    return {
+      ok: true as const,
+      variants: (variants ?? []).map((variant) => ({ ...variant, price: Number(variant.price), stock_quantity: Number(variant.stock_quantity) })),
+      deliveryCharges: {
+        dhaka: Number(settings.delivery.dhakaCharge),
+        outsideDhaka: Number(settings.delivery.outsideDhakaCharge),
+      },
+    }
+  } catch {
+    return { ok: false as const, message: 'Unable to load current delivery charge settings.', variants: [] }
+  }
 }
