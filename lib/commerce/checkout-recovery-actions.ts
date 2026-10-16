@@ -1,6 +1,7 @@
 'use server'
 
 import 'server-only'
+import { revalidatePath } from 'next/cache'
 import { createHash, timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -8,6 +9,7 @@ import { requireAdmin } from '@/lib/admin/auth'
 import { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
 import { getStorefrontSettings } from '@/lib/services/storefront'
 import { getCart } from '@/lib/commerce/cart'
+import { createGuestOrderWithRisk } from '@/lib/orders/actions'
 
 const draftSchema = z.object({
   checkoutRequestId: z.string().uuid(),
@@ -172,4 +174,143 @@ export async function updateCheckoutRecoveryOutcome(raw: unknown) {
   const { error: historyError } = await db.from('checkout_recovery_history').insert({ checkout_session_id: session.id, actor_admin_user_id: admin.id, action: action === 'CONTACTED' ? 'WHATSAPP_OPENED' : action, notes: parsed.data.notes ?? null, linked_order_id: parsed.data.orderId ?? null })
   if (historyError) throw new Error('Recovery outcome could not be recorded.')
   return { ok: true as const }
+}
+
+
+const convertSchema = z.object({
+  sessionId: z.string().uuid(),
+  productId: z.string().uuid(),
+  variantId: z.string().uuid(),
+  quantity: z.number().int().min(1).max(10),
+  fullName: z.string().trim().min(2).max(120),
+  phone: z.string().trim().min(8).max(32),
+  email: z.string().trim().email().max(254).optional().or(z.literal('')),
+  division: z.string().trim().min(1).max(80),
+  district: z.string().trim().min(1).max(80),
+  area: z.string().trim().min(1).max(100),
+  address: z.string().trim().min(3).max(500),
+  postalCode: z.string().trim().max(20).optional(),
+  notes: z.string().trim().max(500).optional(),
+}).strict()
+
+/** Creates a normal COD order through the same stock-safe, idempotent database transaction used by guest checkout. */
+export async function createOrderFromIncompleteCheckout(raw: unknown) {
+  const admin = await requireAdmin(['OWNER', 'ADMIN'])
+  const parsed = convertSchema.safeParse(raw)
+  if (!parsed.success) return { ok: false as const, message: 'Check the customer, delivery, and product details.' }
+  const input = parsed.data
+  if (!isValidBangladeshMobile(input.phone)) return { ok: false as const, message: 'Enter a valid Bangladesh mobile number.' }
+  const phone = normalizePhone(input.phone)
+  const db = createAdminClient()
+  const { data: session, error: sessionError } = await db.from('checkout_sessions')
+    .select('id,checkout_request_id,status,source,completed_order_id,recovery_outcome,quote_snapshot,delivery_snapshot')
+    .eq('id', input.sessionId).maybeSingle()
+  if (sessionError || !session) return { ok: false as const, message: 'Incomplete checkout not found. Refresh the page.' }
+  if (session.completed_order_id || session.status === 'COMPLETED') {
+    return { ok: false as const, message: 'This checkout is already linked to an order.' }
+  }
+  if (session.status === 'PAYMENT_INITIATED') {
+    return { ok: false as const, message: 'Payment has already been initiated for this checkout. Do not create another order; refresh the recovery list and review the existing payment workflow.' }
+  }
+  if (['CLOSED', 'NOT_INTERESTED', 'RECOVERED'].includes(String(session.recovery_outcome ?? ''))) {
+    return { ok: false as const, message: 'This checkout is closed or already resolved. Reopen it through the recovery process before converting.' }
+  }
+  if (session.source === 'CART') return { ok: false as const, message: 'Cart recovery conversion is not enabled for multi-item checkouts yet. Create the order through the regular checkout to preserve cart pricing and stock rules.' }
+  const quote = session.quote_snapshot && typeof session.quote_snapshot === 'object' ? session.quote_snapshot as Record<string, unknown> : {}
+  const savedItems = Array.isArray(quote.items) ? quote.items as Array<Record<string, unknown>> : []
+  if (!savedItems.some((item) => item.product_id === input.productId)) {
+    return { ok: false as const, message: 'Choose the product saved in this checkout.' }
+  }
+  const { data: chosenVariant, error: variantError } = await db.from('product_variants').select('id,product_id,is_active').eq('id', input.variantId).maybeSingle()
+  if (variantError || !chosenVariant || chosenVariant.product_id !== input.productId || chosenVariant.is_active !== true) {
+    return { ok: false as const, message: 'Choose an active variant of the saved product.' }
+  }
+  const checkoutRequestId = session.checkout_request_id
+  if (!checkoutRequestId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(checkoutRequestId)) {
+    return { ok: false as const, message: 'Checkout reference is invalid. Refresh and try again.' }
+  }
+  const { data: preexistingOrders, error: existingOrderError } = await db.from('orders').select('id').eq('checkout_request_id', checkoutRequestId).limit(1)
+  if (existingOrderError) return { ok: false as const, message: 'Unable to verify whether an order already exists. Refresh and try again.' }
+  if (preexistingOrders?.length) return { ok: false as const, message: 'An order already exists for this checkout. Refresh the recovery list to sync its status.' }
+  const notes = [input.notes?.trim(), 'Converted from incomplete checkout.'].filter(Boolean).join('\n')
+  const orderResult = await createGuestOrderWithRisk({
+    productId: input.productId,
+    variantId: input.variantId,
+    quantity: input.quantity,
+    checkoutRequestId,
+    checkoutSource: 'LANDING_PAGE',
+    fullName: input.fullName.trim(),
+    phone,
+    email: input.email?.trim() || '',
+    division: input.division.trim(),
+    district: input.district.trim(),
+    area: input.area.trim(),
+    address: input.address.trim(),
+    postalCode: input.postalCode?.trim() || '',
+    notes,
+    analyticsConsent: false,
+    marketingConsent: false,
+  })
+  if (!orderResult.ok) return { ok: false as const, message: orderResult.message || 'Order could not be created. No recovery status was changed.' }
+  if ('paymentRequired' in orderResult.data) {
+    revalidatePath('/admin/checkout-recovery')
+    revalidatePath('/admin/orders')
+    return {
+      ok: true as const,
+      orderId: String(orderResult.data.orderId),
+      orderNumber: String(orderResult.data.orderNumber ?? ''),
+      paymentRequired: true as const,
+      redirectUrl: orderResult.data.redirectUrl,
+      message: 'Order created. Store risk policy requires advance payment; share the secure payment link with the customer.',
+    }
+  }
+  const orderId = String(orderResult.data.orderId)
+  const now = new Date().toISOString()
+  const { error: updateError } = await db.from('checkout_sessions').update({
+    status: 'COMPLETED', completed_order_id: orderId, recovery_outcome: 'RECOVERED',
+    recovery_outcome_at: now, updated_at: now,
+  }).eq('id', session.id).neq('status', 'COMPLETED')
+  if (updateError) {
+    // The order RPC is idempotent by checkout_request_id; retrying conversion will return the same order.
+    console.error('[checkout-recovery] order created but session update failed', updateError.message)
+    return { ok: false as const, message: 'Order was created, but recovery status needs refresh. The same checkout reference prevents duplicate orders.' }
+  }
+  const { error: historyError } = await db.from('checkout_recovery_history').insert({
+    checkout_session_id: session.id, actor_admin_user_id: admin.id, action: 'RECOVERED',
+    notes: 'Order created from incomplete checkout by admin.', linked_order_id: orderId,
+  })
+  if (historyError) console.error('[checkout-recovery] conversion history write failed', historyError.message)
+  revalidatePath('/admin/checkout-recovery')
+  revalidatePath('/admin/orders')
+  return { ok: true as const, orderId, orderNumber: String(orderResult.data.orderNumber ?? ''), message: 'Order created using the standard checkout and risk-policy transaction.' }
+}
+
+
+export async function getRecoveryProductVariants(sessionId: string) {
+  await requireAdmin(['OWNER', 'ADMIN'])
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sessionId)) return { ok: false as const, message: 'Invalid checkout reference.', variants: [] }
+  const db = createAdminClient()
+  const { data: session, error } = await db.from('checkout_sessions').select('quote_snapshot').eq('id', sessionId).maybeSingle()
+  if (error || !session) return { ok: false as const, message: 'Checkout session not found.', variants: [] }
+  const quote = session.quote_snapshot && typeof session.quote_snapshot === 'object' ? session.quote_snapshot as Record<string, unknown> : {}
+  const items = Array.isArray(quote.items) ? quote.items as Array<Record<string, unknown>> : []
+  const productId = typeof items[0]?.product_id === 'string' ? items[0].product_id : ''
+  if (!productId) return { ok: false as const, message: 'Saved product details are unavailable.', variants: [] }
+  const { data: variants, error: variantsError } = await db.from('product_variants')
+    .select('id,product_id,variant_title,color,ram,storage,price,stock_quantity')
+    .eq('product_id', productId).eq('is_active', true).order('price', { ascending: true })
+  if (variantsError) return { ok: false as const, message: 'Unable to load active variants.', variants: [] }
+  try {
+    const settings = await getStorefrontSettings()
+    return {
+      ok: true as const,
+      variants: (variants ?? []).map((variant) => ({ ...variant, price: Number(variant.price), stock_quantity: Number(variant.stock_quantity) })),
+      deliveryCharges: {
+        dhaka: Number(settings.delivery.dhakaCharge),
+        outsideDhaka: Number(settings.delivery.outsideDhakaCharge),
+      },
+    }
+  } catch {
+    return { ok: false as const, message: 'Unable to load current delivery charge settings.', variants: [] }
+  }
 }
