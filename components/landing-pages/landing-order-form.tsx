@@ -6,15 +6,15 @@ import { CircleCheck, LoaderCircle, ShieldCheck, Truck } from 'lucide-react'
 import { createGuestOrderWithRisk, prepareGuestCheckout, quoteDeliveryZones } from '@/lib/orders/actions'
 import { saveCheckoutRecoveryDraft } from '@/lib/commerce/checkout-recovery-actions'
 import { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
-import { DIVISIONS, districtsForDivision, isDivision } from '@/lib/orders/locations'
+import { DIVISIONS, isDivision } from '@/lib/orders/locations'
 import { getAnalyticsConsent, trackClientEvent } from '@/lib/analytics/client'
 import { SearchSelect } from '@/components/order/search-select'
 import type { DeliveryZonesQuote, OrderSuccessSummary } from '@/lib/orders/schema'
 import type { StorefrontProduct, StorefrontVariant } from '@/lib/services/storefront-utils'
 
-type FormState = { fullName: string; phone: string; division: string; district: string; area: string; address: string }
+type FormState = { fullName: string; phone: string; division: string; address: string }
 type ReturningCustomer = FormState
-const initialForm: FormState = { fullName: '', phone: '', division: '', district: '', area: '', address: '' }
+const initialForm: FormState = { fullName: '', phone: '', division: '', address: '' }
 const CUSTOMER_PREFILL_KEY = 'phonerbazar-customer-prefill-v1'
 const RECOVERY_CONSENT_KEY = 'phonerbazar-recovery-consent:'
 
@@ -86,14 +86,11 @@ function readReturningCustomer(raw: string | null): { values: FormState; applied
     if (!raw) return { values: initialForm, applied: false }
     const value = JSON.parse(raw) as Partial<ReturningCustomer>
     const division = typeof value.division === 'string' && isDivision(value.division) ? value.division : ''
-    const district = division && typeof value.district === 'string' && districtsForDivision(division).includes(value.district) ? value.district : ''
     return {
       values: {
         fullName: typeof value.fullName === 'string' ? value.fullName.slice(0, 120) : '',
         phone: typeof value.phone === 'string' ? value.phone.slice(0, 32) : '',
         division,
-        district,
-        area: typeof value.area === 'string' ? value.area.slice(0, 100) : '',
         address: typeof value.address === 'string' ? value.address.slice(0, 500) : '',
       },
       applied: true,
@@ -108,8 +105,6 @@ function saveReturningCustomer(values: FormState) {
       fullName: values.fullName.trim().slice(0, 120),
       phone: normalizePhone(values.phone).slice(0, 32),
       division: isDivision(values.division) ? values.division : '',
-      district: isDivision(values.division) && districtsForDivision(values.division).includes(values.district) ? values.district : '',
-      area: values.area.trim().slice(0, 100),
       address: values.address.trim().slice(0, 500),
     }
     window.localStorage.setItem(CUSTOMER_PREFILL_KEY, JSON.stringify(safeValues))
@@ -141,7 +136,7 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
-  const [recoveryConsent, setRecoveryConsent] = useState(false)
+  const [recoveryConsent, setRecoveryConsent] = useState(true)
   const [quoteCache, setQuoteCache] = useState<Map<string, DeliveryZonesQuote>>(() => new Map())
   const quoteSequence = useRef(0)
   const funnelEventsSent = useRef(false)
@@ -151,7 +146,6 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
   const submittingRef = useRef(false)
   const nameRef = useRef<HTMLInputElement>(null)
   const phoneRef = useRef<HTMLInputElement>(null)
-  const areaRef = useRef<HTMLInputElement>(null)
   const addressRef = useRef<HTMLTextAreaElement>(null)
   const quoteKey = `${product.id}:${variant.id}:${quantity}`
   const quote = quoteCache.get(quoteKey) ?? null
@@ -187,7 +181,7 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
   }, [quoteKey, quoteAttempt, quoteCache, product.id, variant.id, quantity])
 
   useEffect(() => {
-    if (!formInteracted.current && !recoveryConsent) return
+    if (!formInteracted.current && !form.fullName.trim() && !form.phone.trim() && !form.division && !form.address.trim()) return
     try {
       window.sessionStorage.setItem(RECOVERY_CONSENT_KEY + checkoutRequestId, String(recoveryConsent))
     } catch {
@@ -204,8 +198,6 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
         fullName: form.fullName,
         phone: form.phone,
         division: form.division,
-        district: form.district,
-        area: form.area,
         address: form.address,
         recoveryConsent,
       }).catch(() => undefined)
@@ -251,13 +243,11 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
   }
 
   function focusInvalid(errors: Record<string, string>) {
-    const next = ['fullName', 'phone', 'division', 'district', 'area', 'address'].find((name) => errors[name])
+    const next = ['fullName', 'phone', 'division', 'address'].find((name) => errors[name])
     if (!next) return
     const target = next === 'fullName' ? nameRef.current
       : next === 'phone' ? phoneRef.current
       : next === 'division' ? document.getElementById('landing-division')
-      : next === 'district' ? document.getElementById('landing-district')
-      : next === 'area' ? areaRef.current
       : addressRef.current
     target?.focus()
     target?.scrollIntoView({ block: 'center', behavior: 'smooth' })
@@ -281,9 +271,7 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
     if (form.fullName.trim().length < 2) errors.fullName = 'আপনার নাম অন্তত ২ অক্ষরে লিখুন।'
     if (!isValidBangladeshMobile(form.phone)) errors.phone = 'সঠিক ১১ সংখ্যার মোবাইল নম্বর দিন।'
     if (!form.division) errors.division = 'ডেলিভারির বিভাগ নির্বাচন করুন।'
-    if (!form.district) errors.district = 'আপনার জেলা নির্বাচন করুন।'
-    if (form.area.trim().length < 2) errors.area = 'এলাকা বা উপজেলা লিখুন।'
-    if (form.address.trim().length < 8) errors.address = 'বাড়ি, সড়ক বা কাছের পরিচিত স্থানসহ ঠিকানা লিখুন (কমপক্ষে ৮ অক্ষর)।'
+    if (form.address.trim().length < 8) errors.address = 'বাড়ি/রোড, এলাকা/থানা, জেলা ও কাছের পরিচিত স্থানসহ ঠিকানা লিখুন (কমপক্ষে ৮ অক্ষর)।'
     setFieldErrors(errors)
     if (Object.keys(errors).length) {
       focusInvalid(errors)
@@ -337,9 +325,10 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
     try {
       const consent = getAnalyticsConsent()
       result = await createGuestOrderWithRisk({
-        ...form,
+        fullName: form.fullName.trim(),
         phone: normalizePhone(form.phone),
-        email: '',
+        division: form.division,
+        address: form.address.trim(),
         productId: product.id,
         variantId: variant.id,
         quantity,
@@ -412,7 +401,7 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
     : !quote ? 'মোট মূল্য প্রস্তুত নয়'
     : unavailable ? 'এই ভ্যারিয়েন্টটি স্টকে নেই'
     : availabilityError ? 'পণ্যের প্রাপ্যতা যাচাই করুন'
-    : !form.division ? 'ডেলিভারি এলাকা নির্বাচন করুন'
+    : !form.division ? 'ডেলিভারির বিভাগ নির্বাচন করুন'
     : null
 
   return <section id="order-form" className="mx-auto max-w-5xl scroll-mt-4 px-4 py-8 pb-32 sm:px-6 sm:pb-10" style={{ scrollPaddingBottom: 'calc(7rem + env(safe-area-inset-bottom))' }}>
@@ -444,24 +433,19 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
           {fieldErrors.phone && <span id="landing-phone-error" className="mt-1 block text-xs font-bold text-rose-600">{fieldErrors.phone}</span>}
         </label>
 
-        <SearchSelect label="বিভাগ" id="landing-division" value={form.division} options={DIVISIONS} placeholder="বিভাগ নির্বাচন করুন" autoComplete="address-level1" accent="emerald" error={fieldErrors.division} onChange={(value) => { update('division', value); update('district', ''); update('area', '') }} />
-        <SearchSelect label="জেলা" id="landing-district" value={form.district} options={districtsForDivision(form.division)} placeholder="জেলা নির্বাচন করুন" autoComplete="address-level2" disabled={!form.division} accent="emerald" error={fieldErrors.district} onChange={(value) => { update('district', value); update('area', ''); window.setTimeout(() => areaRef.current?.focus(), 0) }} />
+        <SearchSelect label="বিভাগ" id="landing-division" value={form.division} options={DIVISIONS} placeholder="বিভাগ নির্বাচন করুন" autoComplete="address-level1" accent="emerald" error={fieldErrors.division} onChange={(value) => update('division', value)} />
 
-        <label className="block min-w-0" htmlFor="landing-area">
-          <span className="text-sm font-bold text-slate-800">এলাকা / উপজেলা</span>
-          <input ref={areaRef} id="landing-area" name="area" value={form.area} onChange={(event) => update('area', event.target.value)} autoComplete="address-level3" aria-invalid={Boolean(fieldErrors.area)} aria-describedby={fieldErrors.area ? 'landing-area-error' : undefined} className={`mt-1.5 h-12 w-full rounded-xl border bg-white px-3.5 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 ${fieldErrors.area ? 'border-rose-400' : 'border-slate-200'}`} placeholder="আপনার এলাকা বা থানা" />
-          {fieldErrors.area && <span id="landing-area-error" className="mt-1 block text-xs font-bold text-rose-600">{fieldErrors.area}</span>}
-        </label>
+
         <label className="block min-w-0 sm:col-span-2" htmlFor="landing-address">
-          <span className="text-sm font-bold text-slate-800">সম্পূর্ণ ডেলিভারি ঠিকানা</span>
-          <textarea ref={addressRef} id="landing-address" name="address" required value={form.address} onChange={(event) => update('address', event.target.value)} rows={3} autoComplete="street-address" aria-invalid={Boolean(fieldErrors.address)} aria-describedby={fieldErrors.address ? 'landing-address-error' : undefined} className={`mt-1.5 w-full resize-y rounded-xl border bg-white px-3.5 py-3 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 ${fieldErrors.address ? 'border-rose-400' : 'border-slate-200'}`} placeholder="বাড়ি/ফ্ল্যাট, রোড, গ্রাম বা নিকটস্থ পরিচিত স্থান" />
+          <span className="text-sm font-bold text-slate-800">ডেলিভারি ঠিকানা</span>
+          <textarea ref={addressRef} id="landing-address" name="address" required value={form.address} onChange={(event) => update('address', event.target.value)} rows={3} autoComplete="street-address" aria-invalid={Boolean(fieldErrors.address)} aria-describedby={fieldErrors.address ? 'landing-address-error' : undefined} className={`mt-1.5 w-full resize-y rounded-xl border bg-white px-3.5 py-3 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 ${fieldErrors.address ? 'border-rose-400' : 'border-slate-200'}`} placeholder="বাড়ি/রোড, এলাকা/থানা, জেলা ও কাছের পরিচিত স্থান লিখুন" />
           {fieldErrors.address && <span id="landing-address-error" className="mt-1 block text-xs font-bold text-rose-600">{fieldErrors.address}</span>}
         </label>
       </div>
 
-      <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 px-3 py-3 text-xs leading-5 text-slate-600">
-        <input type="checkbox" checked={recoveryConsent} onChange={(event) => setRecoveryConsent(event.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-emerald-600" />
-        <span>অর্ডার অসম্পূর্ণ থাকলে সহায়তার জন্য আমাদের পক্ষ থেকে আপনার সঙ্গে যোগাযোগ করা যাবে। এটি ঐচ্ছিক; চাইলে নির্বাচনটি বন্ধ রাখতে পারেন।</span>
+      <label className="mt-4 flex cursor-pointer items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs leading-5 text-slate-600">
+        <input type="checkbox" checked={recoveryConsent} onChange={(event) => { formInteracted.current = true; startCheckout(); setRecoveryConsent(event.target.checked) }} className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-600" />
+        <span>অসম্পূর্ণ অর্ডারে সহায়তার জন্য Phonerbazar যোগাযোগ করতে পারবে <span className="font-semibold text-slate-500">(ঐচ্ছিক; যেকোনো সময় বন্ধ করতে পারবেন)</span></span>
       </label>
 
       <section aria-labelledby="landing-order-summary-title" aria-live="polite" className="mt-5 min-h-48 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 sm:p-5">
@@ -477,7 +461,7 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
         <dl className="mt-4 space-y-2.5 text-sm">
           <div className="flex items-center justify-between gap-4"><dt className="text-slate-600">পণ্যের মূল্য</dt><dd className="shrink-0 font-bold text-slate-900">{quote ? money(quote.subtotal) : '—'}</dd></div>
           {quote && quote.discountTotal > 0 && <div className="flex items-center justify-between gap-4 text-emerald-700"><dt>আপনার সাশ্রয়</dt><dd className="shrink-0 font-semibold">{money(quote.discountTotal)}</dd></div>}
-          <div className="flex items-center justify-between gap-4"><dt className="text-slate-600">ডেলিভারি চার্জ</dt><dd className="shrink-0 font-bold text-slate-900">{selectedDeliveryCharge === null ? 'এলাকা নির্বাচন করুন' : money(selectedDeliveryCharge)}</dd></div>
+          <div className="flex items-center justify-between gap-4"><dt className="text-slate-600">ডেলিভারি চার্জ</dt><dd className="shrink-0 font-bold text-slate-900">{selectedDeliveryCharge === null ? 'বিভাগ নির্বাচন করুন' : money(selectedDeliveryCharge)}</dd></div>
           <div className="flex items-center justify-between gap-4 border-t border-emerald-100 pt-3"><dt className="font-black text-slate-950">সর্বমোট</dt><dd className="shrink-0 text-lg font-black text-emerald-800">{displayedTotal === null ? '—' : money(displayedTotal)}</dd></div>
         </dl>
         {!form.division && <p className="mt-3 rounded-lg bg-white/80 px-3 py-2 text-xs leading-5 text-slate-600">ডেলিভারি এলাকা নির্বাচন করলে চার্জ দেখা যাবে</p>}
@@ -495,7 +479,7 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/98 px-3 pt-2.5 pb-[calc(.75rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-18px_rgba(15,23,42,.35)] backdrop-blur sm:static sm:mt-5 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-0">
         <button type="submit" disabled={busy || quoteLoading || !quote || !form.division || !quote.available || Boolean(quoteError) || Boolean(availabilityError)} className="mx-auto flex min-h-12 w-full max-w-6xl items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-black text-white shadow-md transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 disabled:shadow-none">
           {busy && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />}
-          {busy ? 'অর্ডার হচ্ছে...' : displayedTotal === null ? 'অর্ডার কনফার্ম করুন' : `অর্ডার কনফার্ম করুন · ${money(displayedTotal)}`}
+          {busy ? 'অর্ডার হচ্ছে...' : 'অর্ডার কনফার্ম করুন'}
         </button>
         {disabledReason && !busy && <p className="mx-auto mt-1.5 max-w-6xl text-center text-xs leading-5 text-slate-500">{disabledReason}</p>}
       </div>
