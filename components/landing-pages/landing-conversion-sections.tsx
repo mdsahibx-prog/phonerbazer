@@ -154,7 +154,7 @@ function ProductHero({ section, product, variant, fixedImageUrl, onSelect }: { s
               </button>
             })}
           </div>
-        </div> : active?.variant.color ? <p className="mx-auto mt-3 max-w-[23rem] text-center text-sm font-bold text-slate-600 sm:max-w-[30rem]">{variant.color ?? active.variant.color}</p> : null}
+        </div> : active?.variant.color ? <p className="mx-auto mt-3 max-w-[23rem] text-center text-sm font-bold text-slate-600 sm:max-w-[30rem]">{variant?.color ?? active?.variant.color}</p> : null}
       </div>
       <div className="min-w-0 lg:py-5">
         <h1 className="text-2xl font-black leading-tight tracking-tight text-slate-950 sm:text-5xl">{product.name}</h1>
