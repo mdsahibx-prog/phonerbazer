@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { createOrderFromIncompleteCheckout, getRecoveryProductVariants, updateCheckoutRecoveryOutcome } from '@/lib/commerce/checkout-recovery-actions'
+import { createOrderFromIncompleteCheckout, permanentlyDeleteCheckoutRecovery, getRecoveryProductVariants, updateCheckoutRecoveryOutcome } from '@/lib/commerce/checkout-recovery-actions'
 
 type RecoveryVariant = { id: string; variant_title: string; color: string | null; ram: string | null; storage: string | null; price: number; stock_quantity: number }
 type RecoveryDeliveryCharges = { dhaka: number; outsideDhaka: number }
@@ -85,12 +85,9 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
     }).catch(() => setNotice('Unable to create order. Please refresh and retry.')) })
   }
   return <div className="space-y-4">
-    <form className="grid gap-2 rounded-xl border border-slate-200 bg-white p-3 sm:grid-cols-[minmax(0,1fr)_12rem_auto]" method="get">
-      <input name="q" defaultValue={q ?? ''} placeholder="Search customer name or mobile" className="h-10 rounded-lg border border-slate-200 px-3 text-sm" />
-      <select name="status" defaultValue={status ?? 'ABANDONED'} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm">
-        {['ABANDONED','STARTED','DETAILS_ENTERED','QUOTED','PAYMENT_INITIATED','COMPLETED'].map((value) => <option key={value} value={value}>{value.replaceAll('_',' ')}</option>)}
-      </select>
-      <button className="h-10 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white">Filter</button>
+    <form className="flex gap-2 rounded-xl border border-slate-200 bg-white p-3" method="get">
+      <input name="q" defaultValue={q ?? ''} placeholder="Search customer name or mobile" className="h-10 min-w-0 flex-1 rounded-lg border border-slate-200 px-3 text-sm" />
+      <button className="h-10 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white">Search</button>
     </form>
     {notice && <p role="status" className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800">{notice}</p>}
     {paymentLink && <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"><span className="flex-1">Advance payment is pending. Share this secure link with the customer.</span><button type="button" onClick={() => { void navigator.clipboard.writeText(paymentLink).then(() => setNotice('Payment link copied. Share it with the customer.')).catch(() => setNotice('Copy failed. Open the payment link and copy it manually.')) }} className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-semibold">Copy link</button><a href={paymentLink} target="_blank" rel="noreferrer" className="rounded-lg bg-amber-800 px-3 py-2 text-xs font-semibold text-white">Open link</a></div>}
@@ -130,7 +127,7 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
         const items = Array.isArray(snapshot.items) ? snapshot.items as Array<{ product_name?: string; variant_title?: string; quantity?: number; unit_price_snapshot?: number }> : []
         const consent = Boolean(row.recovery_consent_at && !row.recovery_consent_withdrawn_at)
         const expired = new Date(row.expires_at).getTime() <= new Date(now).getTime()
-        const eligible = row.status === 'ABANDONED' && consent && !expired && !row.completed_order_id && !['CLOSED', 'NOT_INTERESTED', 'RECOVERED'].includes(row.recovery_outcome ?? '') && (row.recovery_contact_count ?? 0) < 2 && Boolean(row.customer_phone)
+        const eligible = ['STARTED', 'DETAILS_ENTERED', 'QUOTED', 'ABANDONED'].includes(row.status) && consent && !expired && !row.completed_order_id && !['CLOSED', 'NOT_INTERESTED', 'RECOVERED'].includes(row.recovery_outcome ?? '') && (row.recovery_contact_count ?? 0) < 2 && Boolean(row.customer_phone)
         const total = items.reduce((sum, item) => sum + Number(item.unit_price_snapshot ?? 0) * Number(item.quantity ?? 0), 0)
         return <article key={row.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -143,7 +140,7 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
             <div className="flex flex-wrap gap-2">
               {eligible ? <button type="button" disabled={pending} onClick={() => openWhatsApp(row)} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Open WhatsApp</button> : <span className="rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-500">Recovery contact unavailable</span>}
               {row.status !== 'COMPLETED' && row.status !== 'PAYMENT_INITIATED' && !['CLOSED', 'NOT_INTERESTED', 'RECOVERED'].includes(row.recovery_outcome ?? '') && items.length === 1 && <button type="button" disabled={pending} onClick={() => openConversion(row)} className="rounded-lg bg-slate-950 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Create order</button>}
-              {row.status !== 'COMPLETED' && <><button type="button" disabled={pending} onClick={() => updateOutcome(row,'NOT_INTERESTED')} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50">Not interested</button><button type="button" disabled={pending} onClick={() => updateOutcome(row,'CLOSED')} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50">Close</button></>}
+              {row.status !== 'COMPLETED' && row.status !== 'PAYMENT_INITIATED' && !row.completed_order_id && <><button type="button" disabled={pending} onClick={() => updateOutcome(row,'NOT_INTERESTED')} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50">Not interested</button><button type="button" disabled={pending} onClick={() => updateOutcome(row,'CLOSED')} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50">Close</button><button type="button" disabled={pending} onClick={() => { if (!window.confirm('Permanently delete this incomplete checkout and its recovery history? This cannot be undone.')) return; startTransition(() => { void permanentlyDeleteCheckoutRecovery({ sessionId: row.id }).then((result) => { setNotice(result.message); if (result.ok) router.refresh() }).catch(() => setNotice('Unable to permanently delete this checkout.')) }) }} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700 disabled:opacity-50">Delete permanently</button></>}
             </div>
           </div>
           {row.recovery_last_contacted_at && <p className="mt-2 text-xs text-slate-500">Last WhatsApp link opened: {formatDate(row.recovery_last_contacted_at)} (not delivery confirmation)</p>}
