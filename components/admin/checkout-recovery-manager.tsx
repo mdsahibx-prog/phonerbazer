@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createOrderFromIncompleteCheckout, getRecoveryProductVariants, updateCheckoutRecoveryOutcome } from '@/lib/commerce/checkout-recovery-actions'
 
 type RecoveryVariant = { id: string; variant_title: string; color: string | null; ram: string | null; storage: string | null; price: number; stock_quantity: number }
+type RecoveryDeliveryCharges = { dhaka: number; outsideDhaka: number }
 type RecoveryRow = {
   id: string; checkout_request_id: string; source: string; status: string; customer_name: string | null;
   customer_phone: string | null; customer_email?: string | null; quote_snapshot: Record<string, unknown> | null; delivery_snapshot: Record<string, unknown> | null;
@@ -23,6 +24,8 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
   const [variants, setVariants] = useState<RecoveryVariant[]>([])
   const [variantLoading, setVariantLoading] = useState(false)
   const [selectedVariantId, setSelectedVariantId] = useState('')
+  const [deliveryCharges, setDeliveryCharges] = useState<RecoveryDeliveryCharges | null>(null)
+  const [conversionDivision, setConversionDivision] = useState('')
   function openWhatsApp(row: RecoveryRow) {
     const saved = row.quote_snapshot ?? {}
     const savedItems = Array.isArray(saved.items) ? saved.items as Array<{ product_name?: string; variant_title?: string; color?: string; quantity?: number; unit_price_snapshot?: number }> : []
@@ -48,11 +51,14 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
     const items = Array.isArray(snapshot.items) ? snapshot.items as Array<Record<string, unknown>> : []
     setConverting(row)
     setVariants([])
+    setDeliveryCharges(null)
     setVariantLoading(true)
     setSelectedVariantId(String(items[0]?.variant_id ?? ''))
+    setConversionDivision(String((row.delivery_snapshot ?? {}).division ?? ''))
     void getRecoveryProductVariants(row.id).then((result) => {
       if (!result.ok) { setNotice(result.message); return }
       setVariants(result.variants as RecoveryVariant[])
+      setDeliveryCharges(result.deliveryCharges)
       if (!result.variants.some((variant) => variant.id === String(items[0]?.variant_id ?? ''))) setSelectedVariantId(result.variants[0]?.id ?? '')
     }).catch(() => setNotice('Unable to load product variants.')).finally(() => setVariantLoading(false))
   }
@@ -104,8 +110,9 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
             <label className="grid gap-1 text-sm">Email (optional)<input name="email" type="email" defaultValue={String(row.customer_email ?? '')} className="h-10 rounded-lg border px-3" /></label>
             <label className="grid gap-1 text-sm">Variant<select name="variantId" required value={selectedVariantId} onChange={(event) => setSelectedVariantId(event.target.value)} disabled={variantLoading || !variants.length} className="h-10 rounded-lg border bg-white px-3"><option value="">{variantLoading ? 'Loading variants…' : 'Choose variant'}</option>{variants.map((variant) => <option key={variant.id} value={variant.id}>{[variant.variant_title, variant.color, variant.ram, variant.storage].filter(Boolean).join(' · ')} — ৳{variant.price.toLocaleString('en-BD')} · Stock {variant.stock_quantity}</option>)}</select></label>
             <label className="grid gap-1 text-sm">Quantity<input name="quantity" type="number" min="1" max="10" required defaultValue={Number(item.quantity ?? 1)} className="h-10 rounded-lg border px-3" /></label>
-            <label className="grid gap-1 text-sm">Division<input name="division" required defaultValue={String(delivery.division ?? '')} className="h-10 rounded-lg border px-3" /></label>
+            <label className="grid gap-1 text-sm">Division<input name="division" required value={conversionDivision} onChange={(event) => setConversionDivision(event.target.value)} className="h-10 rounded-lg border px-3" /></label>
             <label className="grid gap-1 text-sm">District<input name="district" required defaultValue={String(delivery.district ?? '')} className="h-10 rounded-lg border px-3" /></label>
+            <p className="text-xs text-slate-500 sm:col-span-2">Current delivery charge: {conversionDivision.trim() ? deliveryCharges ? `৳${(conversionDivision.trim().toLowerCase() === 'dhaka' ? deliveryCharges.dhaka : deliveryCharges.outsideDhaka).toLocaleString('en-BD')}` : 'Unavailable' : 'Select a division'} · Uses the current store setting; checkout recalculates it on submit.</p>
             <label className="grid gap-1 text-sm">Area / Thana<input name="area" required defaultValue={String(delivery.area ?? '')} className="h-10 rounded-lg border px-3" /></label>
             <label className="grid gap-1 text-sm">Postal code (optional)<input name="postalCode" defaultValue={String(delivery.postalCode ?? '')} className="h-10 rounded-lg border px-3" /></label>
             <label className="grid gap-1 text-sm sm:col-span-2">Delivery address<textarea name="address" required defaultValue={String(delivery.address ?? '')} rows={2} className="rounded-lg border px-3 py-2" /></label>
