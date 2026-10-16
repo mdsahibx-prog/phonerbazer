@@ -203,11 +203,17 @@ export async function createOrderFromIncompleteCheckout(raw: unknown) {
   const phone = normalizePhone(input.phone)
   const db = createAdminClient()
   const { data: session, error: sessionError } = await db.from('checkout_sessions')
-    .select('id,checkout_request_id,status,source,completed_order_id,quote_snapshot,delivery_snapshot')
+    .select('id,checkout_request_id,status,source,completed_order_id,recovery_outcome,quote_snapshot,delivery_snapshot')
     .eq('id', input.sessionId).maybeSingle()
   if (sessionError || !session) return { ok: false as const, message: 'Incomplete checkout not found. Refresh the page.' }
   if (session.completed_order_id || session.status === 'COMPLETED') {
     return { ok: false as const, message: 'This checkout is already linked to an order.' }
+  }
+  if (session.status === 'PAYMENT_INITIATED') {
+    return { ok: false as const, message: 'Payment has already been initiated for this checkout. Do not create another order; refresh the recovery list and review the existing payment workflow.' }
+  }
+  if (['CLOSED', 'NOT_INTERESTED', 'RECOVERED'].includes(String(session.recovery_outcome ?? ''))) {
+    return { ok: false as const, message: 'This checkout is closed or already resolved. Reopen it through the recovery process before converting.' }
   }
   if (session.source === 'CART') return { ok: false as const, message: 'Cart recovery conversion is not enabled for multi-item checkouts yet. Create the order through the regular checkout to preserve cart pricing and stock rules.' }
   const quote = session.quote_snapshot && typeof session.quote_snapshot === 'object' ? session.quote_snapshot as Record<string, unknown> : {}
