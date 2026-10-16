@@ -113,7 +113,15 @@ export function validateLandingPageInput(input: LandingPageInput) {
   if (!input.internal_name.trim()) throw new Error('Add an internal page name.')
   if (input.page_type === 'product' && !input.linked_product_id) throw new Error('Product landing pages require a linked product.')
   if (input.status === 'published' && input.noindex) throw new Error('Published pages must be indexable or remain in draft.')
-  const sections = validateSections(input.sections)
+  // Reuse the page's selected product for order sections when older or manually edited section data omits productId.
+  // This keeps review-only edits from failing validation on an otherwise valid product landing page.
+  const defaultProductId = input.linked_product_id ?? input.linked_product_ids?.[0]
+  const normalizedSections = input.sections.map((section) =>
+    section.type === 'order' && !section.productId && defaultProductId
+      ? { ...section, productId: defaultProductId }
+      : section,
+  )
+  const sections = validateSections(normalizedSections)
   assertSafeUrl(input.hero_image_url ?? undefined, 'Hero image')
   assertSafeUrl(input.mobile_hero_image_url ?? undefined, 'Mobile hero image')
   assertSafeUrl(input.og_image_url ?? undefined, 'Social image')
