@@ -18,7 +18,8 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
   const [notice, setNotice] = useState('')
   const [converting, setConverting] = useState<RecoveryRow | null>(null)
   const [variants, setVariants] = useState<RecoveryVariant[]>([])
-  const [variantLoading, setVariantLoading] = useState(false)\n  const [selectedVariantId, setSelectedVariantId] = useState('')
+  const [variantLoading, setVariantLoading] = useState(false)
+  const [selectedVariantId, setSelectedVariantId] = useState('')
   function openWhatsApp(row: RecoveryRow) {
     const saved = row.quote_snapshot ?? {}
     const savedItems = Array.isArray(saved.items) ? saved.items as Array<{ product_name?: string; variant_title?: string; color?: string; quantity?: number; unit_price_snapshot?: number }> : []
