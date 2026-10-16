@@ -211,8 +211,12 @@ export async function createOrderFromIncompleteCheckout(raw: unknown) {
   if (session.source === 'CART') return { ok: false as const, message: 'Cart recovery conversion is not enabled for multi-item checkouts yet. Create the order through the regular checkout to preserve cart pricing and stock rules.' }
   const quote = session.quote_snapshot && typeof session.quote_snapshot === 'object' ? session.quote_snapshot as Record<string, unknown> : {}
   const savedItems = Array.isArray(quote.items) ? quote.items as Array<Record<string, unknown>> : []
-  if (!savedItems.some((item) => item.product_id === input.productId && item.variant_id === input.variantId)) {
-    return { ok: false as const, message: 'Choose the product and variant saved in this checkout.' }
+  if (!savedItems.some((item) => item.product_id === input.productId)) {
+    return { ok: false as const, message: 'Choose the product saved in this checkout.' }
+  }
+  const { data: chosenVariant, error: variantError } = await db.from('product_variants').select('id,product_id,is_active').eq('id', input.variantId).maybeSingle()
+  if (variantError || !chosenVariant || chosenVariant.product_id !== input.productId || chosenVariant.is_active !== true) {
+    return { ok: false as const, message: 'Choose an active variant of the saved product.' }
   }
   const checkoutRequestId = session.checkout_request_id
   if (!checkoutRequestId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(checkoutRequestId)) {
@@ -264,4 +268,22 @@ export async function createOrderFromIncompleteCheckout(raw: unknown) {
   revalidatePath('/admin/checkout-recovery')
   revalidatePath('/admin/orders')
   return { ok: true as const, orderId, orderNumber: String(created[0].order_number ?? ''), message: 'Order created using the standard COD checkout transaction.' }
+}
+
+
+export async function getRecoveryProductVariants(sessionId: string) {
+  await requireAdmin(['OWNER', 'ADMIN'])
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sessionId)) return { ok: false as const, message: 'Invalid checkout reference.', variants: [] }
+  const db = createAdminClient()
+  const { data: session, error } = await db.from('checkout_sessions').select('quote_snapshot').eq('id', sessionId).maybeSingle()
+  if (error || !session) return { ok: false as const, message: 'Checkout session not found.', variants: [] }
+  const quote = session.quote_snapshot && typeof session.quote_snapshot === 'object' ? session.quote_snapshot as Record<string, unknown> : {}
+  const items = Array.isArray(quote.items) ? quote.items as Array<Record<string, unknown>> : []
+  const productId = typeof items[0]?.product_id === 'string' ? items[0].product_id : ''
+  if (!productId) return { ok: false as const, message: 'Saved product details are unavailable.', variants: [] }
+  const { data: variants, error: variantsError } = await db.from('product_variants')
+    .select('id,product_id,variant_title,color,ram,storage,price,stock_quantity')
+    .eq('product_id', productId).eq('is_active', true).order('price', { ascending: true })
+  if (variantsError) return { ok: false as const, message: 'Unable to load active variants.', variants: [] }
+  return { ok: true as const, variants: (variants ?? []).map((variant) => ({ ...variant, price: Number(variant.price), stock_quantity: Number(variant.stock_quantity) })) }
 }
