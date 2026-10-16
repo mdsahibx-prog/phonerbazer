@@ -3,7 +3,8 @@
 import { useState, useTransition } from 'react'
 import { createOrderFromIncompleteCheckout, getRecoveryProductVariants, updateCheckoutRecoveryOutcome } from '@/lib/commerce/checkout-recovery-actions'
 
-type RecoveryVariant = { id: string; variant_title: string; color: string | null; ram: string | null; storage: string | null; price: number; stock_quantity: number }\ntype RecoveryRow = {
+type RecoveryVariant = { id: string; variant_title: string; color: string | null; ram: string | null; storage: string | null; price: number; stock_quantity: number }
+type RecoveryRow = {
   id: string; checkout_request_id: string; source: string; status: string; customer_name: string | null;
   customer_phone: string | null; customer_email?: string | null; quote_snapshot: Record<string, unknown> | null; delivery_snapshot: Record<string, unknown> | null;
   last_activity_at: string; expires_at: string; recovery_consent_at: string | null; recovery_consent_withdrawn_at: string | null;
@@ -15,12 +16,13 @@ function phoneForWhatsApp(value: string) { const digits = value.replace(/\D/g, '
 export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q, now }: { rows: RecoveryRow[]; count: number; page: number; pageSize: number; status?: string; q?: string; now: string }) {
   const [pending, startTransition] = useTransition()
   const [notice, setNotice] = useState('')
-  const [converting, setConverting] = useState<RecoveryRow | null>(null)\n  const [variants, setVariants] = useState<RecoveryVariant[]>([])\n  const [variantLoading, setVariantLoading] = useState(false)\n  const [selectedVariantId, setSelectedVariantId] = useState('')
+  const [converting, setConverting] = useState<RecoveryRow | null>(null)
+  const [variants, setVariants] = useState<RecoveryVariant[]>([])\n  const [variantLoading, setVariantLoading] = useState(false)\n  const [selectedVariantId, setSelectedVariantId] = useState('')
   function openWhatsApp(row: RecoveryRow) {
     const saved = row.quote_snapshot ?? {}
     const savedItems = Array.isArray(saved.items) ? saved.items as Array<{ product_name?: string; variant_title?: string; color?: string; quantity?: number; unit_price_snapshot?: number }> : []
-    const itemLines = savedItems.map((item) => `• ${item.product_name || 'Product'}${item.variant_title ? ' · ' + item.variant_title : ''}${item.color ? ' · ' + item.color : ''} × ${item.quantity ?? 1}`).join('\\n')
-    const message = `আসসালামু আলাইকুম! Phonerbazar থেকে বলছি। আপনার নির্বাচিত পণ্য${itemLines ? ':\\n' + itemLines : ''} সম্পর্কে যোগাযোগ করছি। অর্ডার সম্পন্ন করতে কোনো সাহায্য লাগলে জানাবেন। ধন্যবাদ।`
+    const itemLines = savedItems.map((item) => `• ${item.product_name || 'Product'}${item.variant_title ? ' · ' + item.variant_title : ''}${item.color ? ' · ' + item.color : ''} × ${item.quantity ?? 1}`).join('\n')
+    const message = `আসসালামু আলাইকুম! Phonerbazar থেকে বলছি। আপনার নির্বাচিত পণ্য${itemLines ? ':\n' + itemLines : ''} সম্পর্কে যোগাযোগ করছি। অর্ডার সম্পন্ন করতে কোনো সাহায্য লাগলে জানাবেন। ধন্যবাদ।`
     const url = 'https://wa.me/' + phoneForWhatsApp(row.customer_phone ?? '') + '?text=' + encodeURIComponent(message)
     const popup = window.open('about:blank', '_blank')
     if (!popup) { setNotice('Allow pop-ups to open WhatsApp, then try again.'); return }
@@ -36,7 +38,20 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
     if (!confirmed) return
     startTransition(() => { void updateCheckoutRecoveryOutcome({ sessionId: row.id, outcome, notes: outcome === 'CLOSED' ? 'Archived by admin; soft close only.' : undefined }).then((result) => setNotice(result.ok ? 'Recovery outcome saved.' : result.message)).catch(() => setNotice('Unable to save recovery outcome.')) })
   }
-  function openConversion(row: RecoveryRow) {\n    const snapshot = row.quote_snapshot ?? {}\n    const items = Array.isArray(snapshot.items) ? snapshot.items as Array<Record<string, unknown>> : []\n    setConverting(row)\n    setVariants([])\n    setVariantLoading(true)\n    setSelectedVariantId(String(items[0]?.variant_id ?? ''))\n    void getRecoveryProductVariants(row.id).then((result) => {\n      if (!result.ok) { setNotice(result.message); return }\n      setVariants(result.variants as RecoveryVariant[])\n      if (!result.variants.some((variant) => variant.id === String(items[0]?.variant_id ?? ''))) setSelectedVariantId(result.variants[0]?.id ?? '')\n    }).catch(() => setNotice('Unable to load product variants.')).finally(() => setVariantLoading(false))\n  }\n  function submitConversion(event: React.FormEvent<HTMLFormElement>, row: RecoveryRow) {
+  function openConversion(row: RecoveryRow) {
+    const snapshot = row.quote_snapshot ?? {}
+    const items = Array.isArray(snapshot.items) ? snapshot.items as Array<Record<string, unknown>> : []
+    setConverting(row)
+    setVariants([])
+    setVariantLoading(true)
+    setSelectedVariantId(String(items[0]?.variant_id ?? ''))
+    void getRecoveryProductVariants(row.id).then((result) => {
+      if (!result.ok) { setNotice(result.message); return }
+      setVariants(result.variants as RecoveryVariant[])
+      if (!result.variants.some((variant) => variant.id === String(items[0]?.variant_id ?? ''))) setSelectedVariantId(result.variants[0]?.id ?? '')
+    }).catch(() => setNotice('Unable to load product variants.')).finally(() => setVariantLoading(false))
+  }
+  function submitConversion(event: React.FormEvent<HTMLFormElement>, row: RecoveryRow) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     const snapshot = row.quote_snapshot ?? {}
@@ -80,7 +95,8 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
             <label className="grid gap-1 text-sm">Customer name<input name="fullName" required defaultValue={row.customer_name ?? ''} className="h-10 rounded-lg border px-3" /></label>
             <label className="grid gap-1 text-sm">Mobile number<input name="phone" required defaultValue={row.customer_phone ?? ''} className="h-10 rounded-lg border px-3" /></label>
             <label className="grid gap-1 text-sm">Email (optional)<input name="email" type="email" defaultValue={String((row as any).customer_email ?? '')} className="h-10 rounded-lg border px-3" /></label>
-            <label className="grid gap-1 text-sm">Variant<select name="variantId" required value={selectedVariantId} onChange={(event) => setSelectedVariantId(event.target.value)} disabled={variantLoading || !variants.length} className="h-10 rounded-lg border bg-white px-3"><option value="">{variantLoading ? 'Loading variants…' : 'Choose variant'}</option>{variants.map((variant) => <option key={variant.id} value={variant.id}>{[variant.variant_title, variant.color, variant.ram, variant.storage].filter(Boolean).join(' · ')} — ৳{variant.price.toLocaleString('en-BD')} · Stock {variant.stock_quantity}</option>)}</select></label>\n            <label className="grid gap-1 text-sm">Quantity<input name="quantity" type="number" min="1" max="10" required defaultValue={Number(item.quantity ?? 1)} className="h-10 rounded-lg border px-3" /></label>
+            <label className="grid gap-1 text-sm">Variant<select name="variantId" required value={selectedVariantId} onChange={(event) => setSelectedVariantId(event.target.value)} disabled={variantLoading || !variants.length} className="h-10 rounded-lg border bg-white px-3"><option value="">{variantLoading ? 'Loading variants…' : 'Choose variant'}</option>{variants.map((variant) => <option key={variant.id} value={variant.id}>{[variant.variant_title, variant.color, variant.ram, variant.storage].filter(Boolean).join(' · ')} — ৳{variant.price.toLocaleString('en-BD')} · Stock {variant.stock_quantity}</option>)}</select></label>
+            <label className="grid gap-1 text-sm">Quantity<input name="quantity" type="number" min="1" max="10" required defaultValue={Number(item.quantity ?? 1)} className="h-10 rounded-lg border px-3" /></label>
             <label className="grid gap-1 text-sm">Division<input name="division" required defaultValue={String(delivery.division ?? '')} className="h-10 rounded-lg border px-3" /></label>
             <label className="grid gap-1 text-sm">District<input name="district" required defaultValue={String(delivery.district ?? '')} className="h-10 rounded-lg border px-3" /></label>
             <label className="grid gap-1 text-sm">Area / Thana<input name="area" required defaultValue={String(delivery.area ?? '')} className="h-10 rounded-lg border px-3" /></label>
