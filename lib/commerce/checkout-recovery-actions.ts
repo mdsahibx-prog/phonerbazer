@@ -1,6 +1,7 @@
 'use server'
 
 import 'server-only'
+import { revalidatePath } from 'next/cache'
 import { createHash, timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -217,6 +218,9 @@ export async function createOrderFromIncompleteCheckout(raw: unknown) {
   if (!checkoutRequestId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(checkoutRequestId)) {
     return { ok: false as const, message: 'Checkout reference is invalid. Refresh and try again.' }
   }
+  const { data: preexistingOrders, error: existingOrderError } = await db.from('orders').select('id').eq('checkout_request_id', checkoutRequestId).limit(1)
+  if (existingOrderError) return { ok: false as const, message: 'Unable to verify whether an order already exists. Refresh and try again.' }
+  if (preexistingOrders?.length) return { ok: false as const, message: 'An order already exists for this checkout. Refresh the recovery list to sync its status.' }
   const notes = [input.notes?.trim(), 'Converted from incomplete checkout.'].filter(Boolean).join('\n')
   const { data: created, error: createError } = await db.rpc('create_guest_cod_order', {
     p_product_id: input.productId,
@@ -257,5 +261,7 @@ export async function createOrderFromIncompleteCheckout(raw: unknown) {
     notes: 'Order created from incomplete checkout by admin.', linked_order_id: orderId,
   })
   if (historyError) console.error('[checkout-recovery] conversion history write failed', historyError.message)
+  revalidatePath('/admin/checkout-recovery')
+  revalidatePath('/admin/orders')
   return { ok: true as const, orderId, orderNumber: String(created[0].order_number ?? ''), message: 'Order created using the standard COD checkout transaction.' }
 }
