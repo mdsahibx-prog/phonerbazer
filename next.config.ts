@@ -1,11 +1,23 @@
 import type { NextConfig } from "next";
 
+const supabaseHost = (() => {
+  const value = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!value) return undefined;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' ? url.hostname : undefined;
+  } catch {
+    return undefined;
+  }
+})();
+const supabaseOrigin = supabaseHost ? `https://${supabaseHost}` : '';
+
 const cspHeader = `
     default-src 'self';
     script-src 'self' 'unsafe-eval' 'unsafe-inline' https://connect.facebook.net https://www.googletagmanager.com;
     script-src-elem 'self' 'unsafe-inline' https://www.googletagmanager.com https://connect.facebook.net;
     style-src 'self' 'unsafe-inline';
-    img-src 'self' blob: data: https://yirbztzrgsvxuetqqiov.supabase.co https://www.facebook.com https://connect.facebook.net https://www.google-analytics.com https://www.googletagmanager.com;
+    img-src 'self' blob: data: ${supabaseOrigin} https://www.facebook.com https://connect.facebook.net https://www.google-analytics.com https://www.googletagmanager.com;
     font-src 'self' data:;
     object-src 'none';
     base-uri 'self';
@@ -27,8 +39,7 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
-      { protocol: 'https', hostname: 'yirbztzrgsvxuetqqiov.supabase.co' },
-      { protocol: 'https', hostname: 'ncknpaezdhsqiicdjtgr.supabase.co' },
+      ...(supabaseHost ? [{ protocol: 'https' as const, hostname: supabaseHost }] : []),
     ],
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 86400,
