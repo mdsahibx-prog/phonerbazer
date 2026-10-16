@@ -35,16 +35,6 @@ export function OrdersManager({ orders, invoiceGenerationEnabled }: { orders: an
   }, [selectedId])
 
   return <div className="space-y-4">
-    <section className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-      <div className="min-w-0"><p className="text-xs font-bold uppercase tracking-wider text-slate-500">Export</p><p className="truncate text-[11px] text-slate-500">Compressed CSV · 30d–1y</p></div>
-      <details className="relative shrink-0">
-        <summary className="inline-flex h-8 cursor-pointer list-none items-center gap-1.5 rounded-lg bg-[#151C2F] px-3 text-xs font-bold text-white hover:bg-slate-800"><Download className="h-3.5 w-3.5" />Download</summary>
-        <div className="absolute right-0 top-10 z-20 grid min-w-44 gap-1 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
-          {[30,90,180,365].map((days) => <a key={days} href={`/api/admin/orders/export?format=customers&days=${days}`} className="rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-700 hover:bg-orange-50 hover:text-orange-700">Customers · {days}d</a>)}
-          <a href="/api/admin/orders/export?format=orders&days=365" className="rounded-lg bg-slate-50 px-2.5 py-2 text-xs font-semibold text-slate-800 hover:bg-orange-50 hover:text-orange-700">Orders · 1 year</a>
-        </div>
-      </details>
-    </section>
     <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-100 px-5 py-4"><h2 className="font-semibold">Orders</h2><p className="mt-1 text-sm text-slate-500">Search results are capped at 100 records per request.</p></div>
