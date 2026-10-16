@@ -91,8 +91,12 @@ function ProductHero({ section, product, variant, fixedImageUrl, onSelect }: { s
   const activeGalleryIndex = selectedGalleryIndex >= 0 ? selectedGalleryIndex : fallbackGalleryIndex
   const touchStartXRef = useRef(0)
   if (!product) return null
-  const active = gallery[activeGalleryIndex] ?? gallery.find((entry) => entry.variant.id === variant?.id)
+  const active = selectedGalleryIndex >= 0 ? gallery[selectedGalleryIndex] : gallery[activeGalleryIndex]
   const image = active?.image ?? imageForVariant(product, variant) ?? imageForVariant(product, undefined, fixedImageUrl || section?.imageUrl) ?? primaryImage(product)
+  const colorVariants = product.variants.filter((candidate, index, allVariants) => {
+    const color = (candidate.color ?? '').trim().toLowerCase()
+    return Boolean(color) && allVariants.findIndex((item) => (item.color ?? '').trim().toLowerCase() === color) === index
+  })
   const compareAt = variant?.compare_at_price && variant.price < variant.compare_at_price ? variant.compare_at_price : null
   const colorDot = (color?: string | null) => {
     const value = (color || '').toLowerCase()
@@ -122,26 +126,35 @@ function ProductHero({ section, product, variant, fixedImageUrl, onSelect }: { s
           {image ? <Image key={image.image_url} src={image.image_url} alt={image.alt_text || product.name} fill preload fetchPriority="high" className="object-contain p-2 transition-opacity duration-300 sm:p-6" sizes="(max-width: 640px) 88vw, (max-width: 1024px) 92vw, 42vw" /> : null}
           <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full border border-amber-300/90 bg-gradient-to-r from-amber-300 via-yellow-300 to-orange-300 px-3 py-2 text-xs font-black text-orange-950 shadow-[0_6px_18px_rgba(217,119,6,0.28)] ring-1 ring-white/80"><Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> স্পেশাল অফার</div>
           <div className="absolute bottom-3 right-3 rounded-2xl bg-slate-950 px-3.5 py-2.5 text-white shadow-lg"><p className="text-[10px] font-bold text-emerald-200">বর্তমান মূল্য</p><p className="text-lg font-black">{money(variant?.price)}</p></div>
-          {gallery.length > 1 ? <><button type="button" onClick={() => moveGallery(-1)} aria-label="আগের রং দেখুন" className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-lg font-black text-slate-800 shadow-md">‹</button><button type="button" onClick={() => moveGallery(1)} aria-label="পরের রং দেখুন" className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-lg font-black text-slate-800 shadow-md">›</button></> : null}
+          {gallery.length > 1 ? <><button type="button" onClick={() => moveGallery(-1)} aria-label="আগের রং দেখুন" className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-lg font-black text-slate-800 shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2">‹</button><button type="button" onClick={() => moveGallery(1)} aria-label="পরের রং দেখুন" className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-lg font-black text-slate-800 shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2">›</button></> : null}
         </div>
-        {gallery.length > 1 ? <div className="mx-auto mt-1.5 flex w-full max-w-[23rem] items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-white px-3 py-1.5 sm:max-w-[30rem] sm:px-4">
+        {colorVariants.length > 1 ? <div className="mx-auto mt-1.5 flex w-full max-w-[23rem] items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-white px-3 py-1.5 sm:max-w-[30rem] sm:px-4">
           <div className="min-w-0">
             <p className="text-[11px] font-bold text-slate-500">রং নির্বাচন</p>
             <p aria-live="polite" aria-atomic="true" className="truncate text-sm font-black text-slate-900">{variant?.color || active?.variant.color || 'রং বেছে নিন'}</p>
           </div>
           <div className="flex shrink-0 items-center gap-2.5" role="group" aria-label="রং নির্বাচন করুন">
-            {gallery.map(({ variant: candidate }, index) => {
-              const selected = activeGalleryIndex === index
-              const colorName = (candidate.color || '').toLowerCase()
-              const darkCheck = /white|সাদা|silver|রূপালি|gold|সোনালি|gray|grey|ধূসর/.test(colorName)
-              return <button key={candidate.id} type="button" onClick={() => { setFallbackGalleryIndex(index); onSelect(candidate.id) }} aria-label={`${candidate.color || candidate.variant_title || 'রং'} নির্বাচন করুন`} aria-pressed={selected} title={candidate.color || candidate.variant_title} className={`flex h-10 w-10 items-center justify-center rounded-full transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${selected ? 'border-2 border-emerald-700 bg-emerald-50 ring-2 ring-emerald-600 ring-offset-2 shadow-[0_0_0_4px_rgba(16,185,129,0.10)]' : 'border border-slate-200 bg-white hover:border-slate-400'}`}>
+            {colorVariants.map((candidate) => {
+              const color = (candidate.color ?? '').trim().toLowerCase()
+              const selected = Boolean(color && variant?.color && color === variant.color.trim().toLowerCase())
+              const darkCheck = /white|সাদা|silver|রূপালি|gold|সোনালি|gray|grey|ধূসর/.test(color)
+              return <button key={candidate.id} type="button" onClick={() => {
+                const matchingVariant = product.variants.find((item) =>
+                  (item.color ?? '').trim().toLowerCase() === color &&
+                  item.ram === variant?.ram &&
+                  item.storage === variant?.storage
+                ) ?? candidate
+                const galleryIndex = gallery.findIndex((entry) => entry.variant.id === matchingVariant.id)
+                if (galleryIndex >= 0) setFallbackGalleryIndex(galleryIndex)
+                onSelect(matchingVariant.id)
+              }} aria-label={`${candidate.color || candidate.variant_title || 'রং'} নির্বাচন করুন`} aria-pressed={selected} title={candidate.color || candidate.variant_title} className={`flex h-10 w-10 items-center justify-center rounded-full transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${selected ? 'border-2 border-emerald-700 bg-emerald-50 ring-2 ring-emerald-600 ring-offset-2 shadow-[0_0_0_4px_rgba(16,185,129,0.10)]' : 'border border-slate-200 bg-white hover:border-slate-400'}`}>
                 <span className="relative flex h-6 w-6 items-center justify-center rounded-full border border-black/15 shadow-sm" style={{ backgroundColor: colorDot(candidate.color) }}>
                   {selected ? <span aria-hidden="true" className={`text-[13px] font-black leading-none drop-shadow-sm ${darkCheck ? 'text-slate-900' : 'text-white'}`}>✓</span> : null}
                 </span>
               </button>
             })}
           </div>
-        </div> : active?.variant.color ? <p className="mx-auto mt-3 max-w-[23rem] text-center text-sm font-bold text-slate-600 sm:max-w-[30rem]">{active.variant.color}</p> : null}
+        </div> : active?.variant.color ? <p className="mx-auto mt-3 max-w-[23rem] text-center text-sm font-bold text-slate-600 sm:max-w-[30rem]">{variant.color ?? active.variant.color}</p> : null}
       </div>
       <div className="min-w-0 lg:py-5">
         <h1 className="text-2xl font-black leading-tight tracking-tight text-slate-950 sm:text-5xl">{product.name}</h1>
@@ -342,7 +355,7 @@ export function LandingConversionSections({ sections, products, fixedImageUrl }:
     return () => window.removeEventListener('scroll', updateStickyVisibility)
   }, [])
   if (!selectedProduct || !selectedVariant) return <div className="mx-auto max-w-2xl px-4 py-16 text-center text-slate-600">এই পণ্যটি বর্তমানে পাওয়া যাচ্ছে না।</div>
-  return <div className="min-h-screen overflow-x-clip bg-white pb-24 text-slate-950 sm:pb-0"><ProductHero section={hero} product={selectedProduct} variant={selectedVariant} fixedImageUrl={fixedImageUrl} onSelect={setSelectedVariantId} />
+  return <div className="min-h-screen overflow-x-clip bg-white pb-0 text-slate-950"><ProductHero section={hero} product={selectedProduct} variant={selectedVariant} fixedImageUrl={fixedImageUrl} onSelect={setSelectedVariantId} />
     {renderSections.map((section) => {
       if (section.enabled === false || section.type === 'hero' || section.type === 'product' || section.type === 'announcement' || section.type === 'offer' || section.type === 'countdown' || section.type === 'product_gallery' || section.type === 'related_products' || section.type === 'sticky_mobile_cta') return null
       if (section.type === 'variant_selector') { const quantitySection = sections.find((candidate): candidate is Extract<LandingSection, { type: 'quantity_selector' }> => candidate.type === 'quantity_selector'); return <VariantSelector key={section.id} section={section} product={selectedProduct} selectedVariantId={selectedVariantId} onSelect={setSelectedVariantId} quantity={quantity} onChange={setQuantity} maxQuantity={quantitySection?.maxQuantity ?? 10} /> }
