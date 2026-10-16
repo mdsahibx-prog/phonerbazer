@@ -78,7 +78,6 @@ export function OrdersManager({ orders, invoiceGenerationEnabled }: { orders: an
   useEffect(() => {
     if (!selectedId) return
     let active = true
-    setDetailError(null)
     loadAdminOrderDetail(selectedId).then((detail) => {
       if (active) {
         setSelected(detail)
