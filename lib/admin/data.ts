@@ -117,7 +117,6 @@ export async function getInventoryData() {
 export async function getOrderManagementData(query?: string) {
   await requireAdmin()
   const db = createAdminClient()
-  const invoiceGenerationEnabled = await getInvoiceGenerationStatus()
   const search = query?.trim()
   let request = db
     .from('orders')
@@ -129,7 +128,11 @@ export async function getOrderManagementData(query?: string) {
     request = request.or(`order_number.ilike.%${search.replace(/[,%()]/g, '')}%,customer_name_snapshot.ilike.%${search.replace(/[,%()]/g, '')}%,customer_phone_snapshot.ilike.%${search.replace(/[,%()]/g, '')}%`)
   }
 
-  const { data, error } = await request
+  // Run independent reads concurrently; do not block the order query on Settings.
+  const [invoiceGenerationEnabled, { data, error }] = await Promise.all([
+    getInvoiceGenerationStatus(),
+    request,
+  ])
   assertNoError(error)
   return { orders: data ?? [], invoiceGenerationEnabled }
 }
