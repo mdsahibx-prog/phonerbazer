@@ -404,7 +404,7 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
     : !form.division ? 'ডেলিভারির বিভাগ নির্বাচন করুন'
     : null
 
-  return <section id="order-form" className="mx-auto max-w-5xl scroll-mt-4 px-4 py-8 pb-32 sm:px-6 sm:pb-10" style={{ scrollPaddingBottom: 'calc(7rem + env(safe-area-inset-bottom))' }}>
+  return <section id="order-form" className="mx-auto max-w-5xl scroll-mt-4 px-4 py-6 pb-8 sm:px-6 sm:py-8">
     <form noValidate onSubmit={(event) => { event.preventDefault(); void submitOrder() }} onFocusCapture={startCheckout} className="border border-slate-200 bg-white p-4 shadow-sm sm:rounded-2xl sm:p-7">
       <div className="flex items-start gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><Truck className="h-5 w-5" aria-hidden="true" /></span>
@@ -448,38 +448,41 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
         <span>অসম্পূর্ণ অর্ডারে সহায়তার জন্য Phonerbazar যোগাযোগ করতে পারবে <span className="font-semibold text-slate-500">(ঐচ্ছিক; যেকোনো সময় বন্ধ করতে পারবেন)</span></span>
       </label>
 
-      <section aria-labelledby="landing-order-summary-title" aria-live="polite" className="mt-5 min-h-48 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 sm:p-5">
-        <div className="flex items-start gap-3">
-          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" aria-hidden="true" />
+      <section aria-labelledby="landing-order-summary-title" aria-live="polite" className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/50 p-3 sm:p-4">
+        <div className="flex items-start gap-2.5">
+          <ShieldCheck className="mt-0.5 h-4.5 w-4.5 shrink-0 text-emerald-700" aria-hidden="true" />
           <div className="min-w-0 flex-1">
-            <h3 id="landing-order-summary-title" className="font-black text-slate-950">অর্ডারের সারাংশ</h3>
-            <p className="mt-1 text-sm font-bold text-slate-900">{quote?.productName ?? product.name}</p>
-            <p className="mt-0.5 break-words text-xs leading-5 text-slate-600">{quote?.variantTitle ?? variantLabel(variant)} · {quantity}টি</p>
-            {variant.is_low_stock && <p className="mt-1 text-xs font-semibold text-amber-700">স্টক সীমিত</p>}
+            <h3 id="landing-order-summary-title" className="text-sm font-black text-slate-950">অর্ডারের সারাংশ</h3>
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <p className="min-w-0 break-words text-sm font-bold leading-5 text-slate-900">{quote?.productName ?? product.name}</p>
+              <span className="text-xs text-slate-500">{quote?.variantTitle ?? variantLabel(variant)} · {quantity}টি</span>
+              {variant.is_low_stock && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800">স্টক সীমিত</span>}
+            </div>
           </div>
         </div>
-        <dl className="mt-4 space-y-2.5 text-sm">
-          <div className="flex items-center justify-between gap-4"><dt className="text-slate-600">পণ্যের মূল্য</dt><dd className="shrink-0 font-bold text-slate-900">{quote ? money(quote.subtotal) : '—'}</dd></div>
-          {quote && quote.discountTotal > 0 && <div className="flex items-center justify-between gap-4 text-emerald-700"><dt>আপনার সাশ্রয়</dt><dd className="shrink-0 font-semibold">{money(quote.discountTotal)}</dd></div>}
-          <div className="flex items-center justify-between gap-4"><dt className="text-slate-600">ডেলিভারি চার্জ</dt><dd className="shrink-0 font-bold text-slate-900">{selectedDeliveryCharge === null ? 'বিভাগ নির্বাচন করুন' : money(selectedDeliveryCharge)}</dd></div>
-          <div className="flex items-center justify-between gap-4 border-t border-emerald-100 pt-3"><dt className="font-black text-slate-950">সর্বমোট</dt><dd className="shrink-0 text-lg font-black text-emerald-800">{displayedTotal === null ? '—' : money(displayedTotal)}</dd></div>
+        <dl className="mt-3 space-y-1.5 text-sm">
+          <div className="flex items-center justify-between gap-3"><dt className="text-slate-600">পণ্যের মূল্য</dt><dd className="shrink-0 font-semibold tabular-nums text-slate-900">{quote ? money(quote.subtotal) : '—'}</dd></div>
+          {quote && quote.discountTotal > 0 && <div className="flex items-center justify-between gap-3 text-emerald-700"><dt>আপনার সাশ্রয়</dt><dd className="shrink-0 font-semibold tabular-nums">{money(quote.discountTotal)}</dd></div>}
+          <div className="flex items-center justify-between gap-3"><dt className="text-slate-600">ডেলিভারি চার্জ</dt><dd className="shrink-0 text-right font-semibold tabular-nums text-slate-900">{selectedDeliveryCharge === null ? 'বিভাগ নির্বাচন করুন' : money(selectedDeliveryCharge)}</dd></div>
+          <div className="flex items-center justify-between gap-3 border-t border-emerald-100 pt-2"><dt className="font-black text-slate-950">সর্বমোট</dt><dd className="shrink-0 text-lg font-black tabular-nums text-emerald-800">{displayedTotal === null ? '—' : money(displayedTotal)}</dd></div>
         </dl>
-        {!form.division && <p className="mt-3 rounded-lg bg-white/80 px-3 py-2 text-xs leading-5 text-slate-600">ডেলিভারি এলাকা নির্বাচন করলে চার্জ দেখা যাবে</p>}
-        {quoteLoading && <p className="mt-2 text-xs text-slate-500">সঠিক মূল্য যাচাই হচ্ছে…</p>}
-        {quoteError && <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-rose-700"><span>{quoteError}</span><button type="button" onClick={() => { void retryQuote() }} className="min-h-11 rounded-lg px-2 underline underline-offset-2">আবার চেষ্টা করুন</button></div>}
-        {unavailable && <p className="mt-2 text-xs font-bold text-rose-700">এই ভ্যারিয়েন্টে নির্বাচিত পরিমাণের পণ্য স্টকে নেই। অন্য ভ্যারিয়েন্ট বা পরিমাণ নির্বাচন করুন।</p>}
-        {availabilityError && <p className="mt-2 text-xs font-bold leading-5 text-rose-700">{availabilityError}</p>}
-        <p className="mt-3 border-t border-emerald-100 pt-3 text-xs font-semibold leading-5 text-slate-600">ক্যাশ অন ডেলিভারি — পণ্য হাতে পেয়ে টাকা দিন</p>
+        {!form.division && <p className="mt-2 rounded-lg bg-white/80 px-2.5 py-1.5 text-xs leading-5 text-slate-600">ডেলিভারি এলাকা নির্বাচন করলে চার্জ দেখা যাবে</p>}
+        {quoteLoading && <p className="mt-1.5 text-xs text-slate-500">সঠিক মূল্য যাচাই হচ্ছে…</p>}
+        {quoteError && <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-rose-700"><span>{quoteError}</span><button type="button" onClick={() => { void retryQuote() }} className="min-h-9 rounded-lg px-2 underline underline-offset-2">আবার চেষ্টা করুন</button></div>}
+        {unavailable && <p className="mt-1.5 text-xs font-bold text-rose-700">এই ভ্যারিয়েন্টে নির্বাচিত পরিমাণের পণ্য স্টকে নেই। অন্য ভ্যারিয়েন্ট বা পরিমাণ নির্বাচন করুন।</p>}
+        {availabilityError && <p className="mt-1.5 text-xs font-bold leading-5 text-rose-700">{availabilityError}</p>}
       </section>
 
-      <div className="mt-4 rounded-xl border border-slate-100 bg-white px-3 py-2.5 text-xs leading-5 text-slate-600">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2"><span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-emerald-600" aria-hidden="true" />নিরাপদ অর্ডার</span><span className="inline-flex items-center gap-1.5"><Truck className="h-4 w-4 text-emerald-600" aria-hidden="true" />সারা দেশে ডেলিভারি</span></div>
+      <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-slate-600">
+        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1"><ShieldCheck className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />নিরাপদ অর্ডার</span>
+        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1"><Truck className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />সারা দেশে ডেলিভারি</span>
+        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1"><CircleCheck className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />ক্যাশ অন ডেলিভারি</span>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/98 px-3 pt-2.5 pb-[calc(.75rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-18px_rgba(15,23,42,.35)] backdrop-blur sm:static sm:mt-5 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-0">
+      <div className="mt-4 border-t border-slate-100 pt-4 sm:mt-5 sm:border-0 sm:pt-0">
         <button type="submit" disabled={busy || quoteLoading || !quote || !form.division || !quote.available || Boolean(quoteError) || Boolean(availabilityError)} className="mx-auto flex min-h-12 w-full max-w-6xl items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-black text-white shadow-md transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 disabled:shadow-none">
           {busy && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />}
-          {busy ? 'অর্ডার হচ্ছে...' : 'অর্ডার কনফার্ম করুন'}
+          {busy ? 'অর্ডার হচ্ছে...' : 'অর্ডার করুন'}
         </button>
         {disabledReason && !busy && <p className="mx-auto mt-1.5 max-w-6xl text-center text-xs leading-5 text-slate-500">{disabledReason}</p>}
       </div>
