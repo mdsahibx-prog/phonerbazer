@@ -485,15 +485,15 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
       <div className="mt-4 border-t border-slate-100 pt-4 text-center">
         <p className="text-xs font-medium text-slate-500">অথবা সরাসরি হোয়াটসঅ্যাপে অর্ডার করুন</p>
         <a
-          href={`https://wa.me/${(process.env.NEXT_PUBLIC_WHATSAPP_PHONE || siteConfig.contact.phone).replace(/\\D/g, '')}?text=${encodeURIComponent([
+          href={`https://wa.me/${(process.env.NEXT_PUBLIC_WHATSAPP_PHONE || siteConfig.contact.phone).replace(/\D/g, '')}?text=${encodeURIComponent([
             `হ্যালো, আমি ${siteConfig.name} থেকে অর্ডার করতে চাই:`,
             `- পণ্য: ${quote?.productName ?? product.name}`,
-            `- কালার/ভ্যারিয়েন্ট: ${quote?.variantTitle ?? variantLabel(variant) ?? 'ডিফল্ট/সিলেক্ট করা হয়নি'}`,
+            `- কালার/ভ্যারিয়েন্ট: ${quote?.variantTitle || variantLabel(variant) || 'ডিফল্ট/সিলেক্ট করা হয়নি'}`,
             `- পরিমাণ: ${quantity}`,
             `- প্রতি পিস মূল্য: ${money(quote?.unitPrice ?? variant.price)}`,
             `- পণ্যের মোট মূল্য: ${money(quote?.subtotal ?? variant.price * quantity)}`,
             'অনুগ্রহ করে আমার অর্ডারটি কনফার্ম করতে সহায়তা করুন।',
-          ].join('\\n'))}`}
+          ].join('\n'))}`}
           target="_blank"
           rel="noopener noreferrer"
           aria-label="হোয়াটসঅ্যাপে পণ্যের অর্ডারের তথ্য পাঠান"
