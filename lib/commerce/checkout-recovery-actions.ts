@@ -127,8 +127,16 @@ export async function listCheckoutRecovery(input: { page?: number; status?: stri
   const db = createAdminClient()
   const page = Math.max(1, Math.min(1000, Math.floor(input.page ?? 1)))
   const from = (page - 1) * 25
-  let query = db.from('checkout_sessions').select('id,checkout_request_id,source,status,customer_name,customer_phone,customer_email,quote_snapshot,delivery_snapshot,last_activity_at,created_at,expires_at,recovery_consent_at,recovery_consent_withdrawn_at,recovery_contact_count,recovery_last_contacted_at,recovery_outcome,recovery_outcome_at,completed_order_id', { count: 'exact' }).order('last_activity_at', { ascending: false }).range(from, from + 24)
-  if (input.status && ['STARTED','DETAILS_ENTERED','QUOTED','PAYMENT_INITIATED','ABANDONED','COMPLETED'].includes(input.status)) query = query.eq('status', input.status)
+  let query = db.from('checkout_sessions')
+    .select('id,checkout_request_id,source,status,customer_name,customer_phone,customer_email,quote_snapshot,delivery_snapshot,last_activity_at,created_at,expires_at,recovery_consent_at,recovery_consent_withdrawn_at,recovery_contact_count,recovery_last_contacted_at,recovery_outcome,recovery_outcome_at,completed_order_id', { count: 'exact' })
+    // This page is for unresolved, actionable checkouts only. Keep order history in Orders.
+    .in('status', ['STARTED', 'DETAILS_ENTERED', 'QUOTED', 'ABANDONED'])
+    .is('completed_order_id', null)
+    .not('customer_phone', 'is', null)
+    .or('recovery_outcome.is.null,recovery_outcome.not.in.(CLOSED,NOT_INTERESTED,RECOVERED)')
+    .order('last_activity_at', { ascending: false })
+    .range(from, from + 24)
+  if (input.status && ['STARTED','DETAILS_ENTERED','QUOTED','ABANDONED'].includes(input.status)) query = query.eq('status', input.status)
   if (input.q?.trim()) {
     const q = input.q.trim().replace(/[,%()]/g, '').slice(0, 80)
     if (q) query = query.or('customer_name.ilike.%' + q + '%,customer_phone.ilike.%' + q + '%')
@@ -265,9 +273,25 @@ export async function createOrderFromIncompleteCheckout(raw: unknown) {
   if (!checkoutRequestId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(checkoutRequestId)) {
     return { ok: false as const, message: 'Checkout reference is invalid. Refresh and try again.' }
   }
-  const { data: preexistingOrders, error: existingOrderError } = await db.from('orders').select('id').eq('checkout_request_id', checkoutRequestId).limit(1)
+  const { data: preexistingOrders, error: existingOrderError } = await db.from('orders').select('id,order_number').eq('checkout_request_id', checkoutRequestId).limit(1)
   if (existingOrderError) return { ok: false as const, message: 'Unable to verify whether an order already exists. Refresh and try again.' }
-  if (preexistingOrders?.length) return { ok: false as const, message: 'An order already exists for this checkout. Refresh the recovery list to sync its status.' }
+  if (preexistingOrders?.length) {
+    const existingOrder = preexistingOrders[0]
+    const now = new Date().toISOString()
+    const { error: syncError } = await db.from('checkout_sessions').update({
+      status: 'COMPLETED', completed_order_id: existingOrder.id, recovery_outcome: 'RECOVERED',
+      recovery_outcome_at: now, updated_at: now,
+    }).eq('id', session.id).neq('status', 'COMPLETED')
+    if (syncError) return { ok: false as const, message: 'An order already exists but recovery could not be synced. Do not create another order; refresh and contact support if it remains visible.' }
+    const { error: historyError } = await db.from('checkout_recovery_history').insert({
+      checkout_session_id: session.id, actor_admin_user_id: admin.id, action: 'RECOVERED',
+      notes: 'Existing order linked to checkout recovery; no duplicate order created.', linked_order_id: existingOrder.id,
+    })
+    if (historyError) console.error('[checkout-recovery] existing order sync history write failed', historyError.message)
+    revalidatePath('/admin/checkout-recovery')
+    revalidatePath('/admin/orders')
+    return { ok: true as const, orderId: existingOrder.id, orderNumber: existingOrder.order_number, message: 'Existing order linked and moved to Orders. No duplicate order was created.' }
+  }
   const notes = [input.notes?.trim(), 'Converted from incomplete checkout.'].filter(Boolean).join('\n')
   const orderResult = await createGuestOrderWithRisk({
     productId: input.productId,
@@ -289,15 +313,27 @@ export async function createOrderFromIncompleteCheckout(raw: unknown) {
   })
   if (!orderResult.ok) return { ok: false as const, message: orderResult.message || 'Order could not be created. No recovery status was changed.' }
   if ('paymentRequired' in orderResult.data) {
+    const orderId = String(orderResult.data.orderId)
+    const now = new Date().toISOString()
+    const { error: updateError } = await db.from('checkout_sessions').update({
+      status: 'COMPLETED', completed_order_id: orderId, recovery_outcome: 'RECOVERED',
+      recovery_outcome_at: now, updated_at: now,
+    }).eq('id', session.id).neq('status', 'COMPLETED')
+    if (updateError) console.error('[checkout-recovery] payment-required order created but recovery link update failed', updateError.message)
+    const { error: historyError } = await db.from('checkout_recovery_history').insert({
+      checkout_session_id: session.id, actor_admin_user_id: admin.id, action: 'RECOVERED',
+      notes: 'Order created from incomplete checkout; advance payment is pending.', linked_order_id: orderId,
+    })
+    if (historyError) console.error('[checkout-recovery] payment-required conversion history write failed', historyError.message)
     revalidatePath('/admin/checkout-recovery')
     revalidatePath('/admin/orders')
     return {
       ok: true as const,
-      orderId: String(orderResult.data.orderId),
+      orderId,
       orderNumber: String(orderResult.data.orderNumber ?? ''),
       paymentRequired: true as const,
       redirectUrl: orderResult.data.redirectUrl,
-      message: 'Order created. Store risk policy requires advance payment; share the secure payment link with the customer.',
+      message: 'Order created and moved to Orders. Store risk policy requires advance payment; share the secure payment link with the customer.',
     }
   }
   const orderId = String(orderResult.data.orderId)
