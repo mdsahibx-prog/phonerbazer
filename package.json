@@ -7,7 +7,7 @@
     "build": "node --max-old-space-size=4096 node_modules/next/dist/bin/next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "pnpm exec tsx scripts/analytics-contract-test.ts && pnpm exec tsx scripts/direct-order-payment-test.ts && pnpm exec tsx scripts/risk-category-test.ts && pnpm exec tsx scripts/checkout-recovery-policy-test.ts",
+    "test": "pnpm exec tsx scripts/analytics-contract-test.ts && pnpm exec tsx scripts/direct-order-payment-test.ts && pnpm exec tsx scripts/risk-category-test.ts && pnpm exec tsx scripts/checkout-recovery-policy-test.ts && pnpm exec tsx scripts/landing-order-contract-test.ts",
     "performance:audit": "tsx scripts/performance/audit.ts"
   },
   "dependencies": {
@@ -41,10 +41,4 @@
     "@types/react-dom": "^19",
     "dotenv": "^17.4.2",
     "eslint": "^9",
-    "eslint-config-next": "16.3.0",
-    "tailwindcss": "^4",
-    "tsx": "^4.23.12",
-    "typescript": "^5"
-  },
-  "packageManager": "pnpm@11.21.0"
-}
+    "eslint-config-next": "16.3.¶»§q«^
