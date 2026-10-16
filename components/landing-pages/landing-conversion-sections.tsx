@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BatteryCharging, Bluetooth, Camera, CircleCheck, Quote, Radio, ShieldCheck, Smartphone, Sparkles, Truck } from 'lucide-react'
+import { BatteryCharging, Bluetooth, Camera, CircleCheck, Quote, Radio, ShieldCheck, Smartphone, Sparkles, Truck, UserRound } from 'lucide-react'
 import type { LandingSection } from '@/lib/landing-pages/types'
 import type { StorefrontProduct, StorefrontVariant } from '@/lib/services/storefront-utils'
 
@@ -204,51 +204,50 @@ function ReviewSection({ section }: { section: Extract<LandingSection, { type: '
   const body = section.body?.trim()
   const showBody = body && !/প্রকৃত ক্রেতাদের যাচাই করা অভিজ্ঞতা এখানে প্রকাশ করা হবে/.test(body)
   const disclaimer = section.disclaimer?.trim()
-  const showDisclaimer = disclaimer && !/প্রকাশের আগে প্রকৃত গ্রাহকের অনুমতি-সহ মতামত যোগ করুন/.test(disclaimer)
   const galleryImages = (section.galleryImages ?? []).filter(Boolean)
+  const showDisclaimer = disclaimer && !/প্রকাশের আগে প্রকৃত গ্রাহকের অনুমতি-সহ মতামত যোগ করুন/.test(disclaimer)
 
-  return <section className={`mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10 ${visibility(section)}`} aria-labelledby={`${section.id}-title`}>
-    <header className="mb-5 flex flex-col gap-3 border-b border-emerald-100 pb-4 sm:flex-row sm:items-end sm:justify-between">
+  return <section className={`mx-auto max-w-5xl px-3 py-6 sm:px-6 sm:py-8 ${visibility(section)}`} aria-labelledby={`${section.id}-title`}>
+    <header className="mb-4 flex flex-col gap-2.5 border-b border-emerald-100 pb-3 sm:mb-5 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
       <div className="min-w-0">
-        <p className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-extrabold text-emerald-800">
+        <p className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[11px] font-extrabold text-emerald-800 sm:text-xs">
           <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
           প্রকৃত ক্রেতাদের মতামত
         </p>
-        <h2 id={`${section.id}-title`} className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{customerText(section.title)}</h2>
-        {showBody ? <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{customerText(body)}</p> : null}
+        <h2 id={`${section.id}-title`} className="text-2xl font-black leading-tight tracking-tight text-slate-950 sm:text-3xl">{customerText(section.title)}</h2>
+        {showBody ? <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600">{customerText(body)}</p> : null}
       </div>
-      <span className="inline-flex w-fit shrink-0 items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600">
+      <span className="inline-flex w-fit shrink-0 items-center rounded-full border border-emerald-100 bg-white px-3 py-1.5 text-xs font-bold text-slate-600">
         {reviews.length.toLocaleString('bn-BD')}টি রিভিউ
       </span>
     </header>
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {reviews.map((review) => <article key={`${review.name}-${review.text}`} className="relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50/60 p-5 shadow-[0_4px_20px_rgba(15,23,42,0.04)] transition-shadow duration-200 hover:shadow-md motion-reduce:transition-none">
-        <div className="flex items-start justify-between gap-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {reviews.map((review) => {
+        const proofImage = galleryImages[reviews.indexOf(review)] ?? (review.imageUrl && review.imageEnabled !== false ? review.imageUrl : null)
+        return <article key={`${review.name}-${review.text}`} className="relative min-w-0 overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50/70 p-4 shadow-[0_3px_16px_rgba(15,23,42,0.055)] transition-shadow duration-200 hover:shadow-md motion-reduce:transition-none sm:p-5">
           <div className="flex min-w-0 items-center gap-3">
-            {review.imageUrl && review.imageEnabled !== false
-              ? <Image src={review.imageUrl} alt={review.imageCaption || `${review.name} এর পর্যালোচনা ছবি`} width={44} height={44} className="h-11 w-11 shrink-0 rounded-full border border-emerald-100 object-cover" loading="lazy" />
-              : <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 text-base font-black text-emerald-800">{review.name.trim().charAt(0) || '✓'}</span>}
-            <div className="min-w-0">
-              <p className="truncate font-black text-slate-950">{customerText(review.name)}</p>
-              {review.rating ? <p className="mt-1 inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-sm font-bold text-amber-600" aria-label={`${review.rating} out of 5`}>{'★'.repeat(review.rating)}<span className="sr-only"> / ৫</span></p> : null}
+            <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 text-emerald-700">
+              <UserRound className="h-5 w-5" strokeWidth={1.8} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="break-words text-sm font-black leading-snug text-slate-950 sm:text-base">{customerText(review.name)}</p>
+              {review.rating ? <p className="mt-1 inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-sm font-bold tracking-wide text-amber-600" aria-label={`${review.rating} out of 5`}>{'★'.repeat(review.rating)}<span className="sr-only"> / ৫</span></p> : null}
             </div>
+            <Quote className="h-5 w-5 shrink-0 self-start text-emerald-200" aria-hidden="true" />
           </div>
-          <Quote className="h-5 w-5 shrink-0 text-emerald-200" aria-hidden="true" />
-        </div>
-        <p className="mt-4 border-t border-emerald-100/80 pt-4 text-sm leading-7 text-slate-700">{customerText(review.text)}</p>
-      </article>)}
+          <p className="mt-3 whitespace-pre-line break-words border-t border-emerald-100/80 pt-3 text-sm leading-6 text-slate-700 sm:leading-7">{customerText(review.text)}</p>
+          {proofImage ? <figure className="mt-3 overflow-hidden rounded-xl border border-slate-200/90 bg-slate-50 p-1.5">
+            <div className="relative mx-auto aspect-[16/9] max-h-40 w-full overflow-hidden rounded-lg bg-white sm:max-h-44">
+              <Image src={proofImage} alt={review.imageCaption || `${review.name} এর ডেলিভারি প্রমাণ`} fill sizes="(max-width: 640px) 90vw, (max-width: 1024px) 44vw, 28vw" loading="lazy" onError={(event) => { event.currentTarget.style.display = 'none' }} className="object-contain" />
+            </div>
+            {review.imageCaption ? <figcaption className="px-1 pt-1.5 text-[11px] leading-4 text-slate-500">{customerText(review.imageCaption)}</figcaption> : null}
+          </figure> : null}
+        </article>
+      })}
     </div>
-    {galleryImages.length ? <div className="mt-5" aria-label="গ্রাহকের ছবি">
-      <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3">
-        {galleryImages.map((url, index) => <div key={`${url}-${index}`} className="relative aspect-[4/3] w-[78%] shrink-0 snap-start overflow-hidden rounded-2xl border border-emerald-100 bg-white shadow-sm sm:w-[48%] lg:w-[32%]">
-          <Image src={url} alt={`গ্রাহকের অভিজ্ঞতার ছবি ${index + 1}`} fill sizes="(max-width: 640px) 78vw, (max-width: 1024px) 48vw, 32vw" loading="lazy" className="object-cover" />
-        </div>)}
-      </div>
-    </div> : null}
-    {showDisclaimer ? <p className="mt-4 text-xs font-semibold text-slate-500">{customerText(disclaimer)}</p> : null}
+    {showDisclaimer ? <p className="mt-3 text-xs font-semibold leading-5 text-slate-500">{customerText(disclaimer)}</p> : null}
   </section>
 }
-
 function LandingOrderFormPlaceholder() {
   return <section id="order-form" className="mx-auto max-w-5xl scroll-mt-4 px-4 py-8 sm:px-6" aria-busy="true">
     <div className="min-h-48 animate-pulse rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-8">
