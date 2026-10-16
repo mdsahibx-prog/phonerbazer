@@ -253,7 +253,16 @@ export async function createOrderFromIncompleteCheckout(raw: unknown) {
   })
   if (!orderResult.ok) return { ok: false as const, message: orderResult.message || 'Order could not be created. No recovery status was changed.' }
   if ('paymentRequired' in orderResult.data) {
-    return { ok: false as const, message: 'The store risk policy requires an advance-payment workflow for this customer. The standard checkout has started that workflow; refresh the recovery list before taking further action.' }
+    revalidatePath('/admin/checkout-recovery')
+    revalidatePath('/admin/orders')
+    return {
+      ok: true as const,
+      orderId: String(orderResult.data.orderId),
+      orderNumber: String(orderResult.data.orderNumber ?? ''),
+      paymentRequired: true as const,
+      redirectUrl: orderResult.data.redirectUrl,
+      message: 'Order created. Store risk policy requires advance payment; share the secure payment link with the customer.',
+    }
   }
   const orderId = String(orderResult.data.orderId)
   const now = new Date().toISOString()
