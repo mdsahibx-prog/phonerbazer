@@ -17,7 +17,7 @@ export type LandingSection =
   | (LandingSectionBase & { type: 'quantity_selector'; title?: string; maxQuantity?: number })
   | (LandingSectionBase & { type: 'delivery_info'; title: string; body: string; href?: string })
   | (LandingSectionBase & { type: 'warranty'; title: string; items: string[]; href?: string })
-  | (LandingSectionBase & { type: 'social_proof'; title: string; body: string; disclaimer?: string; reviews?: Array<{ name: string; text: string; rating?: number; imageUrl?: string; imageCaption?: string; imageEnabled?: boolean; enabled?: boolean; sortOrder?: number }> })
+  | (LandingSectionBase & { type: 'social_proof'; title: string; body: string; disclaimer?: string; reviews?: Array<{ name: string; text: string; rating?: number; imageUrl?: string; imageCaption?: string; imageEnabled?: boolean; enabled?: boolean; sortOrder?: number }>; galleryImages?: string[] })
   | (LandingSectionBase & { type: 'image_text'; title: string; body?: string; imageUrl: string; imageAlt: string; ctaLabel?: string; ctaHref?: string })
   | (LandingSectionBase & { type: 'comparison'; title: string; items: Array<{ label: string; value: string }> })
   | (LandingSectionBase & { type: 'related_products'; title?: string; productIds?: string[] })
