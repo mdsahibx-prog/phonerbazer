@@ -133,7 +133,7 @@ function ProductHero({ section, product, variant, fixedImageUrl, onSelect }: { s
             <p className="text-[11px] font-bold text-slate-500">রং নির্বাচন</p>
             <p aria-live="polite" aria-atomic="true" className="truncate text-sm font-black text-slate-900">{variant?.color || active?.variant.color || 'রং বেছে নিন'}</p>
           </div>
-          <div className="flex shrink-0 items-center gap-2.5" role="group" aria-label="রং নির্বাচন করুন">
+          <div className="flex max-w-[58%] shrink-0 flex-wrap items-center justify-end gap-2 sm:max-w-[60%] lg:max-w-[62%]" role="group" aria-label="রং নির্বাচন করুন">
             {colorVariants.map((candidate) => {
               const color = (candidate.color ?? '').trim().toLowerCase()
               const selected = Boolean(color && variant?.color && color === variant.color.trim().toLowerCase())
