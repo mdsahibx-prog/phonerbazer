@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto'
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { z } from 'zod'
 
 import { writeAdminAuditLog } from '@/lib/admin/audit'
 import { requireAdmin } from '@/lib/admin/auth'
@@ -23,8 +24,11 @@ import {
   receiveStockSchema,
   initializeInventoryCostSchema,
   variantSchema,
+  orderDetailsSchema,
+  deleteFakeOrderSchema,
 } from '@/lib/admin/schema'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
 import { latestStatusTransitionId, loadOrderForEmail, queueOrderStatusEmail } from '@/lib/email/service'
 import { createClient } from '@/lib/supabase/server'
 import { receiveStock as receiveInventoryStock, initializeInventoryCost } from '@/lib/inventory/receiving'
@@ -122,6 +126,93 @@ export async function getAdminOrderDetail(orderId: string) {
     .eq('id', orderId).single()
   if (error || !data) throw new Error('ORDER_NOT_FOUND')
   return data
+}
+
+export async function updateOrderContactDetails(input: unknown): Promise<AdminActionResult> {
+  try {
+    const session = await requireAdmin(['OWNER', 'ADMIN'])
+    const parsed = orderDetailsSchema.parse(input)
+    const phone = normalizePhone(parsed.customerPhone)
+    if (!isValidBangladeshMobile(phone)) return { ok: false, message: 'Enter a valid Bangladesh mobile number.' }
+    const db = createAdminClient()
+    const { data, error } = await db.rpc('admin_update_order_contact_details', {
+      p_order_id: parsed.orderId,
+      p_customer_name: parsed.customerName,
+      p_customer_phone: phone,
+      p_customer_email: parsed.customerEmail ?? '',
+      p_shipping_address: parsed.shippingAddress,
+      p_shipping_area: parsed.shippingArea,
+      p_shipping_district: parsed.shippingDistrict,
+      p_shipping_division: parsed.shippingDivision,
+      p_shipping_postal_code: parsed.shippingPostalCode ?? '',
+      p_notes: parsed.notes ?? '',
+      p_actor_id: session.userId,
+    })
+    if (error || !data?.[0]) {
+      const code = error?.message ?? ''
+      if (code.includes('ORDER_HAS_SHIPMENT')) return { ok: false, message: 'A courier shipment already exists. Update the delivery details in the courier workflow instead.' }
+      if (code.includes('ORDER_NOT_ELIGIBLE_FOR_EDIT')) return { ok: false, message: 'This order has progressed too far to edit its delivery details safely.' }
+      if (code.includes('DELIVERY_SETTINGS_UNAVAILABLE')) return { ok: false, message: 'Delivery charges are not configured. Update Settings before editing this address.' }
+      return { ok: false, message: 'Unable to save order details. Refresh the order and try again.' }
+    }
+    await writeAdminAuditLog({
+      actorUserId: session.userId,
+      action: 'ORDER_CONTACT_DETAILS_UPDATED',
+      entityType: 'order',
+      entityId: parsed.orderId,
+      details: { order_number: data[0].updated_order_number, changed_fields: 'customer_contact,shipping_address,delivery_charge,notes' },
+    })
+    refreshAdminRoutes()
+    return { ok: true, message: 'Customer and delivery details updated. Delivery charge was recalculated from Store Settings.' }
+  } catch (error) {
+    if (error instanceof z.ZodError) return { ok: false, message: 'Check the customer contact and delivery fields, then try again.' }
+    return actionFailure(error)
+  }
+}
+
+export async function deleteFakeOrder(input: unknown): Promise<AdminActionResult> {
+  try {
+    const session = await requireAdmin(['OWNER', 'ADMIN'])
+    const parsed = deleteFakeOrderSchema.parse(input)
+    const db = createAdminClient()
+    await writeAdminAuditLog({
+      actorUserId: session.userId,
+      action: 'FAKE_ORDER_DELETE_REQUESTED',
+      entityType: 'order',
+      entityId: parsed.orderId,
+      details: { reason: parsed.reason },
+    })
+    const { data, error } = await db.rpc('admin_delete_unshipped_fake_order', {
+      p_order_id: parsed.orderId,
+      p_actor_id: session.userId,
+    })
+    if (error || !data?.[0]) {
+      const code = error?.message ?? ''
+      if (code.includes('ORDER_HAS_SHIPMENT')) return { ok: false, message: 'This order has a courier shipment and cannot be deleted. Cancel/reconcile it through the courier workflow.' }
+      if (code.includes('ORDER_HAS_INVOICE')) return { ok: false, message: 'An invoice exists for this order. Keep the audit trail and cancel the order instead.' }
+      if (code.includes('ORDER_HAS_PAYMENT_ACTIVITY')) return { ok: false, message: 'Payment activity exists for this order. It cannot be deleted safely.' }
+      if (code.includes('ORDER_HAS_SERIALIZED_INVENTORY')) return { ok: false, message: 'IMEI/serial inventory is linked to this order. It cannot be deleted safely.' }
+      if (code.includes('ORDER_NOT_ELIGIBLE_FOR_DELETION')) return { ok: false, message: 'Only pending, unpaid orders without fulfilment activity can be permanently deleted.' }
+      if (code.includes('ORDER_NOT_FOUND')) return { ok: false, message: 'This order no longer exists. Refresh the list.' }
+      return { ok: false, message: 'The order could not be safely deleted. No changes were committed.' }
+    }
+    try {
+      await writeAdminAuditLog({
+        actorUserId: session.userId,
+        action: 'FAKE_ORDER_DELETED',
+        entityType: 'order',
+        entityId: parsed.orderId,
+        details: { order_number: data[0].deleted_order_number, reason: parsed.reason, restored_stock_variants: data[0].restored_stock_variants },
+      })
+    } catch (auditError) {
+      console.error('[admin] order deleted but completion audit log failed', auditError instanceof Error ? auditError.message : auditError)
+    }
+    refreshAdminRoutes()
+    return { ok: true, message: `Order ${data[0].deleted_order_number} permanently deleted. Stock was safely reconciled and an inventory movement was recorded.` }
+  } catch (error) {
+    if (error instanceof z.ZodError) return { ok: false, message: 'Enter a reason for deleting this fake order.' }
+    return actionFailure(error)
+  }
 }
 
 export async function saveProduct(input: unknown): Promise<AdminActionResult> {

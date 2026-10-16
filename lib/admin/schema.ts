@@ -104,6 +104,24 @@ export const orderStatusSchema = z.object({
   notes: z.string().trim().max(1000).optional().or(z.literal('')),
 })
 
+export const orderDetailsSchema = z.object({
+  orderId: uuid,
+  customerName: z.string().trim().min(2).max(120),
+  customerPhone: z.string().trim().min(7).max(32),
+  customerEmail: z.string().trim().email().max(254).optional().or(z.literal('')),
+  shippingAddress: z.string().trim().min(5).max(500),
+  shippingArea: z.string().trim().min(2).max(100),
+  shippingDistrict: z.string().trim().min(2).max(100),
+  shippingDivision: z.string().trim().min(2).max(100),
+  shippingPostalCode: z.string().trim().max(20).optional().or(z.literal('')),
+  notes: z.string().trim().max(1000).optional().or(z.literal('')),
+})
+
+export const deleteFakeOrderSchema = z.object({
+  orderId: uuid,
+  reason: z.string().trim().min(3).max(500),
+})
+
 const socialUrl = (platform: string) => z.string().trim().url().max(2048).refine((value) => {
   try {
     const hostname = new URL(value).hostname.toLowerCase().replace(/^www\./, '')
