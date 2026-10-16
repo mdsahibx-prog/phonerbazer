@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { createOrderFromIncompleteCheckout, getRecoveryProductVariants, updateCheckoutRecoveryOutcome } from '@/lib/commerce/checkout-recovery-actions'
 
 type RecoveryVariant = { id: string; variant_title: string; color: string | null; ram: string | null; storage: string | null; price: number; stock_quantity: number }
@@ -14,6 +15,7 @@ type RecoveryRow = {
 function formatDate(value: string) { return new Date(value).toLocaleString('en-BD', { dateStyle: 'medium', timeStyle: 'short' }) }
 function phoneForWhatsApp(value: string) { const digits = value.replace(/\D/g, ''); return digits.startsWith('880') ? digits : digits.startsWith('0') ? '88' + digits : '880' + digits }
 export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q, now }: { rows: RecoveryRow[]; count: number; page: number; pageSize: number; status?: string; q?: string; now: string }) {
+  const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [notice, setNotice] = useState('')
   const [converting, setConverting] = useState<RecoveryRow | null>(null)
@@ -71,7 +73,7 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
     }
     startTransition(() => { void createOrderFromIncompleteCheckout(payload).then((result) => {
       setNotice(result.ok ? `Order ${result.orderNumber || result.orderId} created successfully.` : result.message)
-      if (result.ok) setConverting(null)
+      if (result.ok) { setConverting(null); router.refresh() }
     }).catch(() => setNotice('Unable to create order. Please refresh and retry.')) })
   }
   return <div className="space-y-4">
@@ -118,7 +120,7 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
         const items = Array.isArray(snapshot.items) ? snapshot.items as Array<{ product_name?: string; variant_title?: string; quantity?: number; unit_price_snapshot?: number }> : []
         const consent = Boolean(row.recovery_consent_at && !row.recovery_consent_withdrawn_at)
         const expired = new Date(row.expires_at).getTime() <= new Date(now).getTime()
-        const eligible = row.status === 'ABANDONED' && consent && !expired && !row.completed_order_id && (row.recovery_contact_count ?? 0) < 2 && Boolean(row.customer_phone)
+        const eligible = row.status === 'ABANDONED' && consent && !expired && !row.completed_order_id && !['CLOSED', 'NOT_INTERESTED', 'RECOVERED'].includes(row.recovery_outcome ?? '') && (row.recovery_contact_count ?? 0) < 2 && Boolean(row.customer_phone)
         const total = items.reduce((sum, item) => sum + Number(item.unit_price_snapshot ?? 0) * Number(item.quantity ?? 0), 0)
         return <article key={row.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
