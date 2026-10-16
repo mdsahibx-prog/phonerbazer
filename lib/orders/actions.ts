@@ -6,6 +6,8 @@ import { z } from 'zod'
 import { after } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizePhone } from '@/lib/orders/phone'
+import { getDeliveryZoneForDivision } from '@/lib/orders/locations'
+import { buildDeliveryZonesQuote } from '@/lib/orders/delivery-quote'
 import { queueOrderConfirmationEmails } from '@/lib/email/service'
 import { markCheckoutSession, recordCommerceEvent, recordPurchaseOnce } from '@/lib/analytics/events'
 import { assessCustomerRisk } from '@/lib/risk/service'
@@ -19,10 +21,11 @@ import {
   type GuestOrderInput,
   type OrderSuccessSummary,
   type Quote,
+  type DeliveryZonesQuote,
   type TrackingSummary,
 } from '@/lib/orders/schema'
 
-type ActionResult<T> = { ok: true; data: T } | { ok: false; message: string; fieldErrors?: Record<string, string> }
+type ActionResult<T> = { ok: true; data: T } | { ok: false; message: string; fieldErrors?: Record<string, string>; quote?: Quote }
 
 type VariantRow = {
   id: string
@@ -51,55 +54,108 @@ function numeric(value: unknown) {
 function deliveryForDivision(division: string, settings: SettingsRow[]) {
   const config = settings.find((setting) => setting.key === 'delivery_charges')?.value
   const delivery = (config && typeof config === 'object' ? config : {}) as Record<string, unknown>
-  const deliveryZone: 'dhaka' | 'outside_dhaka' = division.trim().toLowerCase() === 'dhaka' ? 'dhaka' : 'outside_dhaka'
-  const deliveryCharge = numeric(delivery[deliveryZone === 'dhaka' ? 'dhaka' : 'outside_dhaka'])
+  const deliveryZone = getDeliveryZoneForDivision(division)
+  const deliveryCharge = numeric(delivery[deliveryZone])
   if (deliveryCharge === null || deliveryCharge < 0) throw new Error('Delivery configuration is unavailable.')
   return { deliveryZone, deliveryCharge }
 }
 
-async function loadVariantQuote(selection: { productId: string; variantId: string; quantity: number }, division: string): Promise<Quote> {
+type VariantQuoteContext = {
+  variant: VariantRow
+  settings: SettingsRow[]
+  imageUrl: string | null
+  unitPrice: number
+  compareAtPrice: number | null
+  subtotal: number
+  discountTotal: number
+  quantity: number
+}
+
+async function loadVariantQuoteContext(selection: { productId: string; variantId: string; quantity: number }): Promise<VariantQuoteContext> {
   const admin = createAdminClient()
-  const { data, error } = await admin
-    .from('product_variants')
-    .select('id,product_id,sku,variant_title,ram,storage,color,price,compare_at_price,stock_quantity,is_active,product:products!inner(id,name,is_published,warranty_policy,product_images(image_url,variant_id,is_primary,sort_order))')
-    .eq('id', selection.variantId)
-    .eq('product_id', selection.productId)
-    .maybeSingle()
-
-  if (error || !data) throw new Error('This product variant is no longer available.')
-  const variant = data as unknown as VariantRow
-  if (!variant.is_active || !variant.product?.is_published) throw new Error('This product is not currently available to order.')
-
-  const [settingsResult] = await Promise.all([
+  const [variantResult, settingsResult] = await Promise.all([
+    admin
+      .from('product_variants')
+      .select('id,product_id,sku,variant_title,ram,storage,color,price,compare_at_price,stock_quantity,is_active,product:products!inner(id,name,is_published,warranty_policy,product_images(image_url,variant_id,is_primary,sort_order))')
+      .eq('id', selection.variantId)
+      .eq('product_id', selection.productId)
+      .maybeSingle(),
     admin.from('settings').select('key,value').eq('key', 'delivery_charges').limit(1),
   ])
+
+  if (variantResult.error || !variantResult.data) throw new Error('This product variant is no longer available.')
   if (settingsResult.error) throw new Error('Delivery configuration is unavailable.')
 
-  const variantImages = (variant.product?.product_images ?? []).filter((image) => image.variant_id === variant.id).sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.sort_order - b.sort_order)
-  const variantImageUrl = variantImages[0]?.image_url ?? ((variant.product?.product_images ?? []).find((image) => image.is_primary)?.image_url ?? null)
+  const variant = variantResult.data as unknown as VariantRow
+  if (!variant.is_active || !variant.product?.is_published) throw new Error('This product is not currently available to order.')
+
+  const variantImages = (variant.product?.product_images ?? [])
+    .filter((image) => image.variant_id === variant.id)
+    .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.sort_order - b.sort_order)
+  const imageUrl = variantImages[0]?.image_url ?? ((variant.product?.product_images ?? []).find((image) => image.is_primary)?.image_url ?? null)
   const unitPrice = numeric(variant.price)
   const compareAtPrice = variant.compare_at_price === null ? null : numeric(variant.compare_at_price)
   if (unitPrice === null || unitPrice < 0) throw new Error('The selected variant has no valid selling price.')
-  const { deliveryZone, deliveryCharge } = deliveryForDivision(division, (settingsResult.data ?? []) as SettingsRow[])
-  const subtotal = unitPrice * selection.quantity
-  const discountTotal = Math.max((compareAtPrice ?? unitPrice) - unitPrice, 0) * selection.quantity
 
   return {
-    productName: variant.product.name,
-    variantTitle: variant.variant_title,
-    color: variant.color ?? null,
-    imageUrl: variantImageUrl,
-    sku: variant.sku,
-    quantity: selection.quantity,
+    variant,
+    settings: (settingsResult.data ?? []) as SettingsRow[],
+    imageUrl,
     unitPrice,
     compareAtPrice,
-    discountTotal,
-    subtotal,
+    subtotal: unitPrice * selection.quantity,
+    discountTotal: Math.max((compareAtPrice ?? unitPrice) - unitPrice, 0) * selection.quantity,
+    quantity: selection.quantity,
+  }
+}
+
+function quoteFromContext(context: VariantQuoteContext, division: string): Quote {
+  const { variant } = context
+  const product = variant.product
+  if (!product) throw new Error('This product is no longer available.')
+  const { deliveryZone, deliveryCharge } = deliveryForDivision(division, context.settings)
+  return {
+    productName: product.name,
+    variantTitle: variant.variant_title,
+    color: variant.color ?? null,
+    imageUrl: context.imageUrl,
+    sku: variant.sku,
+    quantity: context.quantity,
+    unitPrice: context.unitPrice,
+    compareAtPrice: context.compareAtPrice,
+    discountTotal: context.discountTotal,
+    subtotal: context.subtotal,
     deliveryCharge,
-    grandTotal: subtotal + deliveryCharge,
+    grandTotal: context.subtotal + deliveryCharge,
     deliveryZone,
-    warrantyPolicy: variant.product.warranty_policy,
-    available: variant.stock_quantity >= selection.quantity,
+    warrantyPolicy: product.warranty_policy,
+    available: variant.stock_quantity >= context.quantity,
+  }
+}
+
+async function loadVariantQuote(selection: { productId: string; variantId: string; quantity: number }, division: string): Promise<Quote> {
+  return quoteFromContext(await loadVariantQuoteContext(selection), division)
+}
+
+export async function quoteDeliveryZones(input: unknown): Promise<ActionResult<DeliveryZonesQuote>> {
+  const parsed = orderSelectionSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, message: 'সঠিক পণ্য ও পরিমাণ নির্বাচন করুন।', fieldErrors: fieldErrors(parsed.error) }
+  try {
+    const context = await loadVariantQuoteContext(parsed.data)
+    const dhaka = quoteFromContext(context, 'Dhaka')
+    const outside = quoteFromContext(context, 'outside_dhaka')
+    if (!dhaka.available || !outside.available) {
+      return { ok: true, data: buildDeliveryZonesQuote(dhaka, { dhakaCharge: dhaka.deliveryCharge, outsideDhakaCharge: outside.deliveryCharge }) }
+    }
+    return {
+      ok: true,
+      data: buildDeliveryZonesQuote(dhaka, {
+        dhakaCharge: dhaka.deliveryCharge,
+        outsideDhakaCharge: outside.deliveryCharge,
+      }),
+    }
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : 'মোট মূল্য হিসাব করা যায়নি। আবার চেষ্টা করুন।' }
   }
 }
 
@@ -156,8 +212,10 @@ export async function loadOrderSuccessById(orderId: string): Promise<OrderSucces
   }
 }
 
+const prepareGuestCheckoutSchema = orderSelectionSchema.extend({ checkoutRequestId: z.string().uuid().optional(), source: z.enum(['QUICK_ORDER', 'LANDING_PAGE']).default('QUICK_ORDER') })
+
 export async function prepareGuestCheckout(input: unknown): Promise<ActionResult<{ checkoutRequestId: string; redirectUrl: string }>> {
-  const parsed = orderSelectionSchema.safeParse(input)
+  const parsed = prepareGuestCheckoutSchema.safeParse(input)
   if (!parsed.success) return { ok: false, message: 'Please select a valid product option and quantity.', fieldErrors: fieldErrors(parsed.error) }
 
   try {
@@ -185,7 +243,8 @@ export async function prepareGuestCheckout(input: unknown): Promise<ActionResult
     if (!variant.is_active || !variant.product?.is_published) return { ok: false, message: 'This product is not currently available to order.' }
     if (variant.stock_quantity < parsed.data.quantity) return { ok: false, message: 'The selected quantity is no longer available.' }
 
-    const checkoutRequestId = crypto.randomUUID()
+    const checkoutRequestId = parsed.data.checkoutRequestId ?? crypto.randomUUID()
+    const source = parsed.data.source
     const quoteSnapshot = {
       product_id: variant.product_id,
       variant_id: variant.id,
@@ -200,8 +259,8 @@ export async function prepareGuestCheckout(input: unknown): Promise<ActionResult
     // The checkout page and final order creation remain authoritative.
     after(() =>
       Promise.all([
-        markCheckoutSession({ checkoutRequestId, source: 'QUICK_ORDER', status: 'STARTED', quoteSnapshot }),
-        recordCommerceEvent({ eventId: `${checkoutRequestId}:started`, eventName: 'CHECKOUT_STARTED', sessionId: checkoutRequestId, metadata: { source: 'QUICK_ORDER', product_id: variant.product_id, variant_id: variant.id, quantity: parsed.data.quantity } }),
+        markCheckoutSession({ checkoutRequestId, source, status: 'STARTED', quoteSnapshot }),
+        recordCommerceEvent({ eventId: `${checkoutRequestId}:started`, eventName: 'CHECKOUT_STARTED', sessionId: checkoutRequestId, metadata: { source, product_id: variant.product_id, variant_id: variant.id, quantity: parsed.data.quantity } }),
       ]).catch((error) => console.error('[checkout] session tracking failed', error)),
     )
 
@@ -349,6 +408,9 @@ export async function createGuestOrderWithRisk(input: unknown): Promise<ActionRe
       assessCustomerRisk({ phone: payload.phone }),
     ])
     if (!quote.available) return { ok: false, message: 'The selected quantity is no longer available. Please adjust your order and try again.' }
+    if (payload.expectedGrandTotal !== undefined && payload.expectedGrandTotal !== quote.grandTotal) {
+      return { ok: false, message: 'মোট মূল্য পরিবর্তিত হয়েছে। নতুন মূল্য দেখে আবার অর্ডার কনফার্ম করুন।', quote }
+    }
     const paymentRequirement = paymentRequirementForRiskAction(risk.action)
     if (paymentRequirement === 'COD') {
       const db = createAdminClient()

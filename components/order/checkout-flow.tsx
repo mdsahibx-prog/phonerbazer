@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Check, CheckCircle2, ChevronDown, LoaderCircle, PackageCheck, Search, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, Check, CheckCircle2, LoaderCircle, PackageCheck, ShieldCheck } from 'lucide-react'
 import Image from 'next/image'
 
 import { createGuestOrderWithRisk, quoteGuestCodOrder } from '@/lib/orders/actions'
@@ -11,6 +11,8 @@ import { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
 import { getAnalyticsConsent, trackClientEvent } from '@/lib/analytics/client'
 import type { OrderSuccessSummary, Quote } from '@/lib/orders/schema'
 import { formatPrice } from '@/lib/services/storefront-utils'
+import { SearchSelect } from '@/components/order/search-select'
+import { DIVISIONS, districtsForDivision } from '@/lib/orders/locations'
 
 type FormState = {
   fullName: string
@@ -24,18 +26,6 @@ type FormState = {
 
 const initialForm: FormState = { fullName: '', phone: '', division: '', district: '', area: '', address: '', quantity: 1 }
 
-const DIVISIONS = ['Dhaka', 'Chattogram', 'Rajshahi', 'Khulna', 'Barishal', 'Sylhet', 'Rangpur', 'Mymensingh'] as const
-const DISTRICTS_BY_DIVISION: Record<string, string[]> = {
-  Dhaka: ['Dhaka', 'Faridpur', 'Gazipur', 'Gopalganj', 'Kishoreganj', 'Madaripur', 'Manikganj', 'Munshiganj', 'Narayanganj', 'Narsingdi', 'Rajbari', 'Shariatpur', 'Tangail'],
-  Chattogram: ['Bandarban', 'Brahmanbaria', 'Chandpur', 'Chattogram', 'Cox’s Bazar', 'Cumilla', 'Feni', 'Khagrachhari', 'Lakshmipur', 'Noakhali', 'Rangamati'],
-  Rajshahi: ['Bogura', 'Chapainawabganj', 'Joypurhat', 'Naogaon', 'Natore', 'Pabna', 'Rajshahi', 'Sirajganj'],
-  Khulna: ['Bagerhat', 'Chuadanga', 'Jashore', 'Jhenaidah', 'Khulna', 'Kushtia', 'Magura', 'Meherpur', 'Narail', 'Satkhira'],
-  Barishal: ['Barguna', 'Barishal', 'Bhola', 'Jhalokathi', 'Patuakhali', 'Pirojpur'],
-  Sylhet: ['Habiganj', 'Moulvibazar', 'Sunamganj', 'Sylhet'],
-  Rangpur: ['Dinajpur', 'Gaibandha', 'Kurigram', 'Lalmonirhat', 'Nilphamari', 'Panchagarh', 'Rangpur', 'Thakurgaon'],
-  Mymensingh: ['Jamalpur', 'Mymensingh', 'Netrokona', 'Sherpur'],
-}
-
 type Step = 'contact' | 'delivery' | 'review'
 
 
@@ -45,23 +35,6 @@ function Input({ label, value, onChange, onBlur, error, type = 'text', placehold
     <input value={value} onChange={(event) => onChange(event.target.value)} onBlur={onBlur} type={type} inputMode={type === 'tel' ? 'tel' : undefined} autoComplete={autoComplete} placeholder={placeholder} className={`mt-1.5 h-12 w-full rounded-xl border bg-white px-3.5 text-sm text-slate-950 outline-none focus:border-[var(--brand-orange)] focus:ring-4 focus:ring-orange-100 ${error ? 'border-rose-400' : 'border-slate-200'}`} />
     {error && <span className="mt-1 block text-[11px] font-bold text-rose-600">{error}</span>}
   </label>
-}
-
-function SearchSelect({ label, value, options, placeholder, disabled, error, onChange }: { label: string; value: string; options: string[]; placeholder: string; disabled?: boolean; error?: string; onChange: (value: string) => void }) {
-  const [open, setOpen] = useState(false)
-  const [search, setSearch] = useState('')
-  const filtered = options.filter((option) => option.toLowerCase().includes(search.trim().toLowerCase()))
-  return <div className="relative min-w-0">
-    <span className="text-xs font-black text-slate-800">{label}</span>
-    <button type="button" disabled={disabled} onClick={() => { setOpen((current) => !current); setSearch('') }} className={`mt-1.5 flex h-12 w-full items-center justify-between rounded-xl border bg-white px-3.5 text-left text-sm outline-none focus:border-[var(--brand-orange)] focus:ring-4 focus:ring-orange-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 ${error ? 'border-rose-400' : 'border-slate-200'}`}>
-      <span className={value ? 'font-semibold text-slate-950' : 'text-slate-400'}>{value || placeholder}</span><ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
-    </button>
-    {open && !disabled && <div className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-      <div className="flex items-center gap-2 border-b border-slate-100 px-3"><Search className="h-4 w-4 text-slate-400" /><input autoFocus value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search..." className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none" /></div>
-      <div className="max-h-52 overflow-y-auto p-1.5">{filtered.length ? filtered.map((option) => <button key={option} type="button" onClick={() => { onChange(option); setOpen(false) }} className={`flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm ${option === value ? 'bg-orange-50 font-black text-orange-700' : 'text-slate-700 hover:bg-orange-50'}`}>{option}</button>) : <p className="px-3 py-4 text-xs text-slate-500">No matching options.</p>}</div>
-    </div>}
-    {error && <span className="mt-1 block text-[11px] font-bold text-rose-600">{error}</span>}
-  </div>
 }
 
 function Progress({ step }: { step: Step }) {
@@ -214,7 +187,7 @@ export function CheckoutFlow({ productId, variantId, initialQuantity = 1, initia
         <button type="button" onClick={() => setStep('contact')} className="inline-flex items-center gap-1 text-xs font-bold text-slate-500"><ArrowLeft className="h-3.5 w-3.5" /> Edit contact</button>
         <div className="grid gap-3 sm:grid-cols-2">
           <SearchSelect label="Division" value={form.division} options={[...DIVISIONS]} placeholder="Select division" error={fieldErrors.division} onChange={(value) => { update('division', value); update('district', ''); update('area', '') }} />
-          <SearchSelect label="District" value={form.district} options={DISTRICTS_BY_DIVISION[form.division] ?? []} placeholder="Select district" disabled={!form.division} error={fieldErrors.district} onChange={(value) => { update('district', value); update('area', '') }} />
+          <SearchSelect label="District" value={form.district} options={districtsForDivision(form.division)} placeholder="Select district" disabled={!form.division} error={fieldErrors.district} onChange={(value) => { update('district', value); update('area', '') }} />
           <Input label="Area / Upazila" value={form.area} onChange={(value) => update('area', value)} error={fieldErrors.area} placeholder={form.district ? 'Area / thana' : 'Select district first'} />
           <label className="block sm:col-span-2"><span className="text-xs font-black text-slate-800">Full delivery address</span><textarea value={form.address} onChange={(event) => update('address', event.target.value)} rows={2} placeholder="House, road, landmark or village" className={`mt-1.5 w-full resize-none rounded-xl border bg-white px-3.5 py-2.5 text-sm outline-none focus:border-[var(--brand-orange)] focus:ring-4 focus:ring-orange-100 ${fieldErrors.address ? 'border-rose-400' : 'border-slate-200'}`} />{fieldErrors.address && <span className="mt-1 block text-[11px] font-bold text-rose-600">{fieldErrors.address}</span>}</label>
         </div>
