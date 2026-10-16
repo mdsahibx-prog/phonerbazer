@@ -72,6 +72,40 @@ test('landing order form loads ahead of view without an extra start-order click'
   assert.match(source, /if \(!loadForm\) return <LandingOrderFormPlaceholder \/>/)
 })
 
+
+test('landing checkout keeps the dynamic WhatsApp action without redundant helper copy', () => {
+  const source = readFileSync(resolve(process.cwd(), 'components/landing-pages/landing-order-form.tsx'), 'utf8')
+  assert.match(source, /https:\/\/wa\.me\//)
+  assert.match(source, /encodeURIComponent\(/)
+  assert.match(source, /quote\?\.productName \?\? product\.name/)
+  assert.match(source, /quote\?\.variantTitle \|\| variantLabel\(variant\)/)
+  assert.match(source, /\- পরিমাণ: \$\{quantity\}/)
+  assert.doesNotMatch(source, /অথবা সরাসরি হোয়াটসঅ্যাপে অর্ডার করুন/)
+  assert.doesNotMatch(source, /এটি বিকল্প যোগাযোগের মাধ্যম; মূল অর্ডার ফর্ম আগের মতোই কাজ করবে।/)
+  assert.match(source, /type="submit"/)
+  assert.match(source, /createGuestOrderWithRisk/)
+})
+
+test('landing footer transition is compact and sticky-order clearance is reserved at the footer edge', () => {
+  const renderer = readFileSync(resolve(process.cwd(), 'components/landing-pages/landing-page-renderer.tsx'), 'utf8')
+  const conversion = readFileSync(resolve(process.cwd(), 'components/landing-pages/landing-conversion-sections.tsx'), 'utf8')
+  const footer = readFileSync(resolve(process.cwd(), 'components/landing-pages/landing-footer.tsx'), 'utf8')
+  assert.ok(renderer.indexOf('<LandingTrustBridge />') >= 0)
+  assert.ok(renderer.indexOf('<LandingTrustBridge />') < renderer.indexOf('<LandingFooter'))
+  assert.match(footer, /safe-area-inset-bottom/)
+  assert.doesNotMatch(conversion, /min-h-screen overflow-x-clip bg-white pb-24 text-slate-950/)
+  assert.match(footer, /export function LandingTrustBridge\(/)
+  assert.match(footer, /ডেলিভারি চার্জ আগে দেখুন/)
+})
+
+test('landing product color options do not depend on unique gallery image URLs and wrap at narrow widths', () => {
+  const source = readFileSync(resolve(process.cwd(), 'components/landing-pages/landing-conversion-sections.tsx'), 'utf8')
+  assert.match(source, /const colorVariants = product\.variants\.filter/)
+  assert.match(source, /\{colorVariants\.map\(\(candidate\)/)
+  assert.match(source, /flex max-w-\[58%\] shrink-0 flex-wrap/)
+  assert.match(source, /focus-visible:ring-emerald-500/)
+})
+
 test('derives legacy COD district and area from the free-form address without guessing unknown areas', () => {
   const inferred = resolveDeliveryFieldsFromAddress('Dhaka', 'House 10, Road 5, Mirpur, Dhaka')
   assert.equal(inferred.district, 'Dhaka')
