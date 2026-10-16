@@ -249,20 +249,42 @@ function ReviewSection({ section }: { section: Extract<LandingSection, { type: '
   </section>
 }
 
-const LazyLandingOrderForm = dynamic(() => import('./landing-order-form').then((module) => module.LandingOrderForm), { ssr: false, loading: () => <section id="order-form" className="mx-auto max-w-5xl scroll-mt-4 px-4 py-8 sm:px-6" aria-busy="true"><div className="min-h-48 animate-pulse rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-8"><div className="h-6 w-40 rounded bg-slate-200" /><div className="mt-4 h-12 rounded-xl bg-slate-200" /><div className="mt-3 h-12 rounded-xl bg-slate-200" /></div></section> })
+function LandingOrderFormPlaceholder() {
+  return <section id="order-form" className="mx-auto max-w-5xl scroll-mt-4 px-4 py-8 sm:px-6" aria-busy="true">
+    <div className="min-h-48 animate-pulse rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-8">
+      <p className="sr-only">অর্ডার ফর্ম প্রস্তুত হচ্ছে</p>
+      <div className="h-6 w-40 rounded bg-slate-200" />
+      <div className="mt-4 h-12 rounded-xl bg-slate-200" />
+      <div className="mt-3 h-12 rounded-xl bg-slate-200" />
+    </div>
+  </section>
+}
+
+const LazyLandingOrderForm = dynamic(() => import('./landing-order-form').then((module) => module.LandingOrderForm), {
+  ssr: false,
+  loading: () => <LandingOrderFormPlaceholder />,
+})
 
 function DeferredOrderForm({ product, variant, quantity }: { product: StorefrontProduct; variant: StorefrontVariant; quantity: number }) {
   const [loadForm, setLoadForm] = useState(false)
   useEffect(() => {
+    if (loadForm) return
+    if (typeof IntersectionObserver === 'undefined') {
+      const frame = window.requestAnimationFrame(() => setLoadForm(true))
+      return () => window.cancelAnimationFrame(frame)
+    }
     const target = document.getElementById('order-form')
-    if (!target || loadForm) return
+    if (!target) return
     const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) { setLoadForm(true); observer.disconnect() }
-    }, { rootMargin: '0px' })
+      if (entries.some((entry) => entry.isIntersecting)) {
+        setLoadForm(true)
+        observer.disconnect()
+      }
+    }, { rootMargin: '480px 0px' })
     observer.observe(target)
     return () => observer.disconnect()
   }, [loadForm])
-  if (!loadForm) return <section id="order-form" className="mx-auto max-w-5xl scroll-mt-4 px-4 py-8 sm:px-6"><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8"><h2 className="text-2xl font-black text-slate-950">অর্ডার ফর্ম</h2><p className="mt-2 text-sm leading-6 text-slate-600">ক্যাশ অন ডেলিভারি। পণ্য হাতে পেয়ে মূল্য পরিশোধ করুন।</p><button type="button" onClick={() => setLoadForm(true)} className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-emerald-600 px-6 py-3 text-sm font-black text-white transition hover:bg-emerald-700 sm:w-auto">অর্ডার শুরু করুন</button></div></section>
+  if (!loadForm) return <LandingOrderFormPlaceholder />
   return <LazyLandingOrderForm product={product} variant={variant} quantity={quantity} />
 }
 

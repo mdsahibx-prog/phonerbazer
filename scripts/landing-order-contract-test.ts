@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import test from 'node:test'
 
 import { buildDeliveryZonesQuote } from '@/lib/orders/delivery-quote'
@@ -60,4 +62,12 @@ test('delivery zone quote output contains both server-provided charges and autho
     warrantyPolicy: 'Warranty',
     available: true,
   })
+})
+
+
+test('landing order form loads ahead of view without an extra start-order click', () => {
+  const source = readFileSync(resolve(process.cwd(), 'components/landing-pages/landing-conversion-sections.tsx'), 'utf8')
+  assert.doesNotMatch(source, /অর্ডার শুরু করুন/)
+  assert.match(source, /rootMargin:\s*'480px 0px'/)
+  assert.match(source, /if \(!loadForm\) return <LandingOrderFormPlaceholder \/>/)
 })
