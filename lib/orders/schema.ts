@@ -17,8 +17,10 @@ export const customerDetailsSchema = z.object({
 
 export const deliveryDetailsSchema = z.object({
   division: z.string().trim().min(2, 'Select your division.').max(80),
-  district: z.string().trim().min(2, 'Enter your district.').max(80),
-  area: z.string().trim().min(2, 'Enter your area or upazila.').max(100),
+  // These legacy fields are optional in the customer form; the server derives
+  // them from the full address when the existing COD RPC requires them.
+  district: z.string().trim().min(2, 'Enter your district.').max(80).optional().or(z.literal('')),
+  area: z.string().trim().min(2, 'Enter your area or upazila.').max(100).optional().or(z.literal('')),
   address: z.string().trim().min(8, 'Enter your full delivery address.').max(500),
   postalCode: optionalText,
   notes: optionalText,

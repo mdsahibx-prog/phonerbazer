@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { after } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizePhone } from '@/lib/orders/phone'
-import { getDeliveryZoneForDivision } from '@/lib/orders/locations'
+import { getDeliveryZoneForDivision, resolveDeliveryFieldsFromAddress } from '@/lib/orders/locations'
 import { buildDeliveryZonesQuote } from '@/lib/orders/delivery-quote'
 import { queueOrderConfirmationEmails } from '@/lib/email/service'
 import { markCheckoutSession, recordCommerceEvent, recordPurchaseOnce } from '@/lib/analytics/events'
@@ -342,7 +342,14 @@ export async function createGuestCodOrder(input: unknown): Promise<ActionResult<
   const parsed = guestOrderInputSchema.safeParse(input)
   if (!parsed.success) return { ok: false, message: 'Please correct the highlighted details.', fieldErrors: fieldErrors(parsed.error) }
 
-  const payload: GuestOrderInput = { ...parsed.data, phone: normalizePhone(parsed.data.phone), email: parsed.data.email || '' }
+  const inferredLocation = resolveDeliveryFieldsFromAddress(parsed.data.division, parsed.data.address)
+  const payload: GuestOrderInput = {
+    ...parsed.data,
+    phone: normalizePhone(parsed.data.phone),
+    email: parsed.data.email || '',
+    district: parsed.data.district?.trim() || inferredLocation.district,
+    area: parsed.data.area?.trim() || inferredLocation.area,
+  }
   try {
     // This preflight makes unavailable-state feedback clearer; the database function performs the final locked revalidation.
     const quote = await loadVariantQuote(payload, payload.division)
