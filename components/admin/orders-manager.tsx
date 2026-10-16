@@ -16,6 +16,47 @@ const statusDescriptions: Record<string, string> = {
 const currency = new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT', maximumFractionDigits: 0 })
 const riskLabels: Record<string, string> = { ALLOW: 'COD permitted', ALLOW_WITH_VERIFICATION: 'Verification / advance payment', REQUIRE_PREPAYMENT: 'Advance payment required', MANUAL_REVIEW: 'Manual review', TEMPORARILY_RESTRICT: 'Temporarily restricted', BLOCK: 'Order blocked' }
 
+const adminOrderDetailCache = new Map<string, any>()
+const adminOrderDetailRequests = new Map<string, Promise<any>>()
+const MAX_CACHED_ORDER_DETAILS = 12
+
+function loadAdminOrderDetail(orderId: string): Promise<any> {
+  const cached = adminOrderDetailCache.get(orderId)
+  if (cached) {
+    // Refresh insertion order for a small least-recently-used cache.
+    adminOrderDetailCache.delete(orderId)
+    adminOrderDetailCache.set(orderId, cached)
+    return Promise.resolve(cached)
+  }
+
+  const existing = adminOrderDetailRequests.get(orderId)
+  if (existing) return existing
+
+  const request = getAdminOrderDetail(orderId)
+    .then((detail) => {
+      adminOrderDetailCache.set(orderId, detail)
+      while (adminOrderDetailCache.size > MAX_CACHED_ORDER_DETAILS) {
+        const oldestId = adminOrderDetailCache.keys().next().value
+        if (!oldestId) break
+        adminOrderDetailCache.delete(oldestId)
+      }
+      return detail
+    })
+    .finally(() => { adminOrderDetailRequests.delete(orderId) })
+
+  adminOrderDetailRequests.set(orderId, request)
+  return request
+}
+
+function preloadAdminOrderDetail(orderId: string) {
+  if (adminOrderDetailCache.has(orderId) || adminOrderDetailRequests.has(orderId)) return
+  // Avoid flooding the server if a desktop pointer quickly crosses many rows.
+  if (adminOrderDetailRequests.size >= 2) return
+  void loadAdminOrderDetail(orderId).catch(() => {
+    // A prefetch failure is intentionally silent; selecting the row retries it.
+  })
+}
+
 export function OrdersManager({ orders, invoiceGenerationEnabled }: { orders: any[]; invoiceGenerationEnabled: boolean }) {
   const [selectedId, setSelectedId] = useState(orders[0]?.id ?? '')
   const [selected, setSelected] = useState<any | null>(orders[0] ?? null)
@@ -23,22 +64,42 @@ export function OrdersManager({ orders, invoiceGenerationEnabled }: { orders: an
   const [detailError, setDetailError] = useState<string | null>(null)
   const detailLoading = Boolean(selectedId && loadedOrderId !== selectedId && !detailError)
 
+  function selectOrder(orderId: string) {
+    setSelectedId(orderId)
+    setDetailError(null)
+    const cached = adminOrderDetailCache.get(orderId)
+    if (cached) {
+      // Render cached detail immediately instead of showing a loading panel.
+      setSelected(cached)
+      setLoadedOrderId(orderId)
+    }
+  }
+
   useEffect(() => {
     if (!selectedId) return
     let active = true
-    getAdminOrderDetail(selectedId).then((detail) => {
-      if (active) { setSelected(detail); setLoadedOrderId(selectedId) }
+    setDetailError(null)
+    loadAdminOrderDetail(selectedId).then((detail) => {
+      if (active) {
+        setSelected(detail)
+        setLoadedOrderId(selectedId)
+        // Warm only the next row so sequential order review feels instant
+        // without fetching all 100 order details up front.
+        const currentIndex = orders.findIndex((order) => order.id === selectedId)
+        const nextOrder = currentIndex >= 0 ? orders[currentIndex + 1] : undefined
+        if (nextOrder) preloadAdminOrderDetail(nextOrder.id)
+      }
     }).catch(() => {
       if (active) setDetailError('Unable to load this order detail. Please try again.')
     })
     return () => { active = false }
-  }, [selectedId])
+  }, [selectedId, orders])
 
   return <div className="space-y-4">
     <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-100 px-5 py-4"><h2 className="font-semibold">Orders</h2><p className="mt-1 text-sm text-slate-500">Search results are capped at 100 records per request.</p></div>
-      {orders.length ? <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-3">Order</th><th className="px-5 py-3">Customer</th><th className="px-5 py-3">Order status</th><th className="px-5 py-3">Courier</th><th className="px-5 py-3">Risk / payment</th><th className="px-5 py-3 text-right">Total</th></tr></thead><tbody>{orders.map((order) => { const shipment = (order.shipments ?? []).find((item: any) => item.provider === 'PATHAO') ?? (order.shipments ?? [])[0]; const risk = (order.risk_assessments ?? [])[0]; const paymentLabel = order.payment_requirement === 'FULL_ADVANCE' ? 'Advance' : order.payment_requirement === 'MANUAL_REVIEW' ? 'Review' : 'COD'; return <tr key={order.id} onClick={() => { setSelectedId(order.id); setDetailError(null) }} className={`cursor-pointer border-t border-slate-100 border-l-4 transition ${selected?.id === order.id ? 'border-l-orange-500 bg-orange-50' : 'border-l-transparent hover:bg-slate-50'}`}><td className="px-5 py-3"><p className="font-mono text-xs font-bold text-slate-800">{order.order_number}</p>{String(order.notes ?? '').includes('Converted from incomplete checkout.') ? <span className="mt-1 inline-flex rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-800">Converted from Incomplete Checkout</span> : null}<p className="mt-1 text-xs text-slate-500">{new Date(order.created_at).toLocaleDateString('en-BD')}</p></td><td className="px-5 py-3"><p className="font-semibold text-slate-900">{order.customer_name_snapshot}</p><p className="text-xs text-slate-500">{order.customer_phone_snapshot}</p></td><td className="px-5 py-3"><span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">{order.order_status}</span></td><td className="px-5 py-3"><span className={`rounded-full px-2 py-1 text-xs font-semibold ${shipment?.provider_shipment_id ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>{shipment?.provider_shipment_id ? `Pathao · ${shipment.status}` : 'Not created'}</span></td><td className="px-5 py-3"><p className="text-xs font-semibold text-slate-800">{risk ? riskCategoryForLevel(risk.level) : 'Pending'} · {paymentLabel}</p><p className="mt-1 max-w-44 truncate text-xs text-slate-500">{risk ? (riskLabels[risk.action] ?? risk.action) : 'Risk assessment pending'}</p></td><td className="px-5 py-3 text-right font-semibold">{currency.format(Number(order.grand_total))}</td></tr> })}</tbody></table></div> : <div className="p-10 text-center"><ClipboardList className="mx-auto h-6 w-6 text-slate-400" /><p className="mt-3 text-sm text-slate-500">No orders match this view.</p></div>}
+      {orders.length ? <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-3">Order</th><th className="px-5 py-3">Customer</th><th className="px-5 py-3">Order status</th><th className="px-5 py-3">Courier</th><th className="px-5 py-3">Risk / payment</th><th className="px-5 py-3 text-right">Total</th></tr></thead><tbody>{orders.map((order) => { const shipment = (order.shipments ?? []).find((item: any) => item.provider === 'PATHAO') ?? (order.shipments ?? [])[0]; const risk = (order.risk_assessments ?? [])[0]; const paymentLabel = order.payment_requirement === 'FULL_ADVANCE' ? 'Advance' : order.payment_requirement === 'MANUAL_REVIEW' ? 'Review' : 'COD'; return <tr key={order.id} onClick={() => selectOrder(order.id)} onMouseEnter={() => preloadAdminOrderDetail(order.id)} onPointerDown={() => preloadAdminOrderDetail(order.id)} className={`cursor-pointer border-t border-slate-100 border-l-4 transition ${selected?.id === order.id ? 'border-l-orange-500 bg-orange-50' : 'border-l-transparent hover:bg-slate-50'}`}><td className="px-5 py-3"><p className="font-mono text-xs font-bold text-slate-800">{order.order_number}</p>{String(order.notes ?? '').includes('Converted from incomplete checkout.') ? <span className="mt-1 inline-flex rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-800">Converted from Incomplete Checkout</span> : null}<p className="mt-1 text-xs text-slate-500">{new Date(order.created_at).toLocaleDateString('en-BD')}</p></td><td className="px-5 py-3"><p className="font-semibold text-slate-900">{order.customer_name_snapshot}</p><p className="text-xs text-slate-500">{order.customer_phone_snapshot}</p></td><td className="px-5 py-3"><span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">{order.order_status}</span></td><td className="px-5 py-3"><span className={`rounded-full px-2 py-1 text-xs font-semibold ${shipment?.provider_shipment_id ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>{shipment?.provider_shipment_id ? `Pathao · ${shipment.status}` : 'Not created'}</span></td><td className="px-5 py-3"><p className="text-xs font-semibold text-slate-800">{risk ? riskCategoryForLevel(risk.level) : 'Pending'} · {paymentLabel}</p><p className="mt-1 max-w-44 truncate text-xs text-slate-500">{risk ? (riskLabels[risk.action] ?? risk.action) : 'Risk assessment pending'}</p></td><td className="px-5 py-3 text-right font-semibold">{currency.format(Number(order.grand_total))}</td></tr> })}</tbody></table></div> : <div className="p-10 text-center"><ClipboardList className="mx-auto h-6 w-6 text-slate-400" /><p className="mt-3 text-sm text-slate-500">No orders match this view.</p></div>}
     </section>
     {detailLoading ? <div className="rounded-2xl border border-orange-200 bg-orange-50/50 p-8 text-center"><div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-orange-200 border-t-orange-600" /><p className="mt-3 text-sm font-semibold text-slate-700">Loading order detail…</p><p className="mt-1 text-xs text-slate-500">Only the selected order is loaded.</p></div> : detailError ? <div className="rounded-2xl border border-rose-200 bg-rose-50 p-8 text-center text-sm font-semibold text-rose-800">{detailError}</div> : selected ? <OrderDetail key={selected.id} order={selected} invoiceGenerationEnabled={invoiceGenerationEnabled} /> : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">Select an order to see its operational detail.</div>}
   </div>
