@@ -189,10 +189,13 @@ export async function permanentlyDeleteCheckoutRecovery(raw: unknown) {
     .select('id,status,completed_order_id,checkout_request_id')
     .eq('id', parsed.data.sessionId).maybeSingle()
   if (lookupError || !session) return { ok: false as const, message: 'Incomplete checkout not found. Refresh the page.' }
-  if (session.completed_order_id || session.status === 'COMPLETED') {
-    return { ok: false as const, message: 'This checkout is linked to a completed order and cannot be deleted from recovery.' }
+  if (session.completed_order_id || ['COMPLETED', 'PAYMENT_INITIATED'].includes(session.status)) {
+    return { ok: false as const, message: 'This checkout is linked to an order or payment flow and cannot be deleted from recovery.' }
   }
-  const firstDelete = await db.from('checkout_sessions').delete().eq('id', session.id).is('completed_order_id', null).select('id').maybeSingle()
+  const { data: linkedOrders, error: orderLookupError } = await db.from('orders').select('id').eq('checkout_request_id', session.checkout_request_id).limit(1)
+  if (orderLookupError) return { ok: false as const, message: 'Unable to verify linked orders. Refresh and try again.' }
+  if (linkedOrders?.length) return { ok: false as const, message: 'An order already exists for this checkout and cannot be deleted from recovery.' }
+  const firstDelete = await db.from('checkout_sessions').delete().eq('id', session.id).is('completed_order_id', null).neq('status', 'PAYMENT_INITIATED').select('id').maybeSingle()
   if (firstDelete.error) {
     // If history has a restrictive foreign key, remove its child records and retry the session deletion.
     const historyDelete = await db.from('checkout_recovery_history').delete().eq('checkout_session_id', session.id)
