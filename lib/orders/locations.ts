@@ -30,4 +30,7 @@ export function districtsForDivision(division: string): readonly string[] {
   return isDivision(division) ? DISTRICTS_BY_DIVISION[division] : []
 }
 
-export function getDeliveryZoneForDivision(di¶»§q«^
+export function getDeliveryZoneForDivision(division: string): 'dhaka' | 'outside_dhaka' {
+  const normalized = division.trim().toLocaleLowerCase()
+  return normalized === 'dhaka' || normalized === 'à¦¢à¦¾à¦•à¦¾' ? 'dhaka' : 'outside_dhaka'
+}

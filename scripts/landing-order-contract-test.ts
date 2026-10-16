@@ -25,4 +25,39 @@ test('resolves Bengali Dhaka spelling to the Dhaka delivery zone', () => {
   assert.equal(getDeliveryZoneForDivision('Chattogram'), 'outside_dhaka')
 })
 
-test('delivery zone quote output contains both server-provided charges and authorita¶»§q«^
+test('delivery zone quote output contains both server-provided charges and authoritative item totals', () => {
+  const base: Quote = {
+    productName: 'Test phone',
+    variantTitle: 'Black',
+    color: 'Black',
+    imageUrl: null,
+    sku: 'TEST-01',
+    quantity: 2,
+    unitPrice: 1250,
+    compareAtPrice: 1500,
+    discountTotal: 500,
+    subtotal: 2500,
+    deliveryCharge: 80,
+    grandTotal: 2580,
+    deliveryZone: 'dhaka',
+    warrantyPolicy: 'Warranty',
+    available: true,
+  }
+  const result = buildDeliveryZonesQuote(base, { dhakaCharge: 80, outsideDhakaCharge: 130 })
+  assert.deepEqual(result, {
+    productName: 'Test phone',
+    variantTitle: 'Black',
+    color: 'Black',
+    imageUrl: null,
+    sku: 'TEST-01',
+    quantity: 2,
+    unitPrice: 1250,
+    compareAtPrice: 1500,
+    discountTotal: 500,
+    subtotal: 2500,
+    dhakaCharge: 80,
+    outsideDhakaCharge: 130,
+    warrantyPolicy: 'Warranty',
+    available: true,
+  })
+})
