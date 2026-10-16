@@ -121,7 +121,7 @@ export async function getOrderManagementData(query?: string) {
   const search = query?.trim()
   let request = db
     .from('orders')
-    .select('id, order_number, customer_id, grand_total, payment_method, payment_status, payment_requirement, order_status, customer_name_snapshot, customer_phone_snapshot, customer_email_snapshot, created_at, updated_at, shipments(provider, status, provider_shipment_id), risk_assessments(score, level, action)')
+    .select('id, order_number, customer_id, grand_total, payment_method, payment_status, payment_requirement, order_status, customer_name_snapshot, customer_phone_snapshot, customer_email_snapshot, notes, created_at, updated_at, shipments(provider, status, provider_shipment_id), risk_assessments(score, level, action)')
     .order('created_at', { ascending: false })
     .limit(100)
 
