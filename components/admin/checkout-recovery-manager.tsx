@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { createOrderFromIncompleteCheckout, updateCheckoutRecoveryOutcome } from '@/lib/commerce/checkout-recovery-actions'
+import { createOrderFromIncompleteCheckout, getRecoveryProductVariants, updateCheckoutRecoveryOutcome } from '@/lib/commerce/checkout-recovery-actions'
 
-type RecoveryRow = {
+type RecoveryVariant = { id: string; variant_title: string; color: string | null; ram: string | null; storage: string | null; price: number; stock_quantity: number }\ntype RecoveryRow = {
   id: string; checkout_request_id: string; source: string; status: string; customer_name: string | null;
   customer_phone: string | null; customer_email?: string | null; quote_snapshot: Record<string, unknown> | null; delivery_snapshot: Record<string, unknown> | null;
   last_activity_at: string; expires_at: string; recovery_consent_at: string | null; recovery_consent_withdrawn_at: string | null;
@@ -15,7 +15,7 @@ function phoneForWhatsApp(value: string) { const digits = value.replace(/\D/g, '
 export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q, now }: { rows: RecoveryRow[]; count: number; page: number; pageSize: number; status?: string; q?: string; now: string }) {
   const [pending, startTransition] = useTransition()
   const [notice, setNotice] = useState('')
-  const [converting, setConverting] = useState<RecoveryRow | null>(null)
+  const [converting, setConverting] = useState<RecoveryRow | null>(null)\n  const [variants, setVariants] = useState<RecoveryVariant[]>([])\n  const [variantLoading, setVariantLoading] = useState(false)\n  const [selectedVariantId, setSelectedVariantId] = useState('')
   function openWhatsApp(row: RecoveryRow) {
     const saved = row.quote_snapshot ?? {}
     const savedItems = Array.isArray(saved.items) ? saved.items as Array<{ product_name?: string; variant_title?: string; color?: string; quantity?: number; unit_price_snapshot?: number }> : []
@@ -36,7 +36,7 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
     if (!confirmed) return
     startTransition(() => { void updateCheckoutRecoveryOutcome({ sessionId: row.id, outcome, notes: outcome === 'CLOSED' ? 'Archived by admin; soft close only.' : undefined }).then((result) => setNotice(result.ok ? 'Recovery outcome saved.' : result.message)).catch(() => setNotice('Unable to save recovery outcome.')) })
   }
-  function submitConversion(event: React.FormEvent<HTMLFormElement>, row: RecoveryRow) {
+  function openConversion(row: RecoveryRow) {\n    const snapshot = row.quote_snapshot ?? {}\n    const items = Array.isArray(snapshot.items) ? snapshot.items as Array<Record<string, unknown>> : []\n    setConverting(row)\n    setVariants([])\n    setVariantLoading(true)\n    setSelectedVariantId(String(items[0]?.variant_id ?? ''))\n    void getRecoveryProductVariants(row.id).then((result) => {\n      if (!result.ok) { setNotice(result.message); return }\n      setVariants(result.variants as RecoveryVariant[])\n      if (!result.variants.some((variant) => variant.id === String(items[0]?.variant_id ?? ''))) setSelectedVariantId(result.variants[0]?.id ?? '')\n    }).catch(() => setNotice('Unable to load product variants.')).finally(() => setVariantLoading(false))\n  }\n  function submitConversion(event: React.FormEvent<HTMLFormElement>, row: RecoveryRow) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     const snapshot = row.quote_snapshot ?? {}
@@ -44,7 +44,7 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
     const first = items[0]
     if (!first || !first.product_id || !first.variant_id) { setNotice('Saved product/variant details are missing.'); return }
     const payload = {
-      sessionId: row.id, productId: String(first.product_id), variantId: String(first.variant_id),
+      sessionId: row.id, productId: String(first.product_id), variantId: String(form.get('variantId') || selectedVariantId),
       quantity: Number(form.get('quantity') || first.quantity || 1),
       fullName: String(form.get('fullName') || ''), phone: String(form.get('phone') || ''),
       email: String(form.get('email') || ''), division: String(form.get('division') || ''),
@@ -75,12 +75,12 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
       const item = items[0] ?? {}
       return <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="convert-title">
         <form onSubmit={(event) => submitConversion(event, row)} className="max-h-[92vh] w-full max-w-2xl space-y-3 overflow-y-auto rounded-t-2xl bg-white p-4 shadow-2xl sm:rounded-2xl sm:p-6">
-          <div className="flex items-start justify-between gap-3"><div><h2 id="convert-title" className="text-lg font-bold text-slate-950">Create regular COD order</h2><p className="mt-1 text-sm text-slate-500">{String(item.product_name ?? 'Saved product')} · {String(item.variant_title ?? '')} · Current price and stock will be validated by checkout.</p></div><button type="button" onClick={() => setConverting(null)} className="rounded-lg border px-3 py-1.5 text-sm">Cancel</button></div>
+          <div className="flex items-start justify-between gap-3"><div><h2 id="convert-title" className="text-lg font-bold text-slate-950">Create regular COD order</h2><p className="mt-1 text-sm text-slate-500">{String(item.product_name ?? 'Saved product')} · {String(item.variant_title ?? '')} · Current price and stock will be validated by checkout.</p></div><button type="button" onClick={() => { setConverting(null); setVariants([]) }} className="rounded-lg border px-3 py-1.5 text-sm">Cancel</button></div>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-sm">Customer name<input name="fullName" required defaultValue={row.customer_name ?? ''} className="h-10 rounded-lg border px-3" /></label>
             <label className="grid gap-1 text-sm">Mobile number<input name="phone" required defaultValue={row.customer_phone ?? ''} className="h-10 rounded-lg border px-3" /></label>
             <label className="grid gap-1 text-sm">Email (optional)<input name="email" type="email" defaultValue={String((row as any).customer_email ?? '')} className="h-10 rounded-lg border px-3" /></label>
-            <label className="grid gap-1 text-sm">Quantity<input name="quantity" type="number" min="1" max="10" required defaultValue={Number(item.quantity ?? 1)} className="h-10 rounded-lg border px-3" /></label>
+            <label className="grid gap-1 text-sm">Variant<select name="variantId" required value={selectedVariantId} onChange={(event) => setSelectedVariantId(event.target.value)} disabled={variantLoading || !variants.length} className="h-10 rounded-lg border bg-white px-3"><option value="">{variantLoading ? 'Loading variants…' : 'Choose variant'}</option>{variants.map((variant) => <option key={variant.id} value={variant.id}>{[variant.variant_title, variant.color, variant.ram, variant.storage].filter(Boolean).join(' · ')} — ৳{variant.price.toLocaleString('en-BD')} · Stock {variant.stock_quantity}</option>)}</select></label>\n            <label className="grid gap-1 text-sm">Quantity<input name="quantity" type="number" min="1" max="10" required defaultValue={Number(item.quantity ?? 1)} className="h-10 rounded-lg border px-3" /></label>
             <label className="grid gap-1 text-sm">Division<input name="division" required defaultValue={String(delivery.division ?? '')} className="h-10 rounded-lg border px-3" /></label>
             <label className="grid gap-1 text-sm">District<input name="district" required defaultValue={String(delivery.district ?? '')} className="h-10 rounded-lg border px-3" /></label>
             <label className="grid gap-1 text-sm">Area / Thana<input name="area" required defaultValue={String(delivery.area ?? '')} className="h-10 rounded-lg border px-3" /></label>
@@ -89,7 +89,7 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
             <label className="grid gap-1 text-sm sm:col-span-2">Internal notes (optional)<textarea name="notes" rows={2} placeholder="Staff note; visible in order record" className="rounded-lg border px-3 py-2" /></label>
           </div>
           <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">Creates the order through the existing stock-safe COD transaction. Prices and delivery charges come from current store settings, not the saved estimate.</p>
-          <button type="submit" disabled={pending} className="w-full rounded-xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{pending ? 'Creating order…' : 'Confirm and create order'}</button>
+          <button type="submit" disabled={pending || variantLoading || !selectedVariantId || !variants.length} className="w-full rounded-xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{pending ? 'Creating order…' : 'Confirm and create order'}</button>
         </form>
       </div>
     })()}
@@ -112,7 +112,7 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
             <p className="text-xs text-slate-600">Recovery consent: {consent ? 'Active' : 'Not active'} · Contact attempts: {row.recovery_contact_count ?? 0}/2{row.recovery_outcome ? ' · Outcome: '+row.recovery_outcome : ''}</p>
             <div className="flex flex-wrap gap-2">
               {eligible ? <button type="button" disabled={pending} onClick={() => openWhatsApp(row)} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Open WhatsApp</button> : <span className="rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-500">Recovery contact unavailable</span>}
-              {row.status !== 'COMPLETED' && row.status !== 'PAYMENT_INITIATED' && items.length === 1 && <button type="button" disabled={pending} onClick={() => setConverting(row)} className="rounded-lg bg-slate-950 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Create order</button>}
+              {row.status !== 'COMPLETED' && row.status !== 'PAYMENT_INITIATED' && items.length === 1 && <button type="button" disabled={pending} onClick={() => openConversion(row)} className="rounded-lg bg-slate-950 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Create order</button>}
               {row.status !== 'COMPLETED' && <><button type="button" disabled={pending} onClick={() => updateOutcome(row,'NOT_INTERESTED')} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50">Not interested</button><button type="button" disabled={pending} onClick={() => updateOutcome(row,'CLOSED')} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50">Close</button></>}
             </div>
           </div>
