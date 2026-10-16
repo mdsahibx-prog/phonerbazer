@@ -139,11 +139,7 @@ export function resolveDeliveryFieldsFromAddress(division: string, address: stri
     }
   }
 
-  const areaCandidate = matchedIndex > 0
-    ? parts[matchedIndex - 1]
-    : !matched && parts.length > 1
-      ? parts[1]
-      : ''
+  const areaCandidate = matchedIndex > 0 ? parts[matchedIndex - 1] : ''
   const area = areaCandidate && normalizeAddressPart(areaCandidate) !== normalizeAddressPart(division)
     ? areaCandidate.slice(0, 100)
     : ADDRESS_LOCATION_FALLBACK

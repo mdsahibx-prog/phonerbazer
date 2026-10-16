@@ -4,7 +4,7 @@ import { resolve } from 'node:path'
 import test from 'node:test'
 
 import { buildDeliveryZonesQuote } from '@/lib/orders/delivery-quote'
-import { getDeliveryZoneForDivision } from '@/lib/orders/locations'
+import { ADDRESS_LOCATION_FALLBACK, getDeliveryZoneForDivision, resolveDeliveryFieldsFromAddress } from '@/lib/orders/locations'
 import { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
 import type { Quote } from '@/lib/orders/schema'
 
@@ -70,4 +70,22 @@ test('landing order form loads ahead of view without an extra start-order click'
   assert.doesNotMatch(source, /অর্ডার শুরু করুন/)
   assert.match(source, /rootMargin:\s*'480px 0px'/)
   assert.match(source, /if \(!loadForm\) return <LandingOrderFormPlaceholder \/>/)
+})
+
+test('derives legacy COD district and area from the free-form address without guessing unknown areas', () => {
+  const inferred = resolveDeliveryFieldsFromAddress('Dhaka', 'House 10, Road 5, Mirpur, Dhaka')
+  assert.equal(inferred.district, 'Dhaka')
+  assert.equal(inferred.area, 'Mirpur')
+
+  const unrecognized = resolveDeliveryFieldsFromAddress('Dhaka', 'House 10, Road 5, Block C')
+  assert.equal(unrecognized.district, ADDRESS_LOCATION_FALLBACK)
+  assert.equal(unrecognized.area, ADDRESS_LOCATION_FALLBACK)
+})
+
+test('risk-aware guest order path infers legacy location fields before invoking the shared order pipeline', () => {
+  const source = readFileSync(resolve(process.cwd(), 'lib/orders/actions.ts'), 'utf8')
+  const riskAwareAction = source.slice(source.indexOf('export async function createGuestOrderWithRisk'))
+  assert.match(riskAwareAction, /resolveDeliveryFieldsFromAddress\(parsed\.data\.division, parsed\.data\.address\)/)
+  assert.match(riskAwareAction, /district: parsed\.data\.district\?\.trim\(\) \|\| inferredLocation\.district/)
+  assert.match(riskAwareAction, /area: parsed\.data\.area\?\.trim\(\) \|\| inferredLocation\.area/)
 })

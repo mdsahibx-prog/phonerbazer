@@ -406,7 +406,14 @@ type AdvancePaymentResult = { paymentRequired: true; orderId: string; orderNumbe
 export async function createGuestOrderWithRisk(input: unknown): Promise<ActionResult<OrderSuccessSummary | AdvancePaymentResult>> {
   const parsed = guestOrderInputSchema.safeParse(input)
   if (!parsed.success) return { ok: false, message: 'Please correct the highlighted details.', fieldErrors: fieldErrors(parsed.error) }
-  const payload: GuestOrderInput = { ...parsed.data, phone: normalizePhone(parsed.data.phone), email: parsed.data.email || '' }
+  const inferredLocation = resolveDeliveryFieldsFromAddress(parsed.data.division, parsed.data.address)
+  const payload: GuestOrderInput = {
+    ...parsed.data,
+    phone: normalizePhone(parsed.data.phone),
+    email: parsed.data.email || '',
+    district: parsed.data.district?.trim() || inferredLocation.district,
+    area: parsed.data.area?.trim() || inferredLocation.area,
+  }
 
   try {
     // Run the two independent preflight checks together; the database RPC remains the final authoritative check.
