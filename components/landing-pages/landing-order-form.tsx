@@ -445,7 +445,7 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
 
       <label className="mt-4 flex cursor-pointer items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs leading-5 text-slate-600">
         <input type="checkbox" checked={recoveryConsent} onChange={(event) => { formInteracted.current = true; startCheckout(); setRecoveryConsent(event.target.checked) }} className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-600" />
-        <span>অসম্পূর্ণ অর্ডারে সহায়তার জন্য Phonerbazar যোগাযোগ করতে পারবে <span className="font-semibold text-slate-500">(ঐচ্ছিক; যেকোনো সময় বন্ধ করতে পারবেন)</span></span>
+        <span>অসম্পূর্ণ অর্ডারে সহায়তার জন্য Phonerbazar যোগাযোগ করতে পারবে</span>
       </label>
 
       <section aria-labelledby="landing-order-summary-title" aria-live="polite" className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/50 p-3 sm:p-4">
@@ -473,16 +473,10 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
         {availabilityError && <p className="mt-1.5 text-xs font-bold leading-5 text-rose-700">{availabilityError}</p>}
       </section>
 
-      <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-slate-600">
-        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1"><ShieldCheck className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />নিরাপদ অর্ডার</span>
-        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1"><Truck className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />সারা দেশে ডেলিভারি</span>
-        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1"><CircleCheck className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />ক্যাশ অন ডেলিভারি</span>
-      </div>
-
       <div className="mt-4 border-t border-slate-100 pt-4 sm:mt-5 sm:border-0 sm:pt-0">
-        <button type="submit" disabled={busy || quoteLoading || !quote || !form.division || !quote.available || Boolean(quoteError) || Boolean(availabilityError)} className="mx-auto flex min-h-12 w-full max-w-6xl items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-black text-white shadow-md transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 disabled:shadow-none">
+        <button type="submit" disabled={busy || quoteLoading || !quote || !form.division || !quote.available || Boolean(quoteError) || Boolean(availabilityError)} className="mx-auto flex min-h-12 w-full max-w-6xl items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 px-5 text-sm font-black text-white shadow-[0_8px_20px_rgba(234,88,12,0.28)] ring-1 ring-orange-400/70 transition hover:from-orange-600 hover:via-amber-600 hover:to-orange-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:bg-none disabled:text-slate-600 disabled:shadow-none disabled:ring-0">
           {busy && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />}
-          {busy ? 'অর্ডার হচ্ছে...' : 'অর্ডার করুন'}
+          {busy ? 'অর্ডার হচ্ছে...' : 'অর্ডার কনফার্ম করুন'}
         </button>
         {disabledReason && !busy && <p className="mx-auto mt-1.5 max-w-6xl text-center text-xs leading-5 text-slate-500">{disabledReason}</p>}
       </div>
