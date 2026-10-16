@@ -156,7 +156,7 @@ export async function updateCheckoutRecoveryOutcome(raw: unknown) {
   if (error || !session) return { ok: false as const, message: 'Checkout session not found.' }
   const action = parsed.data.outcome
   if (action === 'CONTACTED') {
-    if (!session.customer_phone || !session.recovery_consent_at || session.recovery_consent_withdrawn_at || session.status !== 'ABANDONED' || session.completed_order_id || new Date(session.expires_at).getTime() <= Date.now() || Number(session.recovery_contact_count) >= 2) return { ok: false as const, message: 'This checkout is not eligible for recovery contact.' }
+    if (!session.customer_phone || !session.recovery_consent_at || session.recovery_consent_withdrawn_at || !['STARTED', 'DETAILS_ENTERED', 'QUOTED', 'ABANDONED'].includes(session.status) || session.completed_order_id || new Date(session.expires_at).getTime() <= Date.now() || Number(session.recovery_contact_count) >= 2) return { ok: false as const, message: 'This checkout is not eligible for recovery contact.' }
     const { data: orders, error: orderLookupError } = await db.from('orders').select('id').eq('checkout_request_id', session.checkout_request_id).limit(1)
     if (orderLookupError) return { ok: false as const, message: 'Unable to verify this checkout. Refresh and try again.' }
     if (orders?.length) return { ok: false as const, message: 'An existing order makes this checkout ineligible.' }
@@ -174,6 +174,39 @@ export async function updateCheckoutRecoveryOutcome(raw: unknown) {
   const { error: historyError } = await db.from('checkout_recovery_history').insert({ checkout_session_id: session.id, actor_admin_user_id: admin.id, action: action === 'CONTACTED' ? 'WHATSAPP_OPENED' : action, notes: parsed.data.notes ?? null, linked_order_id: parsed.data.orderId ?? null })
   if (historyError) throw new Error('Recovery outcome could not be recorded.')
   return { ok: true as const }
+}
+
+
+const deleteRecoverySchema = z.object({ sessionId: z.string().uuid() })
+
+/** Permanently deletes an unresolved checkout and its recovery history; completed orders are never deleted here. */
+export async function permanentlyDeleteCheckoutRecovery(raw: unknown) {
+  const admin = await requireAdmin(['OWNER', 'ADMIN'])
+  const parsed = deleteRecoverySchema.safeParse(raw)
+  if (!parsed.success) return { ok: false as const, message: 'Invalid checkout reference.' }
+  const db = createAdminClient()
+  const { data: session, error: lookupError } = await db.from('checkout_sessions')
+    .select('id,status,completed_order_id,checkout_request_id')
+    .eq('id', parsed.data.sessionId).maybeSingle()
+  if (lookupError || !session) return { ok: false as const, message: 'Incomplete checkout not found. Refresh the page.' }
+  if (session.completed_order_id || session.status === 'COMPLETED') {
+    return { ok: false as const, message: 'This checkout is linked to a completed order and cannot be deleted from recovery.' }
+  }
+  const firstDelete = await db.from('checkout_sessions').delete().eq('id', session.id).is('completed_order_id', null).select('id').maybeSingle()
+  if (firstDelete.error) {
+    // If history has a restrictive foreign key, remove its child records and retry the session deletion.
+    const historyDelete = await db.from('checkout_recovery_history').delete().eq('checkout_session_id', session.id)
+    if (historyDelete.error) return { ok: false as const, message: 'Unable to permanently delete checkout history. Nothing else was changed.' }
+    const retry = await db.from('checkout_sessions').delete().eq('id', session.id).is('completed_order_id', null).select('id').maybeSingle()
+    if (retry.error || !retry.data) return { ok: false as const, message: 'Checkout could not be deleted. Refresh and try again.' }
+  } else if (!firstDelete.data) {
+    return { ok: false as const, message: 'Checkout changed or was already deleted. Refresh the list.' }
+  }
+  // Remove any history left behind if the foreign key did not cascade.
+  const cleanup = await db.from('checkout_recovery_history').delete().eq('checkout_session_id', session.id)
+  if (cleanup.error) console.error('[checkout-recovery] deleted session but history cleanup failed', { actor: admin.id, sessionId: session.id })
+  revalidatePath('/admin/checkout-recovery')
+  return { ok: true as const, message: 'Incomplete checkout permanently deleted.' }
 }
 
 
