@@ -204,6 +204,7 @@ function ReviewSection({ section }: { section: Extract<LandingSection, { type: '
   const body = section.body?.trim()
   const showBody = body && !/প্রকৃত ক্রেতাদের যাচাই করা অভিজ্ঞতা এখানে প্রকাশ করা হবে/.test(body)
   const disclaimer = section.disclaimer?.trim()
+  const galleryImages = (section.galleryImages ?? []).filter(Boolean)
   const showDisclaimer = disclaimer && !/প্রকাশের আগে প্রকৃত গ্রাহকের অনুমতি-সহ মতামত যোগ করুন/.test(disclaimer)
 
   return <section className={`mx-auto max-w-5xl px-3 py-6 sm:px-6 sm:py-8 ${visibility(section)}`} aria-labelledby={`${section.id}-title`}>
@@ -222,7 +223,7 @@ function ReviewSection({ section }: { section: Extract<LandingSection, { type: '
     </header>
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {reviews.map((review) => {
-        const proofImage = review.imageUrl && review.imageEnabled !== false ? review.imageUrl : null
+        const proofImage = galleryImages[reviews.indexOf(review)] ?? (review.imageUrl && review.imageEnabled !== false ? review.imageUrl : null)
         return <article key={`${review.name}-${review.text}`} className="relative min-w-0 overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50/70 p-4 shadow-[0_3px_16px_rgba(15,23,42,0.055)] transition-shadow duration-200 hover:shadow-md motion-reduce:transition-none sm:p-5">
           <div className="flex min-w-0 items-center gap-3">
             <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 text-emerald-700">
@@ -237,7 +238,7 @@ function ReviewSection({ section }: { section: Extract<LandingSection, { type: '
           <p className="mt-3 whitespace-pre-line break-words border-t border-emerald-100/80 pt-3 text-sm leading-6 text-slate-700 sm:leading-7">{customerText(review.text)}</p>
           {proofImage ? <figure className="mt-3 overflow-hidden rounded-xl border border-slate-200/90 bg-slate-50 p-1.5">
             <div className="relative mx-auto aspect-[16/9] max-h-40 w-full overflow-hidden rounded-lg bg-white sm:max-h-44">
-              <Image src={proofImage} alt={review.imageCaption || `${review.name} এর ডেলিভারি প্রমাণ`} fill sizes="(max-width: 640px) 90vw, (max-width: 1024px) 44vw, 28vw" loading="lazy" className="object-contain" />
+              <Image src={proofImage} alt={review.imageCaption || `${review.name} এর ডেলিভারি প্রমাণ`} fill sizes="(max-width: 640px) 90vw, (max-width: 1024px) 44vw, 28vw" loading="lazy" onError={(event) => { event.currentTarget.style.display = 'none' }} className="object-contain" />
             </div>
             {review.imageCaption ? <figcaption className="px-1 pt-1.5 text-[11px] leading-4 text-slate-500">{customerText(review.imageCaption)}</figcaption> : null}
           </figure> : null}
