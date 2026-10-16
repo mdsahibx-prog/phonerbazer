@@ -18,6 +18,7 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [notice, setNotice] = useState('')
+  const [paymentLink, setPaymentLink] = useState('')
   const [converting, setConverting] = useState<RecoveryRow | null>(null)
   const [variants, setVariants] = useState<RecoveryVariant[]>([])
   const [variantLoading, setVariantLoading] = useState(false)
@@ -72,7 +73,8 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
       notes: String(form.get('notes') || ''),
     }
     startTransition(() => { void createOrderFromIncompleteCheckout(payload).then((result) => {
-      setNotice(result.ok ? `Order ${result.orderNumber || result.orderId} created successfully.` : result.message)
+      setNotice(result.ok ? (result.message || `Order ${result.orderNumber || result.orderId} created successfully.`) : result.message)
+      setPaymentLink(result.ok && 'paymentRequired' in result && result.paymentRequired ? result.redirectUrl : '')
       if (result.ok) { setConverting(null); router.refresh() }
     }).catch(() => setNotice('Unable to create order. Please refresh and retry.')) })
   }
@@ -85,6 +87,7 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
       <button className="h-10 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white">Filter</button>
     </form>
     {notice && <p role="status" className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800">{notice}</p>}
+    {paymentLink && <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"><span className="flex-1">Advance payment is pending. Share this secure link with the customer.</span><button type="button" onClick={() => { void navigator.clipboard.writeText(paymentLink).then(() => setNotice('Payment link copied. Share it with the customer.')).catch(() => setNotice('Copy failed. Open the payment link and copy it manually.')) }} className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-semibold">Copy link</button><a href={paymentLink} target="_blank" rel="noreferrer" className="rounded-lg bg-amber-800 px-3 py-2 text-xs font-semibold text-white">Open link</a></div>}
     <div className="text-xs text-slate-500">Showing {rows.length} of {count} checkout sessions · Page {page}</div>
     {converting && (() => {
       const row = converting
@@ -94,7 +97,7 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
       const item = items[0] ?? {}
       return <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="convert-title">
         <form onSubmit={(event) => submitConversion(event, row)} className="max-h-[92vh] w-full max-w-2xl space-y-3 overflow-y-auto rounded-t-2xl bg-white p-4 shadow-2xl sm:rounded-2xl sm:p-6">
-          <div className="flex items-start justify-between gap-3"><div><h2 id="convert-title" className="text-lg font-bold text-slate-950">Create regular COD order</h2><p className="mt-1 text-sm text-slate-500">{String(item.product_name ?? 'Saved product')} · {String(item.variant_title ?? '')} · Current price and stock will be validated by checkout.</p></div><button type="button" onClick={() => { setConverting(null); setVariants([]) }} className="rounded-lg border px-3 py-1.5 text-sm">Cancel</button></div>
+          <div className="flex items-start justify-between gap-3"><div><h2 id="convert-title" className="text-lg font-bold text-slate-950">Create order using checkout rules</h2><p className="mt-1 text-sm text-slate-500">{String(item.product_name ?? 'Saved product')} · {String(item.variant_title ?? '')} · Current price and stock will be validated by checkout.</p></div><button type="button" onClick={() => { setConverting(null); setVariants([]) }} className="rounded-lg border px-3 py-1.5 text-sm">Cancel</button></div>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-sm">Customer name<input name="fullName" required defaultValue={row.customer_name ?? ''} className="h-10 rounded-lg border px-3" /></label>
             <label className="grid gap-1 text-sm">Mobile number<input name="phone" required defaultValue={row.customer_phone ?? ''} className="h-10 rounded-lg border px-3" /></label>
@@ -108,7 +111,7 @@ export function CheckoutRecoveryManager({ rows, count, page, pageSize, status, q
             <label className="grid gap-1 text-sm sm:col-span-2">Delivery address<textarea name="address" required defaultValue={String(delivery.address ?? '')} rows={2} className="rounded-lg border px-3 py-2" /></label>
             <label className="grid gap-1 text-sm sm:col-span-2">Internal notes (optional)<textarea name="notes" rows={2} placeholder="Staff note; visible in order record" className="rounded-lg border px-3 py-2" /></label>
           </div>
-          <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">Creates the order through the existing stock-safe COD transaction. Prices and delivery charges come from current store settings, not the saved estimate.</p>
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">Uses the existing risk-aware checkout transaction. Current prices, stock, risk policy, and delivery charges from store settings are revalidated; payment may be required by store policy.</p>
           <button type="submit" disabled={pending || variantLoading || !selectedVariantId || !variants.length} className="w-full rounded-xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{pending ? 'Creating order…' : 'Confirm and create order'}</button>
         </form>
       </div>
