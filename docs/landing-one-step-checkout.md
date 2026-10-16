@@ -14,6 +14,7 @@ This checkout is a compact entry point into the existing guest-order lifecycle, 
 - Analytics/marketing consent is read from the existing client consent helper and passed into the canonical order action; do not bypass the shared event pipeline.
 - Successful order summaries use the existing `sahigatget-last-order` session key and `/order/success` route. A payment-required result follows the payment provider redirect.
 - Returning-customer prefill uses the versioned `phonerbazar-customer-prefill-v1` localStorage key and only the name, phone, division, district, area, and street-address fields. Do not persist email, payment information, order history, or secrets there.
+- The order section uses a lightweight skeleton, then preloads the one-step form before it enters the viewport; customers should not need a separate “start order” click to see the fields.
 
 ## Regression guardrails
 
