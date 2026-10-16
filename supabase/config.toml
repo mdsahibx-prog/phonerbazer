@@ -1,4 +1,4 @@
-project_id = "sahigadget-ci"
+project_id = "phonerbazar"
 
 [db]
 port = 54322
