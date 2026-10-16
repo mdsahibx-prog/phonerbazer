@@ -9,6 +9,7 @@ import { requireAdmin } from '@/lib/admin/auth'
 import { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
 import { getStorefrontSettings } from '@/lib/services/storefront'
 import { getCart } from '@/lib/commerce/cart'
+import { createGuestOrderWithRisk } from '@/lib/orders/actions'
 
 const draftSchema = z.object({
   checkoutRequestId: z.string().uuid(),
@@ -226,30 +227,29 @@ export async function createOrderFromIncompleteCheckout(raw: unknown) {
   if (existingOrderError) return { ok: false as const, message: 'Unable to verify whether an order already exists. Refresh and try again.' }
   if (preexistingOrders?.length) return { ok: false as const, message: 'An order already exists for this checkout. Refresh the recovery list to sync its status.' }
   const notes = [input.notes?.trim(), 'Converted from incomplete checkout.'].filter(Boolean).join('\n')
-  const { data: created, error: createError } = await db.rpc('create_guest_cod_order', {
-    p_product_id: input.productId,
-    p_variant_id: input.variantId,
-    p_quantity: input.quantity,
-    p_checkout_request_id: checkoutRequestId,
-    p_customer_name: input.fullName.trim(),
-    p_customer_phone: phone,
-    p_customer_email: input.email?.trim() || null,
-    p_division: input.division.trim(),
-    p_district: input.district.trim(),
-    p_area: input.area.trim(),
-    p_address: input.address.trim(),
-    p_postal_code: input.postalCode?.trim() || null,
-    p_notes: notes || null,
+  const orderResult = await createGuestOrderWithRisk({
+    productId: input.productId,
+    variantId: input.variantId,
+    quantity: input.quantity,
+    checkoutRequestId,
+    checkoutSource: 'LANDING_PAGE',
+    fullName: input.fullName.trim(),
+    phone,
+    email: input.email?.trim() || '',
+    division: input.division.trim(),
+    district: input.district.trim(),
+    area: input.area.trim(),
+    address: input.address.trim(),
+    postalCode: input.postalCode?.trim() || '',
+    notes,
+    analyticsConsent: false,
+    marketingConsent: false,
   })
-  if (createError || !created?.[0]?.order_id) {
-    const reason = String(createError?.message ?? '')
-    if (reason.includes('INSUFFICIENT_STOCK')) return { ok: false as const, message: 'Stock is no longer sufficient. Update quantity or choose another variant.' }
-    if (reason.includes('PRODUCT_UNAVAILABLE')) return { ok: false as const, message: 'This product or variant is no longer available.' }
-    if (reason.includes('DELIVERY_SETTINGS_UNAVAILABLE')) return { ok: false as const, message: 'Delivery charge settings are unavailable. Please check store settings.' }
-    console.error('[checkout-recovery] order conversion failed', reason || 'unknown')
-    return { ok: false as const, message: 'Order could not be created. No recovery status was changed.' }
+  if (!orderResult.ok) return { ok: false as const, message: orderResult.message || 'Order could not be created. No recovery status was changed.' }
+  if ('paymentRequired' in orderResult.data) {
+    return { ok: false as const, message: 'The store risk policy requires an advance-payment workflow for this customer. The standard checkout has started that workflow; refresh the recovery list before taking further action.' }
   }
-  const orderId = String(created[0].order_id)
+  const orderId = String(orderResult.data.orderId)
   const now = new Date().toISOString()
   const { error: updateError } = await db.from('checkout_sessions').update({
     status: 'COMPLETED', completed_order_id: orderId, recovery_outcome: 'RECOVERED',
@@ -267,7 +267,7 @@ export async function createOrderFromIncompleteCheckout(raw: unknown) {
   if (historyError) console.error('[checkout-recovery] conversion history write failed', historyError.message)
   revalidatePath('/admin/checkout-recovery')
   revalidatePath('/admin/orders')
-  return { ok: true as const, orderId, orderNumber: String(created[0].order_number ?? ''), message: 'Order created using the standard COD checkout transaction.' }
+  return { ok: true as const, orderId, orderNumber: String(orderResult.data.orderNumber ?? ''), message: 'Order created using the standard checkout and risk-policy transaction.' }
 }
 
 
