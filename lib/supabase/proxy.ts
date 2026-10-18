@@ -110,3 +110,19 @@ export function createProxyAwareFetch(): typeof fetch {
     })
   }
 }
+
+export function rewriteSupabaseUrlsInValue<T>(value: T): T {
+  if (typeof value === 'string') return rewriteSupabaseOrigins(value) as T
+  if (Array.isArray(value)) return value.map((entry) => rewriteSupabaseUrlsInValue(entry)) as T
+
+  if (value && typeof value === 'object') {
+    const prototype = Object.getPrototypeOf(value)
+    if (prototype !== Object.prototype && prototype !== null) return value
+    const entries = Object.entries(value as Record<string, unknown>).map(
+      ([key, entry]) => [key, rewriteSupabaseUrlsInValue(entry)] as const,
+    )
+    return Object.fromEntries(entries) as T
+  }
+
+  return value
+}
