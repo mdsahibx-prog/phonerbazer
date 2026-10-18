@@ -15,6 +15,8 @@ function clampQuantity(value: number) { return Math.min(MAX_QUANTITY, Math.max(1
 async function getOrCreateCart(createIfMissing = true) {
   const jar = await cookies()
   const existingToken = jar.get(CART_COOKIE)?.value
+  // An empty cart read is public and should not initialize the privileged client.
+  if (!existingToken && !createIfMissing) return null
   const db = createAdminClient()
   if (existingToken) {
     const { data } = await db.from('carts').select('id,guest_token,status,expires_at').eq('guest_token', existingToken).eq('status', 'ACTIVE').gt('expires_at', new Date().toISOString()).maybeSingle()
