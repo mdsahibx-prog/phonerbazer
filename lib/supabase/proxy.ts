@@ -77,7 +77,18 @@ function rewriteSupabaseOrigins(body: string) {
  */
 export function createProxyAwareFetch(): typeof fetch {
   return async (input, init) => {
-    const response = await fetch(input, init)
+    let requestInit = init
+    if (typeof init?.body === 'string') {
+      const rewrittenRequestBody = rewriteSupabaseOrigins(init.body)
+      if (rewrittenRequestBody !== init.body) {
+        const headers = new Headers(init.headers)
+        headers.delete('content-length')
+        headers.delete('content-md5')
+        requestInit = { ...init, headers, body: rewrittenRequestBody }
+      }
+    }
+
+    const response = await fetch(input, requestInit)
     const contentType = response.headers.get('content-type') || ''
     if (!contentType.toLowerCase().includes('json')) return response
 
