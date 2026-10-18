@@ -32,7 +32,7 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'www.phonerbazar.store' },
       { protocol: 'https', hostname: 'phonerbazar.store' },
       ...(process.env.VERCEL_URL
-        ? [{ protocol: 'https' as const, hostname: process.env.VERCEL_URL.replace(/^https?:\\/\\//, '').split('/')[0] }]
+        ? [{ protocol: 'https' as const, hostname: process.env.VERCEL_URL.split('://').pop()?.split('/')[0] || process.env.VERCEL_URL }]
         : []),
       ...(process.env.NODE_ENV === 'development'
         ? [{ protocol: 'http' as const, hostname: 'localhost', port: process.env.PORT || '3000' }]
@@ -47,16 +47,18 @@ const nextConfig: NextConfig = {
     const beforeFiles: Array<{ source: string; destination: string }> = []
 
     if (primarySupabaseUrl) {
+      const primaryBase = primarySupabaseUrl.endsWith('/') ? primarySupabaseUrl.slice(0, -1) : primarySupabaseUrl
       beforeFiles.push({
         source: '/_gateway/:path*',
-        destination: `${primarySupabaseUrl.replace(/\\/$/, '')}/:path*`,
+        destination: `${primaryBase}/:path*`,
       })
     }
 
     if (legacySupabaseUrl && legacySupabaseUrl !== primarySupabaseUrl) {
+      const legacyBase = legacySupabaseUrl.endsWith('/') ? legacySupabaseUrl.slice(0, -1) : legacySupabaseUrl
       beforeFiles.push({
         source: '/_media/:path*',
-        destination: `${legacySupabaseUrl.replace(/\\/$/, '')}/:path*`,
+        destination: `${legacyBase}/:path*`,
       })
     }
 
