@@ -56,17 +56,28 @@ export function toProxiedSupabaseUrl(value: string | null | undefined): string |
   const target = getSupabaseProxyTargets().find((candidate) => candidate.origin === url.origin)
   if (!target) return value
 
-  return `${getPublicApplicationOrigin()}${target.prefix}${url.pathname}${url.search}${url.hash}`
+  return `${target.prefix}${url.pathname}${url.search}${url.hash}`
 }
 
-function rewriteSupabaseOrigins(body: string) {
+function rewriteSupabaseOriginsToRelative(body: string) {
+  let result = body
+  for (const target of getSupabaseProxyTargets()) {
+    result = result.split(target.origin).join(target.prefix)
+  }
+  return result
+}
+
+function rewriteSupabaseOriginsForBrowser(body: string) {
   const publicOrigin = getPublicApplicationOrigin()
   let result = body
-
   for (const target of getSupabaseProxyTargets()) {
     result = result.split(target.origin).join(`${publicOrigin}${target.prefix}`)
   }
-
+  // Existing database records and new upload actions can store portable paths.
+  // Make those paths absolute only in the server response going to the browser.
+  result = result
+    .replaceAll('"/_gateway', `"${publicOrigin}/_gateway`)
+    .replaceAll('"/_media', `"${publicOrigin}/_media`)
   return result
 }
 
@@ -79,7 +90,7 @@ export function createProxyAwareFetch(): typeof fetch {
   return async (input, init) => {
     let requestInit = init
     if (typeof init?.body === 'string') {
-      const rewrittenRequestBody = rewriteSupabaseOrigins(init.body)
+      const rewrittenRequestBody = rewriteSupabaseOriginsToRelative(init.body)
       if (rewrittenRequestBody !== init.body) {
         const headers = new Headers(init.headers)
         headers.delete('content-length')
@@ -93,7 +104,7 @@ export function createProxyAwareFetch(): typeof fetch {
     if (!contentType.toLowerCase().includes('json')) return response
 
     const originalBody = await response.clone().text()
-    const rewrittenBody = rewriteSupabaseOrigins(originalBody)
+    const rewrittenBody = rewriteSupabaseOriginsForBrowser(originalBody)
     if (rewrittenBody === originalBody) return response
 
     const headers = new Headers(response.headers)
@@ -112,7 +123,7 @@ export function createProxyAwareFetch(): typeof fetch {
 }
 
 export function rewriteSupabaseUrlsInValue<T>(value: T): T {
-  if (typeof value === 'string') return rewriteSupabaseOrigins(value) as T
+  if (typeof value === 'string') return rewriteSupabaseOriginsToRelative(value) as T
   if (Array.isArray(value)) return value.map((entry) => rewriteSupabaseUrlsInValue(entry)) as T
 
   if (value && typeof value === 'object') {
