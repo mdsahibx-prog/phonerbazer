@@ -11,6 +11,7 @@ const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin']
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
+  generator: null,
   title: { 
     default: `${siteConfig.name} · ${siteConfig.tagline}`, 
     template: `%s · ${siteConfig.name}` 
