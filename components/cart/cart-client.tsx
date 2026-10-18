@@ -36,11 +36,12 @@ export function CartClient({ initialCart }: { initialCart: { items: CartItem[]; 
   }, [initialCart.items, initialCart.itemCount, initialCart.subtotal])
   async function run(action: () => Promise<{ ok: boolean; message?: string; data?: typeof initialCart }>, eventName?: 'add_to_cart' | 'remove_from_cart') {
     const previous = cart
-    setBusy(true); setMessage('')
-    const result = await action()
-    setBusy(false)
-    if (!result.ok) { setMessage(result.message ?? 'Unable to update your cart.'); return }
-    if (result.data) {
+    setBusy(true)
+    setMessage('')
+    try {
+      const result = await action()
+      if (!result.ok) { setMessage(result.message ?? 'Unable to update your cart.'); return }
+      if (result.data) {
       setCart(result.data)
       if (eventName) {
         const value = eventName === 'remove_from_cart'
@@ -56,6 +57,11 @@ export function CartClient({ initialCart }: { initialCart: { items: CartItem[]; 
           },
         })
       }
+      }
+    } catch {
+      setMessage('সংযোগে সমস্যা হয়েছে। আবার চেষ্টা করুন।')
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -71,14 +77,15 @@ export function CartClient({ initialCart }: { initialCart: { items: CartItem[]; 
         itemCount: items.reduce((sum, row) => sum + row.quantity, 0),
       }
     })
-    const result = await removeCartItemAction(item.id)
-    if (!result.ok) {
-      setCart(previous)
-      setMessage(result.message ?? 'Unable to remove that item.')
-      return
-    }
-    if (result.data) setCart(result.data)
-    trackClientEvent({
+    try {
+      const result = await removeCartItemAction(item.id)
+      if (!result.ok) {
+        setCart(previous)
+        setMessage(result.message ?? 'Unable to remove that item.')
+        return
+      }
+      if (result.data) setCart(result.data)
+      trackClientEvent({
       eventName: 'remove_from_cart',
       commerce: {
         currency: 'BDT',
@@ -86,7 +93,11 @@ export function CartClient({ initialCart }: { initialCart: { items: CartItem[]; 
         item_count: item.quantity,
         items: [analyticsItem(item)],
       },
-    })
+      })
+    } catch {
+      setCart(previous)
+      setMessage('সংযোগে সমস্যা হয়েছে। আইটেমটি আবার সরানোর চেষ্টা করুন।')
+    }
   }
 
   function changeQuantity(item: CartItem, nextQuantity: number) {
@@ -107,8 +118,8 @@ export function CartClient({ initialCart }: { initialCart: { items: CartItem[]; 
       pendingQuantities.current.delete(item.id)
       pendingTimers.current.delete(item.id)
       setBusy(true)
+      try {
       const result = await updateCartItemAction({ itemId: item.id, quantity: target })
-      setBusy(false)
       if (!result.ok) {
         setCart((current) => {
           const items = current.items.map((row) => row.id === item.id ? { ...row, quantity: previousQuantity } : row)
@@ -129,6 +140,16 @@ export function CartClient({ initialCart }: { initialCart: { items: CartItem[]; 
           items: [analyticsItem(item, changedQuantity)],
         },
       })
+      } catch {
+        setCart((current) => {
+          const items = current.items.map((row) => row.id === item.id ? { ...row, quantity: previousQuantity } : row)
+          const subtotal = items.reduce((sum, row) => sum + Number(row.variant?.price ?? 0) * row.quantity, 0)
+          return { ...current, items, subtotal, itemCount: items.reduce((sum, row) => sum + row.quantity, 0) }
+        })
+        setMessage('সংযোগে সমস্যা হয়েছে। পরিমাণ আবার আপডেট করুন।')
+      } finally {
+        setBusy(false)
+      }
     }, 250))
   }
   return <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
