@@ -35,36 +35,28 @@ export function LandingFooter({
 
 export function LandingTrustBridge() {
   const benefits = [
-    { Icon: CircleCheck, title: 'ভ্যারিয়েন্ট অনুযায়ী মূল্য', description: 'নির্বাচিত পণ্য ও পরিমাণের দাম' },
-    { Icon: Truck, title: 'ডেলিভারি চার্জ আগে দেখুন', description: 'বিভাগ নির্বাচন করলেই চার্জ দেখাবে' },
-    { Icon: ShieldCheck, title: 'ক্যাশ অন ডেলিভারি', description: 'পণ্য হাতে পেয়ে মূল্য পরিশোধ' },
+    { Icon: CircleCheck, title: 'দাম আগে দেখুন', description: 'পছন্দের রং ও পরিমাণ অনুযায়ী মূল্য' },
+    { Icon: Truck, title: 'ডেলিভারি চার্জ', description: 'বিভাগ বেছে চার্জ জেনে নিন' },
+    { Icon: ShieldCheck, title: 'পণ্য হাতে পেমেন্ট', description: 'পণ্য পেয়ে মূল্য পরিশোধ করুন' },
   ]
 
   return (
-    <section aria-labelledby="landing-trust-bridge-title" className="border-y border-emerald-100 bg-gradient-to-b from-white via-emerald-50/50 to-white">
-      <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6 sm:py-7">
-        <div className="overflow-hidden rounded-2xl border border-emerald-100 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.05)]">
-          <header className="flex items-center justify-between gap-3 border-b border-slate-100 bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950 px-4 py-3.5 text-white sm:px-5">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-emerald-300/20 bg-emerald-400/10 text-emerald-200">
-                <ShieldCheck className="h-5 w-5" aria-hidden="true" />
-              </span>
-              <div className="min-w-0">
-                <h2 id="landing-trust-bridge-title" className="text-sm font-black tracking-tight sm:text-base">অর্ডার সহজ, তথ্য পরিষ্কার</h2>
-                <p className="mt-0.5 text-[11px] leading-4 text-slate-300 sm:text-xs">সিদ্ধান্তের আগে প্রয়োজনীয় তথ্য দেখে নিন</p>
-              </div>
-            </div>
-            <span className="hidden shrink-0 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-bold text-emerald-100 sm:inline-flex">{siteConfig.name}</span>
+    <section aria-labelledby="landing-trust-bridge-title" className="border-y border-slate-100 bg-slate-50/70">
+      <div className="mx-auto max-w-5xl px-3 py-4 sm:px-6 sm:py-6">
+        <div className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
+          <header className="px-1 pb-3 sm:px-2 sm:pb-4">
+            <h2 id="landing-trust-bridge-title" className="text-base font-extrabold tracking-tight text-slate-950 sm:text-lg">অর্ডারের আগে জেনে নিন</h2>
+            <p className="mt-0.5 text-xs leading-5 text-slate-500 sm:text-sm">দাম ও ডেলিভারি চার্জ আগেই দেখে নিন</p>
           </header>
-          <div className="grid divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <div className="grid grid-cols-3 gap-2 sm:divide-x sm:divide-slate-100 sm:gap-0">
             {benefits.map(({ Icon, title, description }) => (
-              <article key={title} className="flex min-w-0 items-center gap-3 px-4 py-3.5 sm:px-4 sm:py-4">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+              <article key={title} className="flex min-w-0 flex-col items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/70 px-1.5 py-3 text-center sm:flex-row sm:items-center sm:gap-3 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-4 sm:py-3 sm:text-left">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-emerald-700 ring-1 ring-slate-200 sm:h-9 sm:w-9 sm:rounded-xl sm:bg-emerald-50 sm:ring-0">
                   <Icon className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <div className="min-w-0">
-                  <h3 className="text-xs font-extrabold text-slate-900 sm:text-sm">{title}</h3>
-                  <p className="mt-0.5 text-[11px] leading-4 text-slate-500">{description}</p>
+                  <h3 className="text-[11px] font-bold leading-snug text-slate-900 sm:text-sm">{title}</h3>
+                  <p className="mt-1 hidden text-xs leading-5 text-slate-500 sm:block">{description}</p>
                 </div>
               </article>
             ))}
