@@ -28,6 +28,7 @@ import {
   deleteFakeOrderSchema,
 } from '@/lib/admin/schema'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { toProxiedSupabaseUrl } from '@/lib/supabase/proxy'
 import { isValidBangladeshMobile, normalizePhone } from '@/lib/orders/phone'
 import { latestStatusTransitionId, loadOrderForEmail, queueOrderStatusEmail } from '@/lib/email/service'
 import { createClient } from '@/lib/supabase/server'
@@ -276,7 +277,7 @@ export async function saveBrand(input: unknown): Promise<AdminActionResult> {
     const session = await requireAdmin(['OWNER', 'ADMIN'])
     const parsed = brandSchema.parse(input)
     const db = createAdminClient()
-    const payload = { name: parsed.name, slug: parsed.slug, description: optional(parsed.description), logo_url: optional(parsed.logoUrl), is_active: parsed.isActive, meta_title: optional(parsed.metaTitle), meta_description: optional(parsed.metaDescription), updated_at: new Date().toISOString() }
+    const payload = { name: parsed.name, slug: parsed.slug, description: optional(parsed.description), logo_url: optional(toProxiedSupabaseUrl(parsed.logoUrl)), is_active: parsed.isActive, meta_title: optional(parsed.metaTitle), meta_description: optional(parsed.metaDescription), updated_at: new Date().toISOString() }
     const request = parsed.id ? db.from('brands').update(payload).eq('id', parsed.id).select('id').single() : db.from('brands').insert(payload).select('id').single()
     const { data, error } = await request
     if (error || !data) throw new Error(error?.message ?? 'Unable to save brand.')
@@ -312,7 +313,8 @@ export async function uploadBrandLogo(formData: FormData): Promise<AdminActionRe
     const upload = await db.storage.from('brand-logos').upload(storagePath, file, { contentType: file.type, upsert: false })
     if (upload.error) throw new Error(upload.error.message)
     const { data: publicUrl } = db.storage.from('brand-logos').getPublicUrl(storagePath)
-    const { error: updateError } = await db.from('brands').update({ logo_url: publicUrl.publicUrl, updated_at: new Date().toISOString() }).eq('id', brandId)
+    const imageUrl = toProxiedSupabaseUrl(publicUrl.publicUrl) ?? publicUrl.publicUrl
+    const { error: updateError } = await db.from('brands').update({ logo_url: imageUrl, updated_at: new Date().toISOString() }).eq('id', brandId)
     if (updateError) {
       await db.storage.from('brand-logos').remove([storagePath])
       throw new Error(updateError.message)
@@ -321,7 +323,7 @@ export async function uploadBrandLogo(formData: FormData): Promise<AdminActionRe
     if (oldPath && oldPath !== storagePath) await db.storage.from('brand-logos').remove([oldPath])
     await writeAdminAuditLog({ actorUserId: session.userId, action: 'BRAND_LOGO_UPLOADED', entityType: 'brand', entityId: brandId, details: { content_type: file.type, size: file.size } })
     refreshAdminRoutes()
-    return { ok: true, message: 'Brand logo uploaded.', data: { id: brandId, logoUrl: publicUrl.publicUrl } }
+    return { ok: true, message: 'Brand logo uploaded.', data: { id: brandId, logoUrl: imageUrl } }
   } catch (error) {
     return actionFailure(error)
   }
@@ -363,8 +365,9 @@ export async function uploadCategoryImage(formData: FormData): Promise<AdminActi
     const upload = await db.storage.from('product-images').upload(storagePath, file, { contentType: file.type, upsert: false, cacheControl: '31536000' })
     if (upload.error) throw new Error(upload.error.message)
     const { data: publicUrl } = db.storage.from('product-images').getPublicUrl(storagePath)
+    const imageUrl = toProxiedSupabaseUrl(publicUrl.publicUrl) ?? publicUrl.publicUrl
     if (typeof categoryId === 'string' && categoryId) {
-      const { error } = await db.from('categories').update({ image_url: publicUrl.publicUrl, updated_at: new Date().toISOString() }).eq('id', categoryId)
+      const { error } = await db.from('categories').update({ image_url: imageUrl, updated_at: new Date().toISOString() }).eq('id', categoryId)
       if (error) {
         await db.storage.from('product-images').remove([storagePath])
         throw new Error(error.message)
@@ -372,7 +375,7 @@ export async function uploadCategoryImage(formData: FormData): Promise<AdminActi
     }
     await writeAdminAuditLog({ actorUserId: session.userId, action: 'CATEGORY_IMAGE_UPLOADED', entityType: 'category', entityId: typeof categoryId === 'string' ? categoryId : undefined, details: { content_type: file.type, size: file.size } })
     refreshAdminRoutes()
-    return { ok: true, message: 'Category image uploaded.', data: { logoUrl: publicUrl.publicUrl } }
+    return { ok: true, message: 'Category image uploaded.', data: { logoUrl: imageUrl } }
   } catch (error) {
     return actionFailure(error)
   }
@@ -383,7 +386,7 @@ export async function saveCategory(input: unknown): Promise<AdminActionResult> {
     const session = await requireAdmin(['OWNER', 'ADMIN'])
     const parsed = categorySchema.parse(input)
     const db = createAdminClient()
-    const payload = { name: parsed.name, slug: parsed.slug, description: optional(parsed.description), image_url: optional(parsed.imageUrl), sort_order: parsed.sortOrder, is_active: parsed.isActive, meta_title: optional(parsed.metaTitle), meta_description: optional(parsed.metaDescription), updated_at: new Date().toISOString() }
+    const payload = { name: parsed.name, slug: parsed.slug, description: optional(parsed.description), image_url: optional(toProxiedSupabaseUrl(parsed.imageUrl)), sort_order: parsed.sortOrder, is_active: parsed.isActive, meta_title: optional(parsed.metaTitle), meta_description: optional(parsed.metaDescription), updated_at: new Date().toISOString() }
     const request = parsed.id ? db.from('categories').update(payload).eq('id', parsed.id).select('id').single() : db.from('categories').insert(payload).select('id').single()
     const { data, error } = await request
     if (error || !data) throw new Error(error?.message ?? 'Unable to save category.')
@@ -743,13 +746,14 @@ export async function uploadProductImage(formData: FormData): Promise<AdminActio
     const upload = await db.storage.from('product-images').upload(storagePath, file, { contentType: file.type, upsert: false })
     if (upload.error) throw new Error(upload.error.message)
     const { data: publicUrl } = db.storage.from('product-images').getPublicUrl(storagePath)
+    const imageUrl = toProxiedSupabaseUrl(publicUrl.publicUrl) ?? publicUrl.publicUrl
     if (isPrimary) {
       let primaryQuery = db.from('product_images').update({ is_primary: false, updated_at: new Date().toISOString() }).eq('product_id', productId)
       primaryQuery = typeof variantId === 'string' && variantId ? primaryQuery.eq('variant_id', variantId) : primaryQuery.is('variant_id', null)
       const { error } = await primaryQuery
       if (error) throw new Error(error.message)
     }
-    const { data, error } = await db.from('product_images').insert({ product_id: productId, variant_id: typeof variantId === 'string' && variantId ? variantId : null, storage_path: storagePath, image_url: publicUrl.publicUrl, alt_text: typeof altText === 'string' ? optional(altText) : null, is_primary: isPrimary, created_by: session.userId }).select('id').single()
+    const { data, error } = await db.from('product_images').insert({ product_id: productId, variant_id: typeof variantId === 'string' && variantId ? variantId : null, storage_path: storagePath, image_url: imageUrl, alt_text: typeof altText === 'string' ? optional(altText) : null, is_primary: isPrimary, created_by: session.userId }).select('id').single()
     if (error || !data) {
       await db.storage.from('product-images').remove([storagePath])
       throw new Error(error?.message ?? 'Unable to store image metadata.')

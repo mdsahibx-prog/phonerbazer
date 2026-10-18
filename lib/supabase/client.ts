@@ -3,36 +3,57 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 const SESSION_STORAGE_KEY = '_pb_sess'
 
 /**
- * Move the existing browser session to the generic storage key before the
- * client is initialized, so the footprint change does not sign users out.
+ * Migrate old Supabase-named browser session keys without embedding the
+ * project's Supabase URL or project reference in the browser bundle.
  */
-function migrateLegacySessionStorage(supabaseUrl: string) {
+function migrateLegacySessionStorage() {
   if (typeof window === 'undefined') return
 
   try {
-    const projectRef = new URL(supabaseUrl).hostname.split('.')[0]
-    if (!projectRef) return
+    const storage = window.localStorage
+    const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index))
+      .filter((key): key is string => Boolean(key))
 
-    const legacyKey = `sb-${projectRef}-auth-token`
-    const legacySession = window.localStorage.getItem(legacyKey)
-    if (legacySession === null) return
+    const hasNewSession = keys.some(
+      (key) => key === SESSION_STORAGE_KEY || key.startsWith(`${SESSION_STORAGE_KEY}.`)
+    )
+    if (hasNewSession) return
 
-    if (window.localStorage.getItem(SESSION_STORAGE_KEY) === null) {
-      window.localStorage.setItem(SESSION_STORAGE_KEY, legacySession)
+    const legacyBaseKeys = new Set(
+      keys
+        .filter((key) => /^sb-.+-auth-token(?:\.\d+)?$/.test(key))
+        .map((key) => key.replace(/\.\d+$/, ''))
+    )
+    // Never guess when multiple Supabase projects have sessions in this origin.
+    if (legacyBaseKeys.size !== 1) return
+
+    const legacyBaseKey = Array.from(legacyBaseKeys)[0]
+    const legacyKeys = keys.filter(
+      (key) => key === legacyBaseKey || key.startsWith(`${legacyBaseKey}.`)
+    )
+
+    for (const key of legacyKeys) {
+      const suffix = key.slice(legacyBaseKey.length)
+      const value = storage.getItem(key)
+      if (value !== null) storage.setItem(`${SESSION_STORAGE_KEY}${suffix}`, value)
     }
 
-    window.localStorage.removeItem(legacyKey)
+    legacyKeys.forEach((key) => storage.removeItem(key))
   } catch {
     // Storage can be unavailable in restricted browser contexts.
   }
 }
 
+function getBrowserSupabaseUrl() {
+  if (typeof window === 'undefined') return 'http://localhost:3000/_gateway'
+  return new URL('/_gateway', window.location.origin).toString()
+}
+
 export function createClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  migrateLegacySessionStorage(supabaseUrl)
+  migrateLegacySessionStorage()
 
   return createSupabaseClient(
-    supabaseUrl,
+    getBrowserSupabaseUrl(),
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: {

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireLandingPageManagement } from '@/lib/admin/auth'
+import { toProxiedSupabaseUrl } from '@/lib/supabase/proxy'
 import { getAdminLandingPages } from '@/lib/landing-pages/data'
 import { validateLandingPageInput, type LandingPageInput } from '@/lib/landing-pages/types'
 
@@ -45,7 +46,7 @@ export async function uploadLandingPageMediaAction(formData: FormData): Promise<
     const upload = await db.storage.from('landing-pages').upload(path, Buffer.from(await file.arrayBuffer()), { contentType: file.type, upsert: false })
     if (upload.error) throw new Error('The landing-page image could not be uploaded.')
     const { data } = db.storage.from('landing-pages').getPublicUrl(upload.data.path)
-    return { ok: true, message: 'Landing-page image uploaded.', url: data.publicUrl }
+    return { ok: true, message: 'Landing-page image uploaded.', url: toProxiedSupabaseUrl(data.publicUrl) ?? data.publicUrl }
   } catch (error) {
     return failure(error)
   }

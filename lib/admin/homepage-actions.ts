@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAdmin } from '@/lib/admin/auth'
+import { toProxiedSupabaseUrl, rewriteSupabaseUrlsInValue } from '@/lib/supabase/proxy'
 import type { HomepageBanner } from '@/lib/services/storefront-utils'
 
 export type AdminActionResult = { ok: boolean; message: string }
@@ -71,7 +72,7 @@ export async function uploadBannerImageAction(formData: FormData): Promise<Admin
       .from('homepage-banners')
       .getPublicUrl(data.path)
 
-    return { ok: true, message: 'Image uploaded successfully.', url: publicUrl }
+    return { ok: true, message: 'Image uploaded successfully.', url: toProxiedSupabaseUrl(publicUrl) ?? publicUrl }
   } catch (error: unknown) {
     console.error('Server action upload error:', error)
     return { ok: false, message: error instanceof Error ? error.message : 'Server upload failed.' }
@@ -85,7 +86,7 @@ export async function createHomepageBanner(payload: Omit<HomepageBanner, 'id' | 
 
     const { error } = await db
       .from('homepage_banners')
-      .insert([{ ...payload, created_by: session.userId }])
+      .insert([{ ...rewriteSupabaseUrlsInValue(payload), created_by: session.userId }])
 
     if (error) throw new Error(error.message)
     
