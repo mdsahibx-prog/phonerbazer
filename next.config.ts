@@ -18,6 +18,7 @@ const cspHeader = `
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  productionBrowserSourceMaps: false,
   experimental: { optimizePackageImports: ['lucide-react', 'recharts'] },
   turbopack: {
     resolveAlias: {
@@ -38,6 +39,7 @@ const nextConfig: NextConfig = {
       {
         source: "/(.*)",
         headers: [
+          { key: "Server", value: "webserver" },
           { key: 'Content-Security-Policy', value: cspHeader },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
