@@ -1,6 +1,7 @@
 import { unstable_cache } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createPublicClient } from '@/lib/supabase/public'
+import { getCatalogFilterData } from '@/lib/services/catalog-filters'
 import {
   normalizeProduct,
   normalizeVariant,
@@ -447,64 +448,18 @@ export async function getRelatedProducts(product: StorefrontProduct, limit = 4) 
 }
 
 export async function getBrands() {
-  const supabase = await createClient()
-  const { data, error } = await supabase.from('brands').select('id,name,slug,logo_url,description,meta_title,meta_description').eq('is_active', true).order('name')
-  if (error) throw new Error('Unable to load brands.')
-  return (data ?? []) as StorefrontBrand[]
+  return (await getCatalogFilterData()).brands
 }
 
 export async function getBrandBySlug(slug: string) {
-  const supabase = await createClient()
-  const { data, error } = await supabase.from('brands').select('id,name,slug,logo_url,description,meta_title,meta_description').eq('slug', slug).eq('is_active', true).maybeSingle()
-  if (error) throw new Error('Unable to load this brand.')
-  return (data ?? null) as StorefrontBrand | null
+  const brands = await getBrands()
+  return brands.find((brand) => brand.slug === slug) ?? null
 }
 
 export async function getCategories() {
-  const supabase = await createClient()
-  const { data, error } = await supabase.from('categories').select('id,name,slug,description,image_url,sort_order,meta_title,meta_description').eq('is_active', true).order('sort_order').order('name')
-  if (error) throw new Error('Unable to load categories.')
-  return (data ?? []) as StorefrontCategory[]
+  return (await getCatalogFilterData()).categories
 }
 
-const defaultFooterConfig = {
-  social: { facebook: 'https://www.facebook.com/share/1EA2WP2yNe/', tiktok: '', instagram: '', x: '', youtube: '' },
-  payments: { cash_on_delivery: true, visa: false, mastercard: false },
-}
-
-async function loadStorefrontSettings(): Promise<StorefrontSettings> {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return {
-      delivery: { dhakaCharge: 80, outsideDhakaCharge: 130 },
-      warranty: { guaranteeDays: 7, serviceWarrantyYears: 1, policyText: 'Standard 1 Year Brand Warranty' },
-      footer: defaultFooterConfig,
-    }
-  }
-  const supabase = createPublicClient()
-  const { data, error } = await supabase.from('settings').select('key, value').in('key', ['delivery_charges', 'business_policy', 'footer_config']).limit(3)
-  if (error) {
-    return {
-      delivery: { dhakaCharge: 80, outsideDhakaCharge: 130 },
-      warranty: { guaranteeDays: 7, serviceWarrantyYears: 1, policyText: 'Standard 1 Year Brand Warranty' },
-      footer: defaultFooterConfig,
-    }
-  }
-  const settings = Object.fromEntries((data ?? []).map((item) => [item.key, item.value])) as {
-    delivery_charges?: { dhaka?: number; outside_dhaka?: number }
-    business_policy?: { guarantee_days?: number; service_warranty_years?: number; policy_text?: string }
-    footer_config?: Partial<FooterConfig> & { social?: Partial<FooterConfig['social']>; payments?: Partial<FooterConfig['payments']> }
-  }
-  const delivery = settings.delivery_charges ?? { dhaka: 80, outside_dhaka: 130 }
-  const policy = settings.business_policy ?? { guarantee_days: 7, service_warranty_years: 1, policy_text: 'Standard 1 Year Brand Warranty' }
-  return {
-    delivery: { dhakaCharge: Number(delivery.dhaka ?? 80), outsideDhakaCharge: Number(delivery.outside_dhaka ?? 130) },
-    warranty: { guaranteeDays: Number(policy.guarantee_days ?? 7), serviceWarrantyYears: Number(policy.service_warranty_years ?? 1), policyText: String(policy.policy_text ?? 'Standard 1 Year Brand Warranty') },
-    footer: { ...defaultFooterConfig, ...(settings.footer_config ?? {}), social: { ...defaultFooterConfig.social, ...(settings.footer_config?.social ?? {}) }, payments: { ...defaultFooterConfig.payments, ...(settings.footer_config?.payments ?? {}) } },
-  }
-}
-
-// Commerce-sensitive delivery and warranty settings stay uncached so pricing/order
-// flows never receive stale values from a public cache.
 export const getStorefrontSettings = loadStorefrontSettings
 
 async function loadFooterSettings(): Promise<StorefrontSettings> {
