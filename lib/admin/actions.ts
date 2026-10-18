@@ -2,7 +2,7 @@
 
 import { randomUUID } from 'crypto'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 
@@ -61,7 +61,11 @@ function actionFailure(error: unknown): AdminActionResult {
   return { ok: false, message: 'The operation could not be completed.' }
 }
 
-function refreshAdminRoutes() {
+function refreshAdminRoutes(refreshCatalogData = false) {
+  if (refreshCatalogData) {
+    updateTag('storefront:catalog-filters')
+    revalidatePath('/categories')
+  }
   ;['/admin', '/admin/dashboard', '/admin/products', '/admin/inventory', '/admin/orders', '/admin/customers', '/admin/settings'].forEach((path) => revalidatePath(path))
   revalidatePath('/products')
   revalidatePath('/brands')
@@ -251,7 +255,7 @@ export async function saveProduct(input: unknown): Promise<AdminActionResult> {
       entityId: data.id,
       details: { status: parsed.status, is_published: parsed.isPublished, is_featured: parsed.isFeatured },
     })
-    refreshAdminRoutes()
+    refreshAdminRoutes(true)
     return { ok: true, message: parsed.id ? 'Product updated.' : 'Product created.' }
   } catch (error) {
     return actionFailure(error)
@@ -265,7 +269,7 @@ export async function archiveProduct(productId: string): Promise<AdminActionResu
     const { error } = await db.from('products').update({ status: 'archived', is_published: false, updated_at: new Date().toISOString() }).eq('id', productId)
     if (error) throw new Error(error.message)
     await writeAdminAuditLog({ actorUserId: session.userId, action: 'PRODUCT_ARCHIVED', entityType: 'product', entityId: productId })
-    refreshAdminRoutes()
+    refreshAdminRoutes(true)
     return { ok: true, message: 'Product archived and unpublished.' }
   } catch (error) {
     return actionFailure(error)
@@ -282,7 +286,7 @@ export async function saveBrand(input: unknown): Promise<AdminActionResult> {
     const { data, error } = await request
     if (error || !data) throw new Error(error?.message ?? 'Unable to save brand.')
     await writeAdminAuditLog({ actorUserId: session.userId, action: parsed.id ? 'BRAND_UPDATED' : 'BRAND_CREATED', entityType: 'brand', entityId: data.id, details: { is_active: parsed.isActive } })
-    refreshAdminRoutes()
+    refreshAdminRoutes(true)
     return { ok: true, message: parsed.id ? 'Brand updated.' : 'Brand created.', data: { id: data.id, logoUrl: payload.logo_url ?? undefined } }
   } catch (error) {
     return actionFailure(error)
@@ -322,7 +326,7 @@ export async function uploadBrandLogo(formData: FormData): Promise<AdminActionRe
     const oldPath = getBrandLogoStoragePath(brand.logo_url)
     if (oldPath && oldPath !== storagePath) await db.storage.from('brand-logos').remove([oldPath])
     await writeAdminAuditLog({ actorUserId: session.userId, action: 'BRAND_LOGO_UPLOADED', entityType: 'brand', entityId: brandId, details: { content_type: file.type, size: file.size } })
-    refreshAdminRoutes()
+    refreshAdminRoutes(true)
     return { ok: true, message: 'Brand logo uploaded.', data: { id: brandId, logoUrl: imageUrl } }
   } catch (error) {
     return actionFailure(error)
@@ -341,7 +345,7 @@ export async function removeBrandLogo(brandId: string): Promise<AdminActionResul
     const storagePath = getBrandLogoStoragePath(brand.logo_url)
     if (storagePath) await db.storage.from('brand-logos').remove([storagePath])
     await writeAdminAuditLog({ actorUserId: session.userId, action: 'BRAND_LOGO_REMOVED', entityType: 'brand', entityId: brandId })
-    refreshAdminRoutes()
+    refreshAdminRoutes(true)
     return { ok: true, message: 'Brand logo removed.', data: { id: brandId, logoUrl: '' } }
   } catch (error) {
     return actionFailure(error)
@@ -374,7 +378,7 @@ export async function uploadCategoryImage(formData: FormData): Promise<AdminActi
       }
     }
     await writeAdminAuditLog({ actorUserId: session.userId, action: 'CATEGORY_IMAGE_UPLOADED', entityType: 'category', entityId: typeof categoryId === 'string' ? categoryId : undefined, details: { content_type: file.type, size: file.size } })
-    refreshAdminRoutes()
+    refreshAdminRoutes(true)
     return { ok: true, message: 'Category image uploaded.', data: { logoUrl: imageUrl } }
   } catch (error) {
     return actionFailure(error)
@@ -391,7 +395,7 @@ export async function saveCategory(input: unknown): Promise<AdminActionResult> {
     const { data, error } = await request
     if (error || !data) throw new Error(error?.message ?? 'Unable to save category.')
     await writeAdminAuditLog({ actorUserId: session.userId, action: parsed.id ? 'CATEGORY_UPDATED' : 'CATEGORY_CREATED', entityType: 'category', entityId: data.id, details: { is_active: parsed.isActive, sort_order: parsed.sortOrder } })
-    refreshAdminRoutes()
+    refreshAdminRoutes(true)
     return { ok: true, message: parsed.id ? 'Category updated.' : 'Category created.' }
   } catch (error) {
     return actionFailure(error)
