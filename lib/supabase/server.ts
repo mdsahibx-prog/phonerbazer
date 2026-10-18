@@ -1,5 +1,8 @@
+import 'server-only'
+
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { createProxyAwareFetch } from '@/lib/supabase/proxy'
 
 const SESSION_COOKIE_NAME = '_pb_sess'
 
@@ -17,6 +20,7 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      global: { fetch: createProxyAwareFetch() },
       cookieOptions: { name: SESSION_COOKIE_NAME },
       cookies: {
         getAll() {
