@@ -1,5 +1,6 @@
 import 'server-only'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createProxyAwareFetch } from '@/lib/supabase/proxy'
 
 export function createAdminClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -10,6 +11,7 @@ export function createAdminClient() {
   }
 
   return createSupabaseClient(supabaseUrl, serviceRoleKey, {
+    global: { fetch: createProxyAwareFetch() },
     auth: {
       persistSession: false,
       autoRefreshToken: false,
