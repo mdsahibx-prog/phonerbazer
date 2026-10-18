@@ -36,7 +36,7 @@ export function LandingFooter({
 export function LandingTrustBridge() {
   const benefits = [
     { Icon: CircleCheck, title: 'দাম আগে দেখুন', description: 'পছন্দের রং ও পরিমাণ অনুযায়ী মূল্য' },
-    { Icon: Truck, title: 'ডেলিভারি চার্জ', description: 'বিভাগ বেছে চার্জ জেনে নিন' },
+    { Icon: Truck, title: 'ডেলিভারি চার্জ আগে দেখুন', description: 'বিভাগ বেছে চার্জ জেনে নিন' },
     { Icon: ShieldCheck, title: 'পণ্য হাতে পেমেন্ট', description: 'পণ্য পেয়ে মূল্য পরিশোধ করুন' },
   ]
 
