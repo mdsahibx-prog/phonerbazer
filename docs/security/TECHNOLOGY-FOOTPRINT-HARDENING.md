@@ -1,44 +1,48 @@
-# Technology Footprint Hardening
+# Infrastructure Endpoint Masking and Security
 
-This change reduces obvious framework markers; it is not a guarantee that a technology profiler cannot identify the stack. Browser JavaScript, request behavior, asset paths, and public API destinations can still identify a framework or backend.
+## What the code now does
 
-## Application-side changes
+- Browser-side Supabase Auth requests use the same-origin **/_gateway** path instead of embedding the project's Supabase hostname in the browser client.
+- A second same-origin **/_media** path handles existing media URLs saved from the legacy Supabase project. Set **SUPABASE_LEGACY_URL** if that legacy project's domain ever changes.
+- Server Supabase clients rewrite backend URLs in JSON reads and writes before values can be serialized into page HTML, React Server Component payloads, or server-action responses.
+- New brand, category, product, banner, and landing-page uploads return/use first-party URLs.
+- Browser CSP no longer allowlists the Supabase hostname. The gateway rewrites live upstream to the server-configured Supabase URL.
+- Browser sessions continue to use the generic **_pb_sess** storage/cookie name with a compatibility migration for old browser keys.
 
-- `poweredByHeader: false` disables Next.js' `X-Powered-By` header.
-- Production browser source maps remain disabled.
-- The `Server: webserver` response header is configured as a best-effort override. Vercel or an intermediary may replace it; verify the actual deployed response.
-- Framework generator metadata is explicitly unset. The default `next.svg` and `vercel.svg` assets have been removed.
-- Browser auth storage and Supabase SSR cookies use `_pb_sess`. Existing browser sessions and legacy SSR cookies are migrated when the corresponding client next runs. Stateless `lib/supabase/public.ts` intentionally has no persistent session storage or cookie configuration.
-- `site.webmanifest` contains only app branding and relative icon paths. `app/robots.ts` has crawl rules for the site's public and restricted route groups, but robots rules are public and are not an authorization mechanism.
+The public publishable/anon key can still be visible in browser code by design. It is not a database password. Supabase expects the Data API to be protected by least-privilege grants, Row Level Security (RLS), and Auth; the service-role/secret key must remain server-only. Hiding the URL is defense-in-depth, not an authorization boundary.
 
-## Cloudflare: strip Vercel response headers
+## Vercel domain exposure
 
-Cloudflare must proxy the production DNS record (orange-cloud enabled); Transform Rules do not affect requests that bypass Cloudflare.
+The Vercel project currently has SSO protection enabled for generated deployment URLs, excluding custom domains. Keep this setting enabled so generated vercel.app deployment URLs are not a public bypass around the custom domain.
 
-1. Open **Cloudflare Dashboard → your zone → Rules → Transform Rules → Response Header Transform Rules**.
-2. Create a rule named **Remove hosting diagnostic headers**.
-3. Use this expression for the production hostnames:
+The production custom domain still responds from Vercel directly unless Cloudflare is actually proxying it. To prevent a technology profiler from seeing **Server: Vercel** and Vercel diagnostic headers:
 
-   ```text
-   (http.host eq "www.phonerbazar.store") or (http.host eq "phonerbazar.store")
-   ```
+1. In Cloudflare DNS, proxy the **www** and apex records through Cloudflare (orange cloud). Confirm the DNS target and SSL/TLS mode are correct before saving.
+2. Under **Rules → Transform Rules → Response Header Transform Rules**, add a rule for **www.phonerbazar.store** and **phonerbazar.store**.
+3. Remove these response headers: **x-vercel-id**, **x-vercel-cache**, **x-matched-path**, **x-nextjs-prerender**, and **x-nextjs-stale-time**.
+4. Deploy the rules and verify the public custom domain. Cloudflare does not allow a Response Header Transform Rule to edit the **Server** header; with proxying enabled, verify that the returned server header is Cloudflare rather than Vercel.
+5. Test the custom domain, not only a Vercel deployment URL. Do not disable deployment protection just to test the origin.
 
-   Adjust the hostnames if the production domain changes.
-4. Add **Remove** response-header actions for each of these headers:
-   - `x-vercel-id`
-   - `x-vercel-cache`
-   - `x-matched-path`
-5. Deploy the rule, then verify the public response using browser DevTools or `curl -sSI https://www.phonerbazar.store/`. Repeat for representative page and API endpoints.
+If Cloudflare is not currently the authoritative DNS/proxy for these records, this step requires dashboard/DNS changes and cannot be accomplished by a Next.js code change alone.
 
-Cloudflare's current Response Header Transform Rules documentation says the `Server` header cannot be modified through these rules. Therefore, the application-side `Server: webserver` value may not survive the hosting/CDN response path. Do not claim the server identity is hidden unless the actual public response has been checked. Also check the deployment directly, if a public Vercel deployment alias remains reachable, because direct-origin requests bypass Cloudflare's rules.
+## Supabase security checks
+
+The current Supabase Security Advisor reports:
+
+- **Warning: leaked-password protection is disabled.** Enable it in **Supabase Dashboard → Authentication → Settings → Password Security → Leaked password protection**. This helps block known compromised passwords.
+- Four tables have RLS enabled with no policies: **analytics_delivery_ledger**, **analytics_worker_auth**, **inventory_cost_balances**, and **inventory_receipts**. No policies means access through RLS is denied by default. These appear to be internal tables, so do not add broad policies; verify they have no unintended anon or authenticated grants.
+
+Never expose **SUPABASE_SERVICE_ROLE_KEY** in browser code. Keep all sensitive tables protected by explicit grants and RLS, and validate every payment/webhook/admin mutation server-side. Anyone who knows a Supabase hostname can still attempt requests to it; the actual protection must come from database authorization, secret handling, validation, and rate limits.
 
 ## Verification checklist
 
-- [ ] Run lint, production build, and existing checkout/auth contract tests.
-- [ ] Verify admin sign-in, sign-out, password reset, invitation activation, and an authenticated server action.
-- [ ] Confirm `X-Powered-By` and generator metadata are absent from production HTML/headers.
-- [ ] Confirm no public references remain to `/next.svg` or `/vercel.svg`.
-- [ ] Confirm the three Vercel diagnostic headers are absent through Cloudflare.
-- [ ] Confirm payment webhooks and all admin/API routes remain reachable and retain their existing authentication and response behavior.
+- [ ] Run lint, typecheck, production build, and existing checkout/auth contract tests.
+- [ ] Verify homepage, product list, cart, product detail pages, banner images, and legacy landing-page images.
+- [ ] Verify admin login, invitation activation, password reset, upload/preview, and an authenticated server action.
+- [ ] Inspect the page HTML and network requests: no Supabase project hostname should be required by the browser.
+- [ ] Confirm requests through /_gateway and /_media return expected content and do not expose upstream response bodies or secrets.
+- [ ] Confirm Vercel generated deployment URLs are still SSO-protected.
+- [ ] Verify Cloudflare is proxying the production DNS records and removing Vercel diagnostic headers.
+- [ ] Confirm payment webhooks and all admin/API routes preserve authentication, signatures, idempotency, and response behavior.
 
-Removing framework markers is obscurity, not a security boundary. Keep authorization, payment validation, secrets, and database access protected independently of these changes.
+Framework and hosting markers may still be inferred from behavior and asset paths. The primary goal here is to avoid exposing the actual Supabase project hostname/identifier or a public Vercel-origin bypass through ordinary page source and browser requests, while keeping real access controls intact.
