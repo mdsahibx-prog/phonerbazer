@@ -41,6 +41,20 @@ const nextConfig: NextConfig = {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 86400,
   },
+  async redirects() {
+    return [
+      {
+        source: '/landing/mobile2',
+        destination: '/landing/nokia-2720-flip-bangladesh',
+        permanent: true,
+      },
+      {
+        source: '/landing/nokia-2720-flip',
+        destination: '/landing/nokia-2720-flip-bangladesh',
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     const primarySupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const legacySupabaseUrl = process.env.SUPABASE_LEGACY_URL || 'https://ncknpaezdhsqiicdjtgr.supabase.co'
