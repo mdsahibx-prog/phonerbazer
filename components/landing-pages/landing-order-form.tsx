@@ -38,7 +38,7 @@ function translateFieldErrors(errors: Record<string, string>) {
   const bengali: Record<string, string> = {
     fullName: 'আপনার নাম অন্তত ২ অক্ষরে লিখুন।',
     phone: 'সঠিক ১১ সংখ্যার মোবাইল নম্বর দিন।',
-    division: 'ডেলিভারির বিভাগ নির্বাচন করুন।',
+    division: 'বিভাগ নির্বাচন করুন।',
     district: 'আপনার জেলা নির্বাচন করুন।',
     area: 'এলাকা বা উপজেলা লিখুন।',
     address: 'বাড়ি, সড়ক বা কাছের পরিচিত স্থানসহ সম্পূর্ণ ঠিকানা লিখুন।',
@@ -272,7 +272,7 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
     const errors: Record<string, string> = {}
     if (form.fullName.trim().length < 2) errors.fullName = 'আপনার নাম অন্তত ২ অক্ষরে লিখুন।'
     if (!isValidBangladeshMobile(form.phone)) errors.phone = 'সঠিক ১১ সংখ্যার মোবাইল নম্বর দিন।'
-    if (!form.division) errors.division = 'ডেলিভারির বিভাগ নির্বাচন করুন।'
+    if (!form.division) errors.division = 'বিভাগ নির্বাচন করুন।'
     if (form.address.trim().length < 8) errors.address = 'বাড়ি/রোড, এলাকা/থানা, জেলা ও কাছের পরিচিত স্থানসহ ঠিকানা লিখুন (কমপক্ষে ৮ অক্ষর)।'
     setFieldErrors(errors)
     if (Object.keys(errors).length) {
@@ -403,14 +403,13 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
     : !quote ? 'মোট মূল্য প্রস্তুত নয়'
     : unavailable ? 'এই ভ্যারিয়েন্টটি স্টকে নেই'
     : availabilityError ? 'পণ্যের প্রাপ্যতা যাচাই করুন'
-    : !form.division ? 'ডেলিভারির বিভাগ নির্বাচন করুন'
     : null
 
-  return <section id="order-form" className="mx-auto max-w-5xl scroll-mt-4 px-4 py-6 pb-8 sm:px-6 sm:py-8">
-    <form noValidate onSubmit={(event) => { event.preventDefault(); void submitOrder() }} onFocusCapture={startCheckout} className="border border-slate-200 bg-white p-4 shadow-sm sm:rounded-2xl sm:p-7">
+  return <section id="order-form" className="mx-auto max-w-5xl scroll-mt-4 px-4 py-5 pb-6 sm:px-6 sm:py-7">
+    <form noValidate onSubmit={(event) => { event.preventDefault(); void submitOrder() }} onFocusCapture={startCheckout} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:rounded-2xl sm:p-7">
       <div className="flex items-start gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><Truck className="h-5 w-5" aria-hidden="true" /></span>
-        <div className="min-w-0"><h2 className="text-xl font-black text-slate-950 sm:text-2xl">অর্ডার ফর্ম</h2><p className="mt-1 text-sm leading-6 text-slate-600">ক্যাশ অন ডেলিভারি। পণ্য হাতে পেয়ে মূল্য পরিশোধ করুন।</p></div>
+        <div className="min-w-0"><h2 className="text-xl font-black text-slate-950 sm:text-2xl">অর্ডার ফর্ম</h2><p className="mt-1 text-[15px] leading-6 text-slate-600">ক্যাশ অন ডেলিভারি। পণ্য হাতে পেয়ে মূল্য পরিশোধ করুন।</p></div>
       </div>
 
       {prefillApplied && <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-100 bg-emerald-50/70 px-3 py-2 text-xs font-semibold text-emerald-800">
@@ -420,16 +419,16 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
 
       {message && <div role="alert" className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-sm font-semibold leading-6 text-rose-700">{message}</div>}
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="block min-w-0" htmlFor="landing-full-name">
-          <span className="text-sm font-bold text-slate-800">আপনার নাম</span>
-          <input ref={nameRef} id="landing-full-name" name="name" required value={form.fullName} onChange={(event) => update('fullName', event.target.value)} autoComplete="name" aria-invalid={Boolean(fieldErrors.fullName)} aria-describedby={fieldErrors.fullName ? 'landing-name-error' : undefined} className={`mt-1.5 h-12 w-full rounded-xl border bg-white px-3.5 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 ${fieldErrors.fullName ? 'border-rose-400' : 'border-slate-200'}`} placeholder="আপনার পুরো নাম" />
+          <span className="text-[15px] font-bold text-slate-800">আপনার নাম</span>
+          <input ref={nameRef} id="landing-full-name" name="name" required value={form.fullName} onChange={(event) => update('fullName', event.target.value)} autoComplete="name" aria-invalid={Boolean(fieldErrors.fullName)} aria-describedby={fieldErrors.fullName ? 'landing-name-error' : undefined} className={`mt-1.5 h-12 w-full rounded-xl border bg-white px-3.5 text-base outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 ${fieldErrors.fullName ? 'border-rose-400' : 'border-slate-200'}`} placeholder="আপনার পুরো নাম" />
           {fieldErrors.fullName && <span id="landing-name-error" className="mt-1 block text-xs font-bold text-rose-600">{'আপনার নাম সঠিকভাবে লিখুন।'}</span>}
         </label>
         <label className="block min-w-0" htmlFor="landing-mobile">
-          <span className="text-sm font-bold text-slate-800">মোবাইল নম্বর</span>
+          <span className="text-[15px] font-bold text-slate-800">মোবাইল নম্বর</span>
           <span className="relative block">
-            <input ref={phoneRef} id="landing-mobile" name="phone" type="tel" inputMode="tel" required value={form.phone} onChange={(event) => update('phone', event.target.value)} onBlur={validatePhone} autoComplete="tel" aria-invalid={Boolean(fieldErrors.phone)} aria-describedby={fieldErrors.phone ? 'landing-phone-error' : undefined} className={`mt-1.5 h-12 w-full rounded-xl border bg-white px-3.5 pr-10 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 ${fieldErrors.phone ? 'border-rose-400' : 'border-slate-200'}`} placeholder="01XXXXXXXXX" />
+            <input ref={phoneRef} id="landing-mobile" name="phone" type="tel" inputMode="tel" required value={form.phone} onChange={(event) => update('phone', event.target.value)} onBlur={validatePhone} autoComplete="tel" aria-invalid={Boolean(fieldErrors.phone)} aria-describedby={fieldErrors.phone ? 'landing-phone-error' : undefined} className={`mt-1.5 h-12 w-full rounded-xl border bg-white px-3.5 pr-10 text-base outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 ${fieldErrors.phone ? 'border-rose-400' : 'border-slate-200'}`} placeholder="01XXXXXXXXX" />
             {phoneIsValid && !fieldErrors.phone && <CircleCheck className="absolute right-3 top-4 h-4 w-4 text-emerald-600" aria-label="মোবাইল নম্বর সঠিক" />}
           </span>
           {fieldErrors.phone && <span id="landing-phone-error" className="mt-1 block text-xs font-bold text-rose-600">{fieldErrors.phone}</span>}
@@ -437,15 +436,14 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
 
         <SearchSelect label="বিভাগ" id="landing-division" value={form.division} options={DIVISIONS} placeholder="বিভাগ নির্বাচন করুন" autoComplete="address-level1" accent="emerald" error={fieldErrors.division} onChange={(value) => update('division', value)} />
 
-
         <label className="block min-w-0 sm:col-span-2" htmlFor="landing-address">
-          <span className="text-sm font-bold text-slate-800">ডেলিভারি ঠিকানা</span>
-          <textarea ref={addressRef} id="landing-address" name="address" required value={form.address} onChange={(event) => update('address', event.target.value)} rows={3} autoComplete="street-address" aria-invalid={Boolean(fieldErrors.address)} aria-describedby={fieldErrors.address ? 'landing-address-error' : undefined} className={`mt-1.5 w-full resize-y rounded-xl border bg-white px-3.5 py-3 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 ${fieldErrors.address ? 'border-rose-400' : 'border-slate-200'}`} placeholder="বাড়ি/রোড, এলাকা/থানা, জেলা ও কাছের পরিচিত স্থান লিখুন" />
+          <span className="text-[15px] font-bold text-slate-800">ডেলিভারি ঠিকানা</span>
+          <textarea ref={addressRef} id="landing-address" name="address" required value={form.address} onChange={(event) => update('address', event.target.value)} rows={3} autoComplete="street-address" aria-invalid={Boolean(fieldErrors.address)} aria-describedby={fieldErrors.address ? 'landing-address-error' : undefined} className={`mt-1.5 w-full resize-y rounded-xl border bg-white px-3.5 py-3 text-base outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 ${fieldErrors.address ? 'border-rose-400' : 'border-slate-200'}`} placeholder="বাড়ি/রোড, এলাকা/থানা, জেলা ও কাছের পরিচিত স্থান লিখুন" />
           {fieldErrors.address && <span id="landing-address-error" className="mt-1 block text-xs font-bold text-rose-600">{fieldErrors.address}</span>}
         </label>
       </div>
 
-      <label className="mt-4 flex cursor-pointer items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs leading-5 text-slate-600">
+      <label className="mt-4 flex cursor-pointer items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm leading-5 text-slate-600">
         <input type="checkbox" checked={recoveryConsent} onChange={(event) => { formInteracted.current = true; startCheckout(); setRecoveryConsent(event.target.checked) }} className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-600" />
         <span>অসম্পূর্ণ অর্ডারে সহায়তার জন্য Phonerbazar যোগাযোগ করতে পারবে</span>
       </label>
@@ -454,29 +452,28 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
         <div className="flex items-start gap-2.5">
           <ShieldCheck className="mt-0.5 h-4.5 w-4.5 shrink-0 text-emerald-700" aria-hidden="true" />
           <div className="min-w-0 flex-1">
-            <h3 id="landing-order-summary-title" className="text-sm font-black text-slate-950">অর্ডারের সারাংশ</h3>
+            <h3 id="landing-order-summary-title" className="text-[15px] font-black text-slate-950">অর্ডারের সারাংশ</h3>
             <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-              <p className="min-w-0 break-words text-sm font-bold leading-5 text-slate-900">{quote?.productName ?? product.name}</p>
+              <p className="min-w-0 break-words text-[15px] font-bold leading-5 text-slate-900">{quote?.productName ?? product.name}</p>
               <span className="text-xs text-slate-500">{quote?.variantTitle ?? variantLabel(variant)} · {quantity}টি</span>
               {variant.is_low_stock && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800">স্টক সীমিত</span>}
             </div>
           </div>
         </div>
-        <dl className="mt-3 space-y-1.5 text-sm">
+        <dl className="mt-3 space-y-1.5 text-[15px]">
           <div className="flex items-center justify-between gap-3"><dt className="text-slate-600">পণ্যের মূল্য</dt><dd className="shrink-0 font-semibold tabular-nums text-slate-900">{quote ? money(quote.subtotal) : '—'}</dd></div>
           {quote && quote.discountTotal > 0 && <div className="flex items-center justify-between gap-3 text-emerald-700"><dt>আপনার সাশ্রয়</dt><dd className="shrink-0 font-semibold tabular-nums">{money(quote.discountTotal)}</dd></div>}
           <div className="flex items-center justify-between gap-3"><dt className="text-slate-600">ডেলিভারি চার্জ</dt><dd className="shrink-0 text-right font-semibold tabular-nums text-slate-900">{selectedDeliveryCharge === null ? 'বিভাগ নির্বাচন করুন' : money(selectedDeliveryCharge)}</dd></div>
           <div className="flex items-center justify-between gap-3 border-t border-emerald-100 pt-2"><dt className="font-black text-slate-950">সর্বমোট</dt><dd className="shrink-0 text-lg font-black tabular-nums text-emerald-800">{displayedTotal === null ? '—' : money(displayedTotal)}</dd></div>
         </dl>
-        {!form.division && <p className="mt-2 rounded-lg bg-white/80 px-2.5 py-1.5 text-xs leading-5 text-slate-600">ডেলিভারি এলাকা নির্বাচন করলে চার্জ দেখা যাবে</p>}
-        {quoteLoading && <p className="mt-1.5 text-xs text-slate-500">সঠিক মূল্য যাচাই হচ্ছে…</p>}
+            {quoteLoading && <p className="mt-1.5 text-xs text-slate-500">সঠিক মূল্য যাচাই হচ্ছে…</p>}
         {quoteError && <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-rose-700"><span>{quoteError}</span><button type="button" onClick={() => { void retryQuote() }} className="min-h-9 rounded-lg px-2 underline underline-offset-2">আবার চেষ্টা করুন</button></div>}
         {unavailable && <p className="mt-1.5 text-xs font-bold text-rose-700">এই ভ্যারিয়েন্টে নির্বাচিত পরিমাণের পণ্য স্টকে নেই। অন্য ভ্যারিয়েন্ট বা পরিমাণ নির্বাচন করুন।</p>}
         {availabilityError && <p className="mt-1.5 text-xs font-bold leading-5 text-rose-700">{availabilityError}</p>}
       </section>
 
       <div className="mt-4 border-t border-slate-100 pt-4 sm:mt-5 sm:border-0 sm:pt-0">
-        <button type="submit" disabled={busy || quoteLoading || !quote || !form.division || !quote.available || Boolean(quoteError) || Boolean(availabilityError)} className="mx-auto flex min-h-12 w-full max-w-6xl items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 px-5 text-sm font-black text-white shadow-[0_8px_20px_rgba(234,88,12,0.28)] ring-1 ring-orange-400/70 transition hover:from-orange-600 hover:via-amber-600 hover:to-orange-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:bg-none disabled:text-slate-600 disabled:shadow-none disabled:ring-0">
+        <button type="submit" disabled={busy || quoteLoading || !quote || !form.division || !quote.available || Boolean(quoteError) || Boolean(availabilityError)} className="mx-auto flex min-h-12 w-full max-w-6xl items-center justify-center gap-2 rounded-xl bg-orange-600 px-5 text-base font-black text-white shadow-sm ring-1 ring-orange-600/10 transition-colors hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-300 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 disabled:shadow-none disabled:ring-0">
           {busy && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />}
           {busy ? 'অর্ডার হচ্ছে...' : 'অর্ডার কনফার্ম করুন'}
         </button>
@@ -497,7 +494,7 @@ export function LandingOrderForm({ product, variant, quantity }: OrderFormProps)
           target="_blank"
           rel="noopener noreferrer"
           aria-label="হোয়াটসঅ্যাপে পণ্যের অর্ডারের তথ্য পাঠান"
-          className="mx-auto inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-800 transition-colors hover:border-emerald-300 hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 sm:w-auto sm:min-w-72"
+          className="mx-auto inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-base font-bold text-emerald-800 transition-colors hover:border-emerald-300 hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 sm:w-auto sm:min-w-72"
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="currentColor" aria-hidden="true">
             <path d="M20.52 3.48A11.86 11.86 0 0 0 12.07 0C5.5 0 .16 5.34.16 11.91c0 2.1.55 4.15 1.59 5.96L.06 24l6.28-1.65a11.9 11.9 0 0 0 5.72 1.46h.01c6.56 0 11.9-5.34 11.9-11.91a11.83 11.83 0 0 0-3.45-8.42ZM12.07 21.8h-.01a9.9 9.9 0 0 1-5.04-1.38l-.36-.21-3.73.98.99-3.64-.24-.37a9.86 9.86 0 0 1-1.52-5.27c0-5.47 4.45-9.92 9.92-9.92a9.86 9.86 0 0 1 7.02 2.91 9.86 9.86 0 0 1 2.9 7.02c0 5.47-4.45 9.92-9.93 9.92Zm5.44-7.43c-.3-.15-1.77-.87-2.04-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.8-1.49-1.78-1.67-2.08-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.48-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.49s1.07 2.89 1.22 3.09c.15.2 2.1 3.21 5.09 4.5.71.31 1.26.49 1.69.63.71.23 1.36.2 1.87.12.57-.08 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.08-.13-.27-.2-.57-.35Z" />
