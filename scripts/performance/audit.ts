@@ -15,9 +15,15 @@ async function measureRoute(route: string) {
   const start = performance.now()
   try {
     const response = await fetch(baseUrl + route, { redirect: 'follow' })
-    const body = await response.arrayBuffer()
+    // fetch resolves when response headers arrive; record TTFB before downloading
+    // the body so large HTML documents do not inflate the server-response metric.
     const ttfbMs = Math.round((performance.now() - start) * 100) / 100
-    return { route, status: response.ok ? thresholdStatus('ttfbMs', ttfbMs) : 'WARNING', httpStatus: response.status, ttfbMs, bytes: body.byteLength }
+    const body = await response.arrayBuffer()
+    const totalResponseMs = Math.round((performance.now() - start) * 100) / 100
+    const status = response.ok
+      ? thresholdStatus('ttfbMs', ttfbMs)
+      : response.status >= 500 ? 'CRITICAL' : 'WARNING'
+    return { route, status, httpStatus: response.status, ttfbMs, totalResponseMs, bytes: body.byteLength }
   } catch (error) {
     return { route, status: 'NOT MEASURED', reason: error instanceof Error ? error.message : 'Request failed' }
   }
