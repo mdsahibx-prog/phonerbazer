@@ -28,7 +28,7 @@ async function main() {
   const { ANALYTICS_PROVIDER_ADAPTERS, buildGa4MeasurementPayload, interpretGa4ValidationResponse } = await import('../lib/analytics/provider-adapters')
   const { safeAnalyticsConfigForEnvironment } = await import('../lib/analytics/server')
   const { isAnalyticsDeliveryPermanentlyIneligible } = await import('../lib/analytics/worker')
-  const { isBrowserAnalyticsEventEnabled, isBrowserProviderEventAllowed, getMetaPixelIds, buildMetaPixelInitArgs, buildMetaPixelEventData, buildMetaPixelTrackSingleArgs } = await import('../lib/analytics/browser-registry')
+  const { isBrowserAnalyticsEventEnabled, isBrowserProviderEventAllowed, getMetaPixelIds, buildMetaPixelInitArgs, buildMetaPixelEventData, buildMetaPixelTrackSingleArgs, shouldReuseAnalyticsScript, buildGtmStartEvent } = await import('../lib/analytics/browser-registry')
   const { isAnalyticsPageViewPathAllowed } = await import('../lib/analytics/client')
   const { ANALYTICS_MAX_DELIVERY_ATTEMPTS } = await import('../lib/analytics/delivery-ledger')
 
@@ -309,6 +309,15 @@ async function main() {
   assert.equal(isAnalyticsPageViewPathAllowed('/admin/dashboard'), false)
   assert.equal(isAnalyticsPageViewPathAllowed('/auth/callback'), false)
   assert.equal(isAnalyticsPageViewPathAllowed('/verify-order/private-token'), false)
+
+  // Failed analytics script requests must be retryable; loading/loaded scripts must be reused.
+  assert.equal(shouldReuseAnalyticsScript(undefined), true)
+  assert.equal(shouldReuseAnalyticsScript('loading'), true)
+  assert.equal(shouldReuseAnalyticsScript('loaded'), true)
+  assert.equal(shouldReuseAnalyticsScript('error'), false)
+
+  // Match Google's required GTM bootstrap dataLayer event and ensure the timestamp is deterministic.
+  assert.deepEqual(buildGtmStartEvent(123456), { 'gtm.start': 123456, event: 'gtm.js' })
 
   // Meta must initialize each configured pixel once and dispatch only once per pixel.
   assert.deepEqual(
