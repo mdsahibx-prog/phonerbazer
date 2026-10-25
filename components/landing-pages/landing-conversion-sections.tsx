@@ -209,6 +209,18 @@ function TextSection({ section, title, tone = 'plain' }: { section: Extract<Land
   </section>
 }
 
+function DeliveryInfoSection({ section }: { section: Extract<LandingSection, { type: 'delivery_info' }> }) {
+  return <section className={`mx-auto max-w-5xl px-4 py-3 sm:px-6 sm:py-4 ${visibility(section)}`} aria-labelledby={`${section.id}-title`}>
+    <div className="flex items-start gap-3 rounded-xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 sm:items-center sm:px-5">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-emerald-700"><Truck className="h-5 w-5" aria-hidden="true" /></span>
+      <div className="min-w-0">
+        <h2 id={`${section.id}-title`} className="text-sm font-black tracking-tight text-slate-950 sm:text-base">ডেলিভারি ও পেমেন্ট</h2>
+        <p className="mt-0.5 text-sm font-semibold leading-6 text-slate-700">ঢাকার ভেতরে ৳৮০ <span className="px-1 text-emerald-700" aria-hidden="true">·</span> ঢাকার বাইরে ৳১৩০</p>
+      </div>
+    </div>
+  </section>
+}
+
 function ReviewSection({ section }: { section: Extract<LandingSection, { type: 'social_proof' }> }) {
   const reviews = (section.reviews ?? []).filter((review) => review.enabled !== false).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
   if (!reviews.length) return null
@@ -363,7 +375,8 @@ export function LandingConversionSections({ sections, products, fixedImageUrl }:
       if (section.type === 'features' || section.type === 'benefits') return <section key={section.id} className={`mx-auto max-w-5xl px-4 py-5 sm:px-6 sm:py-7 ${visibility(section)}`}><div><p className="text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700">দৈনন্দিন ব্যবহারে</p><h2 className="mt-1 text-xl font-black tracking-tight sm:text-2xl">{customerText(section.title)}</h2></div><div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">{section.items.filter((item) => item.enabled !== false && !(selectedProduct.name.toLowerCase().includes('nokia 6310') && /কীপ্যাড|keypad|প্রয়োজনীয় কানেক্টিভিটি|কানেক্টিভিটি|connectivity/i.test(item.title))).map((item) => { const label = item.title.toLowerCase(); const Icon = /ব্যাটারি|battery|চার্জ/.test(label) ? BatteryCharging : /bluetooth|ব্লুটুথ|কানেক্টিভিটি/.test(label) ? Bluetooth : /camera|ক্যামেরা/.test(label) ? Camera : /radio|রেডিও|fm/.test(label) ? Radio : /ডিসপ্লে|display|screen|স্ক্রিন/.test(label) ? Smartphone : CircleCheck; return <article key={item.title} className="flex min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700"><Icon className="h-4 w-4" /></span><h3 className="min-w-0 text-sm font-bold leading-snug text-slate-950">{customerText(item.title)}</h3></article> })}</div></section>
       if (section.type === 'specifications') { const fields = section.fields.filter((field) => field.enabled !== false && field.value.trim()); if (!fields.length) return null; return <section key={section.id} className={`mx-auto max-w-5xl px-4 py-7 sm:px-6 ${visibility(section)}`}><details className="group rounded-2xl border border-slate-200 bg-white shadow-sm"><summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-xl font-black tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 sm:px-6"><span>{customerText(section.title) || 'পণ্যের বিস্তারিত'}</span><span aria-hidden="true" className="text-2xl leading-none text-emerald-700 transition-transform group-open:rotate-45">+</span></summary><dl className="grid gap-x-8 border-t border-slate-100 px-5 pb-4 sm:grid-cols-2 sm:px-6">{fields.map((field) => <div key={field.label} className="flex justify-between gap-4 border-b border-slate-100 py-3 text-sm"><dt className="font-semibold text-slate-500">{customerText(field.label)}</dt><dd className="text-right font-bold">{customerText(field.value)}</dd></div>)}</dl></details></section> }
       if (section.type === 'social_proof') return <ReviewSection key={section.id} section={section} />
-      if (section.type === 'delivery_info' || section.type === 'warranty' || section.type === 'trust') return <TextSection key={section.id} section={section} tone={section.type === 'delivery_info' ? 'green' : 'plain'} title={section.type === 'delivery_info' ? 'ডেলিভারি ও পেমেন্ট' : undefined} />
+      if (section.type === 'delivery_info') return <DeliveryInfoSection key={section.id} section={section} />
+      if (section.type === 'warranty' || section.type === 'trust') return <TextSection key={section.id} section={section} tone="plain" />
       if (section.type === 'faq') { const isLegacySmokeFaq = section.id === 'faq-live' && section.items.length === 2 && section.items.some((item) => /Where does the product information come from\?|How is the order completed\?/i.test(item.question)); const items = isLegacySmokeFaq ? [
         { question: 'এটা কি অরিজিনাল?', answer: 'হ্যাঁ, এটা অরিজিনাল মেইড ইন ভিয়েতনামের গ্লোবাল ভার্সন ফোন।', enabled: true, sortOrder: 0 },
         { question: 'ব্যাটারি এবং সিম?', answer: '৮০০ mAh ব্যাটারি শুধু কথা বললে ২/৩ দিন চার্জিং ব্যাকআপ দিবে এবং ২টি (সিম) ব্যবহার করা যাবে।', enabled: true, sortOrder: 1 },
