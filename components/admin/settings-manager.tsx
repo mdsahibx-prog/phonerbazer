@@ -77,7 +77,7 @@ function AdminAccess({ admins }: { admins: any[] }) {
 
 
 const defaultFooterConfig = {
-  social: { facebook: 'https://www.facebook.com/sahigadgetbd', tiktok: '', instagram: '', x: '', youtube: '' },
+  social: { facebook: 'https://www.facebook.com/profile.php?id=61576274226905', tiktok: '', instagram: '', x: '', youtube: '' },
   payments: { cash_on_delivery: true, visa: false, mastercard: false },
 }
 
